@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Administration — tableau de bord stratégique — Transia</title>
+  <meta name="description" content="Back-office administrateur : vérification des transporteurs, journal des affaires et commissions, pilotage de l'expansion internationale pays par pays." />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+  <header class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="logo"><span class="logo-mark">◆</span> Transia</a>
+      <nav class="nav-links" id="navLinks">
+        <a href="index.html">Accueil</a>
+        <a href="demande.html">Créer une demande</a>
+        <a href="transporteur.html">Espace transporteur</a>
+        <a href="comparateur.html">Comparateur</a>
+        <a href="admin.html" class="active">Administration</a>
+      </nav>
+      <div class="nav-actions">
+        <a href="transporteur.html" class="btn btn-ghost">Je suis transporteur</a>
+        <a href="demande.html" class="btn btn-primary">Déposer une demande</a>
+        <button class="nav-toggle" id="navToggle" aria-label="Ouvrir le menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="page-head">
+    <div class="container">
+      <div class="breadcrumb"><a href="index.html">Accueil</a> / Administration</div>
+      <h1>Tableau de bord stratégique</h1>
+      <p>Vérification des transporteurs, journal des affaires, expansion internationale. La plateforme recommande — l'administrateur décide.</p>
+    </div>
+  </section>
+
+  <section class="section" style="padding:36px 0;">
+    <div class="container">
+
+      <!-- ============ KPI ============ -->
+      <div class="grid grid-4" id="kpiGrid" style="margin-bottom:26px;"></div>
+
+      <!-- ============ PAYS ============ -->
+      <div class="panel" style="margin-bottom:26px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px;">
+          <h3 class="mt-0 mb-0">🌍 Expansion internationale</h3>
+          <span class="badge badge-amber">Ouverture : décision humaine</span>
+        </div>
+        <div class="info-banner" style="margin-bottom:16px;">
+          🧭 <span>La plateforme analyse, recommande et signale les opportunités — mais <b>aucun pays n'est activé automatiquement</b>. L'administrateur conserve le contrôle de chaque marché.</span>
+        </div>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Pays</th><th>Marché</th><th>Entreprises identifiées</th><th>Transporteurs</th>
+                <th>Contacts</th><th>Cotations</th><th>Affaires</th><th>Indice de maturité</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="paysBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ============ VÉRIFICATION ============ -->
+      <div class="panel" style="margin-bottom:26px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
+          <h3 class="mt-0 mb-0">🛡️ Vérification des transporteurs</h3>
+          <span class="badge badge-blue">Inscrit → à vérifier → validé → actif</span>
+        </div>
+        <p class="muted" style="font-size:14px;margin-bottom:16px;">L'administrateur conserve la décision finale d'activation. Justificatifs : immatriculation, licences, assurances, documents spécifiques.</p>
+        <div id="verifList"></div>
+      </div>
+
+      <!-- ============ JOURNAL DES AFFAIRES ============ -->
+      <div class="panel" style="margin-bottom:26px;">
+        <h3 class="mt-0">📒 Journal des affaires &amp; commissions</h3>
+        <p class="muted" style="font-size:14px;margin-bottom:16px;">Chaque acceptation est enregistrée et horodatée (preuve électronique). Commission de 8 % sur la partie transport, émise au transporteur.</p>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr><th>Réf.</th><th>Ligne</th><th>Mode</th><th>Offre</th><th>Prix accepté</th><th>Commission 8 %</th><th>Horodatage</th><th>Transporteur</th></tr>
+            </thead>
+            <tbody id="affairesBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ============ VALIDATION ÉCONOMIQUE ============ -->
+      <div class="panel">
+        <h3 class="mt-0">📈 Validation économique (phase 6)</h3>
+        <p class="muted" style="font-size:14px;margin-bottom:16px;">Indicateurs mesurés pour valider le modèle avant industrialisation.</p>
+        <div class="grid grid-3" id="metriquesGrid"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ============ MODALE OUVERTURE MARCHÉ ============ -->
+  <div class="modal-backdrop" id="modalMarche">
+    <div class="modal" style="width:min(480px,100%);">
+      <div class="modal-head">
+        <h3>Ouvrir le marché</h3>
+        <button class="modal-close" aria-label="Fermer">✕</button>
+      </div>
+      <div id="marcheInfo" style="background:var(--blue-light);border-radius:10px;padding:14px 16px;font-size:14px;color:#0b2545;margin-bottom:18px;"></div>
+      <p style="font-size:14px;color:#5b6b84;margin-bottom:18px;">
+        L'ouverture d'un nouveau pays est une <b>décision humaine</b>. Vérifiez le cadre juridique local, les conditions de transport et la couverture transporteur avant de confirmer.
+      </p>
+      <button class="btn btn-primary btn-block" id="btnConfirmerMarche">Confirmer l'ouverture du marché</button>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="container footer-bottom" style="border:none;padding-top:0;">
+      <span>© <span id="year"></span> Transia — Prototype v0.1 · Démonstration, aucune donnée transmise</span>
+      <span><a href="index.html" style="color:#93c5fd;">Retour à l'accueil</a></span>
+    </div>
+  </footer>
+
+  <div class="toast-zone"></div>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/admin.js"></script>
+</body>
+</html>

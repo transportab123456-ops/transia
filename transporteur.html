@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Espace transporteur — demandes de cotation et réponses — Transia</title>
+  <meta name="description" content="Espace transporteur : inscription en moins de 5 minutes, tableau de bord des demandes de cotation internationales, réponse en un formulaire simple. Cotation à l'aveugle." />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+  <header class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="logo"><span class="logo-mark">◆</span> Transia</a>
+      <nav class="nav-links" id="navLinks">
+        <a href="index.html">Accueil</a>
+        <a href="demande.html">Créer une demande</a>
+        <a href="transporteur.html" class="active">Espace transporteur</a>
+        <a href="comparateur.html">Comparateur</a>
+        <a href="admin.html">Administration</a>
+      </nav>
+      <div class="nav-actions">
+        <a href="transporteur.html" class="btn btn-ghost">Je suis transporteur</a>
+        <a href="demande.html" class="btn btn-primary">Déposer une demande</a>
+        <button class="nav-toggle" id="navToggle" aria-label="Ouvrir le menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="page-head">
+    <div class="container">
+      <div class="breadcrumb"><a href="index.html">Accueil</a> / Espace transporteur</div>
+      <h1>Tableau de bord transporteur</h1>
+      <p>Consultez les demandes de cotation, répondez en quelques clics. Vos offres sont déposées à l'aveugle.</p>
+    </div>
+  </section>
+
+  <section class="section" style="padding:36px 0;">
+    <div class="container">
+
+      <!-- ============ COMPTE ============ -->
+      <div class="panel" id="comptePanel" style="margin-bottom:24px;"></div>
+
+      <!-- ============ LAYOUT ============ -->
+      <div class="layout-2">
+
+        <!-- Liste des RFQ -->
+        <div>
+          <!-- Filtres -->
+          <div class="filters">
+            <div class="filters-row">
+              <div class="field" style="margin:0;">
+                <label>Pays de départ</label>
+                <select id="fDepart"><option value="">Tous</option></select>
+              </div>
+              <div class="field" style="margin:0;">
+                <label>Pays d'arrivée</label>
+                <select id="fArrivee"><option value="">Tous</option></select>
+              </div>
+              <div class="field" style="margin:0;">
+                <label>Mode</label>
+                <select id="fMode"><option value="">Tous</option></select>
+              </div>
+              <div class="field" style="margin:0;">
+                <label>Type de marchandise</label>
+                <select id="fType"><option value="">Tous</option></select>
+              </div>
+              <button class="btn btn-outline" id="btnReset" type="button">Réinitialiser</button>
+            </div>
+          </div>
+
+          <div class="results-bar">
+            <div class="count"><b id="countRfq">0</b> demandes de cotation ouvertes</div>
+            <span class="badge badge-blue">🔒 Offres déposées à l'aveugle</span>
+          </div>
+
+          <div class="panel" style="padding:0;overflow:hidden;">
+            <div class="table-wrap">
+              <table class="table" id="rfqTable">
+                <thead>
+                  <tr>
+                    <th>Réf.</th><th>Origine</th><th>Destination</th><th>Mode</th>
+                    <th>Marchandise</th><th>Date</th><th>Statut</th><th></th>
+                  </tr>
+                </thead>
+                <tbody id="rfqBody"></tbody>
+              </table>
+            </div>
+          </div>
+
+          <div class="empty hidden" id="emptyState">
+            <div class="big">🔍</div>
+            <p>Aucune demande ne correspond à vos filtres.</p>
+          </div>
+        </div>
+
+        <!-- Mes offres -->
+        <aside class="panel panel-sticky">
+          <h3>📝 Mes offres déposées</h3>
+          <p style="font-size:13.5px;color:#5b6b84;margin-bottom:16px;">Vous ne voyez jamais le nombre d'offres concurrentes, ni leurs prix. Le donneur d'ordre décide ensuite.</p>
+          <div id="mesOffres"></div>
+        </aside>
+
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MODALE INSCRIPTION ============ -->
+  <div class="modal-backdrop" id="modalInscription">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <h3>Inscription transporteur</h3>
+          <p class="muted" style="font-size:14px;">Moins de 5 minutes. Votre compte sera actif après vérification par l'administrateur.</p>
+        </div>
+        <button class="modal-close" aria-label="Fermer">✕</button>
+      </div>
+      <div class="divider"></div>
+      <h4 style="color:#0b2545;margin-bottom:12px;">Informations entreprise</h4>
+      <div class="field"><label>Raison sociale *</label><input id="iRaison" type="text" placeholder="TransAtlas Logistics" /></div>
+      <div class="form-row-3">
+        <div class="field"><label>Pays *</label><input id="iPays" type="text" placeholder="France" /></div>
+        <div class="field"><label>Numéro d'immatriculation *</label><input id="iImmat" type="text" placeholder="FR-812 449 302" /></div>
+        <div class="field"><label>N° TVA / identifiant fiscal *</label><input id="iTva" type="text" placeholder="FR 42 812449302" /></div>
+      </div>
+      <div class="field"><label>Adresse *</label><input id="iAdresse" type="text" placeholder="12 rue des Transporteurs, 69007 Lyon" /></div>
+      <div class="field"><label>Site internet</label><input id="iSite" type="text" placeholder="mon-transporteur.example" /></div>
+
+      <div class="divider"></div>
+      <h4 style="color:#0b2545;margin-bottom:12px;">Responsable</h4>
+      <div class="form-row">
+        <div class="field"><label>Nom du responsable *</label><input id="iNom" type="text" placeholder="Sophie Marchand" /></div>
+        <div class="field"><label>Fonction</label><input id="iFonction" type="text" placeholder="Responsable commercial" /></div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Téléphone *</label><input id="iTel" type="tel" placeholder="+33 4 72 00 11 22" /></div>
+        <div class="field"><label>E-mail *</label><input id="iEmail" type="email" placeholder="contact@mon-transporteur.example" /></div>
+      </div>
+
+      <div class="divider"></div>
+      <h4 style="color:#0b2545;margin-bottom:12px;">Informations transport</h4>
+      <div class="field">
+        <label>Modes de transport traités *</label>
+        <div style="display:flex;gap:18px;flex-wrap:wrap;padding:4px 0;" id="iModes"></div>
+      </div>
+      <div class="field"><label>Pays / lignes desservis</label><input id="iLignes" type="text" placeholder="FR · BE · DE · ES · MA" /></div>
+
+      <div class="info-banner" style="margin:16px 0;">
+        🛡️ <span>Statut après inscription : <b>à vérifier</b>. L'administrateur demande les justificatifs (immatriculation, licences, assurances) et garde la décision finale d'activation.</span>
+      </div>
+      <button class="btn btn-primary btn-block btn-lg" id="btnInscrire">Créer mon compte</button>
+    </div>
+  </div>
+
+  <!-- ============ MODALE RÉPONSE ============ -->
+  <div class="modal-backdrop" id="modalReponse">
+    <div class="modal">
+      <div class="modal-head">
+        <div>
+          <h3>Répondre à la demande</h3>
+          <p class="muted" style="font-size:14px;" id="reponseRef"></p>
+        </div>
+        <button class="modal-close" aria-label="Fermer">✕</button>
+      </div>
+      <div id="reponseInfo" style="background:var(--blue-light);border-radius:10px;padding:14px 16px;font-size:14px;color:#0b2545;margin-bottom:18px;"></div>
+      <div class="info-banner" style="margin-bottom:18px;">
+        🔒 <span><b>Cotation à l'aveugle.</b> Vous ne voyez ni le nombre d'offres déposées, ni le nom des concurrents, ni leurs prix ou conditions.</span>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Prix du transport *</label><input id="rPrix" type="number" min="0" placeholder="2090" /></div>
+        <div class="field">
+          <label>Devise *</label>
+          <select id="rDevise">
+            <option>EUR</option><option>USD</option><option>GBP</option><option>CHF</option>
+            <option>MAD</option><option>TND</option><option>CAD</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field"><label>Délai d'exécution *</label><input id="rDelai" type="text" placeholder="6 jours" /></div>
+        <div class="field"><label>Validité de l'offre *</label><input id="rValidite" type="date" /></div>
+      </div>
+      <div class="field"><label>Conditions</label><textarea id="rConditions" placeholder="Port payé, TVA incluse, assurance…"></textarea></div>
+      <div class="field"><label>Frais ou services complémentaires (clairement identifiés)</label><textarea id="rFrais" placeholder="Manutention départ, attente, escortes…" ></textarea></div>
+      <button class="btn btn-primary btn-block btn-lg" id="btnEnvoyerOffre">Déposer mon offre</button>
+      <p class="form-note text-center">Déposer une offre vaut acceptation des conditions de mise en relation et de la clause de non-contournement.</p>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="container footer-bottom" style="border:none;padding-top:0;">
+      <span>© <span id="year"></span> Transia — Prototype v0.1 · Démonstration, aucune donnée transmise</span>
+      <span><a href="index.html" style="color:#93c5fd;">Retour à l'accueil</a></span>
+    </div>
+  </footer>
+
+  <div class="toast-zone"></div>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/transporteur.js"></script>
+</body>
+</html>

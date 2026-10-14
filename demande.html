@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Créer une demande de cotation — Transia</title>
+  <meta name="description" content="Déposez votre demande de cotation de transport international : origine, destination, mode, marchandise, incoterm et marchandises dangereuses." />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+  <header class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="logo"><span class="logo-mark">◆</span> Transia</a>
+      <nav class="nav-links" id="navLinks">
+        <a href="index.html">Accueil</a>
+        <a href="demande.html" class="active">Créer une demande</a>
+        <a href="transporteur.html">Espace transporteur</a>
+        <a href="comparateur.html">Comparateur</a>
+        <a href="admin.html">Administration</a>
+      </nav>
+      <div class="nav-actions">
+        <a href="transporteur.html" class="btn btn-ghost">Je suis transporteur</a>
+        <a href="demande.html" class="btn btn-primary">Déposer une demande</a>
+        <button class="nav-toggle" id="navToggle" aria-label="Ouvrir le menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="page-head">
+    <div class="container">
+      <div class="breadcrumb"><a href="index.html">Accueil</a> / Nouvelle demande de cotation</div>
+      <h1>Créer une demande de cotation (RFQ)</h1>
+      <p>Quelques minutes suffisent. Les transporteurs qualifiés la recevront et coteront à l'aveugle.</p>
+    </div>
+  </section>
+
+  <section class="section" style="padding:40px 0;">
+    <div class="container layout-2">
+
+      <!-- ============ FORMULAIRE ============ -->
+      <div>
+        <div id="formWrap">
+          <form id="formRfq" novalidate>
+
+            <!-- A — ORIGINE -->
+            <div class="panel" style="margin-bottom:22px;">
+              <h2>A — Origine</h2>
+              <div class="form-row-3">
+                <div class="field"><label>Pays *</label><input id="oPays" type="text" placeholder="France" /></div>
+                <div class="field"><label>Ville *</label><input id="oVille" type="text" placeholder="Lyon" /></div>
+                <div class="field"><label>Code postal</label><input id="oCp" type="text" placeholder="69007" /></div>
+              </div>
+              <div class="form-row">
+                <div class="field"><label>Lieu d'enlèvement *</label><input id="oLieu" type="text" placeholder="Entrepôt, adresse complète" /></div>
+                <div class="field"><label>Date d'enlèvement souhaitée *</label><input id="oDate" type="date" /></div>
+              </div>
+            </div>
+
+            <!-- B — DESTINATION -->
+            <div class="panel" style="margin-bottom:22px;">
+              <h2>B — Destination</h2>
+              <div class="form-row-3">
+                <div class="field"><label>Pays *</label><input id="dPays" type="text" placeholder="Maroc" /></div>
+                <div class="field"><label>Ville *</label><input id="dVille" type="text" placeholder="Casablanca" /></div>
+                <div class="field"><label>Code postal</label><input id="dCp" type="text" placeholder="20000" /></div>
+              </div>
+              <div class="field"><label>Lieu de livraison *</label><input id="dLieu" type="text" placeholder="Adresse complète de livraison" /></div>
+            </div>
+
+            <!-- C — MODE -->
+            <div class="panel" style="margin-bottom:22px;">
+              <h2>🚚 Mode de transport</h2>
+              <div class="field">
+                <label>Mode demandé *</label>
+                <select id="mode"></select>
+              </div>
+              <div id="maritimeBlock" class="hidden">
+                <div class="form-row">
+                  <div class="field">
+                    <label>Acheminement maritime</label>
+                    <select id="acheminement">
+                      <option value="FCL">FCL — Conteneur complet</option>
+                      <option value="LCL">LCL — Groupage (less than container load)</option>
+                    </select>
+                  </div>
+                  <div class="field" id="conteneurField">
+                    <label>Type de conteneur</label>
+                    <select id="conteneur">
+                      <option value="20'">20'</option>
+                      <option value="40'">40'</option>
+                      <option value="40' HC" selected>40' HC (hauteur cubic)</option>
+                    </select>
+                  </div>
+                </div>
+                <p class="form-note">D'autres équipements (reefer, flat rack…) seront ajoutés ultérieurement.</p>
+              </div>
+            </div>
+
+            <!-- D — MARCHANDISE -->
+            <div class="panel" style="margin-bottom:22px;">
+              <h2>📦 Marchandise</h2>
+              <div class="field"><label>Description de la marchandise *</label><textarea id="mDesc" placeholder="Nature, contenu, contraintes particulières…"></textarea></div>
+              <div class="form-row-3">
+                <div class="field"><label>Nombre de colis</label><input id="mColis" type="number" min="0" placeholder="18" /></div>
+                <div class="field"><label>Nombre de palettes</label><input id="mPalettes" type="number" min="0" placeholder="9" /></div>
+                <div class="field"><label>Poids total *</label><input id="mPoids" type="text" placeholder="4 100 kg" /></div>
+              </div>
+              <div class="form-row">
+                <div class="field"><label>Volume *</label><input id="mVolume" type="text" placeholder="26 m³" /></div>
+                <div class="field"><label>Dimensions (si nécessaire)</label><input id="mDims" type="text" placeholder="120x100x160 cm" /></div>
+              </div>
+
+              <!-- ADR -->
+              <div class="divider"></div>
+              <div class="field">
+                <label>Marchandise dangereuse ? *</label>
+                <div style="display:flex;gap:22px;padding:4px 0;">
+                  <label style="display:flex;gap:8px;align-items:center;font-weight:500;font-size:14.5px;">
+                    <input type="radio" name="dangereux" value="non" checked style="width:auto;" /> Non
+                  </label>
+                  <label style="display:flex;gap:8px;align-items:center;font-weight:500;font-size:14.5px;">
+                    <input type="radio" name="dangereux" value="oui" style="width:auto;" /> Oui — marchandise réglementée ADR / IMDG / IATA
+                  </label>
+                </div>
+              </div>
+              <div id="dangerBlock" class="hidden">
+                <div class="info-banner" style="margin-bottom:16px;">
+                  ⚠️ <span>Les marchandises dangereuses font l'objet d'un traitement spécifique : référentiels selon le mode de transport (ADR routier, IMDG maritime, RIAD aérien).</span>
+                </div>
+                <div class="form-row-3">
+                  <div class="field"><label>Numéro ONU / UN *</label><input id="dOnu" type="text" placeholder="UN 1950" /></div>
+                  <div class="field"><label>Désignation *</label><input id="dDesignation" type="text" placeholder="Aérosols" /></div>
+                  <div class="field"><label>Classe de danger *</label><input id="dClasse" type="text" placeholder="Classe 2.1" /></div>
+                </div>
+                <div class="form-row-3">
+                  <div class="field"><label>Groupe d'emballage</label><input id="dGroupe" type="text" placeholder="Groupe II" /></div>
+                  <div class="field"><label>Quantité *</label><input id="dQuantite" type="text" placeholder="3 palettes" /></div>
+                  <div class="field">
+                    <label>Documentation</label>
+                    <select id="dDoc">
+                      <option>FDS fournie</option>
+                      <option>FDS à fournir</option>
+                      <option>Déclaration ADR / IMDG</option>
+                      <option>Certificat de sécurité</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- INCOTERM -->
+            <div class="panel" style="margin-bottom:22px;">
+              <h2>🧭 Incoterm® 2020</h2>
+              <div class="field">
+                <label>Incoterm applicable *</label>
+                <select id="incoterm"></select>
+              </div>
+              <p class="form-note">L'incoterm détermine le périmètre exact de la prestation de transport demandée.</p>
+            </div>
+
+            <!-- CONTACT -->
+            <div class="panel" style="margin-bottom:22px;">
+              <h2>👤 Contact opérationnel</h2>
+              <div class="form-row">
+                <div class="field"><label>Nom et prénom *</label><input id="cNom" type="text" placeholder="Marie Dupont" /></div>
+                <div class="field"><label>Fonction</label><input id="cFonction" type="text" placeholder="Responsable logistique" /></div>
+              </div>
+              <div class="form-row">
+                <div class="field"><label>E-mail professionnel *</label><input id="cEmail" type="email" placeholder="m.dupont@entreprise.example" /></div>
+                <div class="field"><label>Téléphone professionnel *</label><input id="cTel" type="tel" placeholder="+33 6 12 34 56 78" /></div>
+              </div>
+              <p class="form-note">Ces coordonnées restent protégées : elles ne sont communiquées qu'après acceptation d'une offre.</p>
+            </div>
+
+            <div style="display:flex;gap:14px;flex-wrap:wrap;">
+              <button type="submit" class="btn btn-primary btn-lg">Publier ma demande de cotation</button>
+              <a href="index.html" class="btn btn-ghost btn-lg">Annuler</a>
+            </div>
+          </form>
+        </div>
+
+        <!-- Succès -->
+        <div id="successBox" class="success-box hidden">
+          <div class="check">✓</div>
+          <h2>Demande de cotation publiée</h2>
+          <p>Votre RFQ est maintenant consultable par les transporteurs qualifiés sur cette ligne.</p>
+          <div class="ref-code" id="refCode">RFQ-00000</div>
+          <p id="successDetails"></p>
+          <p style="font-size:13px;color:#5b6b84;margin-top:10px;">Les transporteurs cotent à l'aveugle : ils ne voient ni le nombre d'offres, ni leurs concurrents.</p>
+          <div class="match-list" id="matchList"></div>
+          <div style="margin-top:24px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">
+            <a href="comparateur.html" class="btn btn-primary" id="linkComparateur">Voir le comparateur</a>
+            <button class="btn btn-outline" id="btnNouvelleRfq">Déposer une autre demande</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- ============ PANNEAU LATÉRAL ============ -->
+      <aside class="panel panel-sticky">
+        <h3>🔒 Confidentialité garantie</h3>
+        <p style="font-size:14px;color:#5b6b84;margin-bottom:14px;">Tant que vous n'avez pas accepté une offre, les transporteurs ne voient <b>jamais</b> :</p>
+        <ul style="list-style:none;font-size:13.5px;color:#5b6b84;line-height:2;margin-bottom:18px;">
+          <li>✕ Votre raison sociale</li>
+          <li>✕ Vos coordonnées</li>
+          <li>✕ L'identité des autres transporteurs</li>
+        </ul>
+        <div class="divider"></div>
+        <h3>Ce que les transporteurs verront</h3>
+        <ul style="list-style:none;font-size:13.5px;color:#5b6b84;line-height:2;">
+          <li>✓ La ligne : origine → destination</li>
+          <li>✓ Le mode et la nature de la marchandise</li>
+          <li>✓ Les volumes, poids et dates</li>
+          <li>✓ L'incoterm et les contraintes ADR</li>
+        </ul>
+        <div class="divider"></div>
+        <div class="info-banner">
+          📊 <span>Après comparaison, la plateforme vous présente la meilleure offre — prix, délai, validité, conditions — sans révéler l'identité du transporteur.</span>
+        </div>
+      </aside>
+
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container footer-bottom" style="border:none;padding-top:0;">
+      <span>© <span id="year"></span> Transia — Prototype v0.1 · Démonstration, aucune donnée transmise</span>
+      <span><a href="index.html" style="color:#93c5fd;">Retour à l'accueil</a></span>
+    </div>
+  </footer>
+
+  <div class="toast-zone"></div>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/demande.js"></script>
+</body>
+</html>

@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Transia — Mise en relation transport international, cotations à l'aveugle</title>
+  <meta name="description" content="Transia est la plateforme B2B de mise en relation entre donneurs d'ordre et transporteurs pour le transport international. Cotation à l'aveugle, comparaison des offres, commission de 8 % émise au transporteur." />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+  <!-- ============ NAV ============ -->
+  <header class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="logo"><span class="logo-mark">◆</span> Transia</a>
+      <nav class="nav-links" id="navLinks">
+        <a href="index.html" class="active">Accueil</a>
+        <a href="demande.html">Créer une demande</a>
+        <a href="transporteur.html">Espace transporteur</a>
+        <a href="comparateur.html">Comparateur</a>
+        <a href="admin.html">Administration</a>
+      </nav>
+      <div class="nav-actions">
+        <a href="transporteur.html" class="btn btn-ghost">Je suis transporteur</a>
+        <a href="demande.html" class="btn btn-primary">Déposer une demande</a>
+        <button class="nav-toggle" id="navToggle" aria-label="Ouvrir le menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ HERO ============ -->
+  <section class="hero">
+    <div class="container hero-grid">
+      <div>
+        <div class="eyebrow" style="background:rgba(147,197,253,.18);color:#bfdbfe;">Plateforme B2B · Prototype v0.1</div>
+        <h1>Le transport international,<br />mis en concurrence <span class="hl">à l'aveugle</span>.</h1>
+        <p class="lead">
+          Transia met en relation les entreprises importatrices et exportatrices avec des transporteurs vérifiés.
+          Vous déposez votre demande de cotation, les transporteurs répondent sans voir leurs concurrents,
+          la plateforme compare et recommande la meilleure offre.
+        </p>
+        <div class="hero-cta">
+          <a href="demande.html" class="btn btn-light btn-lg">Déposer une demande de cotation</a>
+          <a href="transporteur.html" class="btn btn-outline btn-lg" style="border-color:rgba(255,255,255,.35);color:#fff;background:transparent;">Espace transporteur</a>
+        </div>
+        <div class="hero-checks">
+          <span>Identités masquées avant acceptation</span>
+          <span>Commission de 8 % au transporteur</span>
+          <span>Inscription transporteur en moins de 5 min</span>
+        </div>
+      </div>
+
+      <div class="search-card">
+        <h3>🔗 La boucle Transia</h3>
+        <ol style="list-style:none;font-size:14.5px;line-height:2.1;color:#16233b;">
+          <li>1️⃣ Une entreprise a besoin d'un transport</li>
+          <li>2️⃣ Elle dépose sa demande de cotation</li>
+          <li>3️⃣ Des transporteurs qualifiés la consultent</li>
+          <li>4️⃣ Les transporteurs intéressés <b>cotent à l'aveugle</b></li>
+          <li>5️⃣ La plateforme <b>compare et recommande</b></li>
+          <li>6️⃣ Le donneur d'ordre accepte ou refuse</li>
+          <li>7️⃣ Acceptation → <b>mise en relation</b> des parties</li>
+          <li>8️⃣ Transport réalisé → commission plateforme</li>
+        </ol>
+        <a href="demande.html" class="btn btn-primary btn-block">Commencer — déposer une RFQ</a>
+        <p class="search-hint">Démonstration : aucune donnée n'est envoyée, tout reste dans votre navigateur.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CHIFFRES ============ -->
+  <section class="section" style="padding-top:20px;">
+    <div class="container">
+      <div class="stats">
+        <div class="stat"><b>8 %</b><span>Commission émise au transporteur</span></div>
+        <div class="stat"><b>&lt; 5 min</b><span>Pour créer un compte transporteur</span></div>
+        <div class="stat"><b>100 %</b><span>Offres déposées à l'aveugle</span></div>
+        <div class="stat"><b>11</b><span>Incoterms® 2020 intégrés</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ COMMENT ÇA MARCHE ============ -->
+  <section class="section section-white">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Comment ça marche</span>
+        <h2>Une seule boucle, rendue extrêmement simple</h2>
+        <p>Le MVP excelle sur le cœur du métier : identifier le besoin, mettre en concurrence, comparer, recommander, mettre en relation.</p>
+      </div>
+      <div class="steps">
+        <div class="step">
+          <h4>Dépôt de la demande</h4>
+          <p>Origine, destination, mode, marchandise, incoterm, marchandises dangereuses : la RFQ est créée en quelques minutes.</p>
+        </div>
+        <div class="step">
+          <h4>Consultation qualifiée</h4>
+          <p>La demande est mise à disposition des transporteurs susceptibles de la traiter : pays, modes, lignes dessertes.</p>
+        </div>
+        <div class="step">
+          <h4>Cotation à l'aveugle</h4>
+          <p>Chaque transporteur répond seul : prix, devise, délai, validité, conditions. Il ne voit ni le nombre d'offres, ni les concurrents.</p>
+        </div>
+        <div class="step">
+          <h4>Comparaison</h4>
+          <p>La plateforme vérifie que les offres couvrent le même périmètre, puis compare prix, délai et conformité.</p>
+        </div>
+        <div class="step">
+          <h4>Recommandation</h4>
+          <p>La meilleure offre est présentée avec ses conditions et les indicateurs de qualité du transporteur — sans son identité.</p>
+        </div>
+        <div class="step">
+          <h4>Acceptation &amp; dévoilement</h4>
+          <p>Acceptée, l'affaire est enregistrée, horodatée, les identités et coordonnées sont débloquées entre les parties.</p>
+        </div>
+        <div class="step">
+          <h4>Transport réalisé</h4>
+          <p>Le contrat de transport est conclu directement entre le donneur d'ordre et le transporteur. Transia ne vend pas le transport.</p>
+        </div>
+        <div class="step">
+          <h4>Commission</h4>
+          <p>8 % sur la partie transport de l'opération confirmée, facturés au transporteur. Les prestations annexes sont hors assiette.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CONFIDENTIALITÉ ============ -->
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Règle fondamentale</span>
+        <h2>La confidentialité des cotations, avant tout</h2>
+        <p>Avant confirmation, aucun contact direct n'est possible. Les échanges passent par la plateforme, des deux côtés.</p>
+      </div>
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="icon-tile">🔒</div>
+          <h3>Avant confirmation</h3>
+          <p style="margin-bottom:12px;">Le donneur d'ordre ne connaît <b>pas</b> :</p>
+          <ul style="list-style:none;font-size:14.5px;color:#5b6b84;line-height:2;">
+            <li>✕ Le nom du transporteur, son adresse, son téléphone, son e-mail</li>
+            <li>✕ Le nom de son responsable commercial</li>
+            <li>✕ Toute information permettant une prise de contact directe</li>
+          </ul>
+          <p style="margin-top:12px;">Réciproquement, le transporteur ne dispose pas des coordonnées permettant de contourner la plateforme. Les transporteurs <b>cotent à l'aveugle</b> : ni le nombre d'offres, ni les noms, ni les prix des concurrents.</p>
+        </div>
+        <div class="card">
+          <div class="icon-tile" style="background:var(--green-light);color:var(--green);">🔓</div>
+          <h3>Après confirmation</h3>
+          <p style="margin-bottom:12px;">Offre → acceptation → enregistrement de l'affaire → dévoilement des identités.</p>
+          <ul style="list-style:none;font-size:14.5px;color:#5b6b84;line-height:2;">
+            <li>✓ Débloquage des coordonnées nécessaires à l'exécution du transport</li>
+            <li>✓ Enregistrement de l'affaire gagnée pour le calcul de la commission</li>
+            <li>✓ Horodatage et traçabilité des acceptations (preuve électronique)</li>
+          </ul>
+          <p style="margin-top:12px;">Chaque acceptation alimente le journal d'audit de la plateforme.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MODÈLE ÉCONOMIQUE ============ -->
+  <section class="section section-white">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Modèle économique</span>
+        <h2>Transia ne vend pas le transport</h2>
+        <p>Le contrat de transport est conclu entre le donneur d'ordre et le transporteur. Transia est l'intermédiaire de mise en relation.</p>
+      </div>
+      <div class="grid grid-3">
+        <div class="card">
+          <div class="icon-tile">🎯</div>
+          <h3>Commission de 8 %</h3>
+          <p>Calculée sur la partie transport de l'opération confirmée. La facture de commission est émise au transporteur.</p>
+          <div class="divider"></div>
+          <p style="font-size:13px;"><b>Exemple :</b> transport à 2 000 € → commission plateforme de 160 €.</p>
+        </div>
+        <div class="card">
+          <div class="icon-tile">⚖️</div>
+          <h3>Assiette maîtrisée</h3>
+          <p>Les prestations annexes qui ne font pas partie du transport ne doivent pas automatiquement entrer dans l'assiette de commission.</p>
+          <div class="divider"></div>
+          <p style="font-size:13px;">Point à définir très précisément dans les CGU/CGV et le contrat transporteur.</p>
+        </div>
+        <div class="card">
+          <div class="icon-tile">📜</div>
+          <h3>Positionnement juridique</h3>
+          <p>Prestation numérique de mise en relation et d'intermédiation. La qualification exacte sera validée par un juriste spécialisé.</p>
+          <div class="divider"></div>
+          <p style="font-size:13px;">Contrats, clause de non-contournement et fonctionnement réel doivent rester cohérents.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FONCTIONNALITÉS ============ -->
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Périmètre du MVP</span>
+        <h2>Conçu pour le transport international réel</h2>
+      </div>
+      <div class="grid grid-3">
+        <div class="card"><div class="icon-tile">📋</div><h3>RFQ professionnel</h3><p>Origine (pays, ville, code postal, lieu d'enlèvement, date) et destination complètes, modes routier, maritime, aérien et multimodal.</p></div>
+        <div class="card"><div class="icon-tile">📦</div><h3>Conteneurs &amp; groupage</h3><p>Pour le maritime : LCL ou FCL, avec choix du type de conteneur 20', 40' ou 40' HC. Colis, palettes, poids et volume saisis.</p></div>
+        <div class="card"><div class="icon-tile">🧭</div><h3>Incoterms® 2020</h3><p>Les 11 incoterms sont intégrés aux demandes pour déterminer exactement le périmètre de la prestation de transport demandée.</p></div>
+        <div class="card"><div class="icon-tile">⚠️</div><h3>Marchandises dangereuses</h3><p>Question obligatoire. Si oui : numéro ONU, désignation, classe de danger, groupe d'emballage, quantité, documentation et FDS.</p></div>
+        <div class="card"><div class="icon-tile">🛡️</div><h3>Vérification transporteurs</h3><p>Inscrit → à vérifier → validé → actif. Immatriculation, licences, assurances : l'administrateur garde la décision finale.</p></div>
+        <div class="card"><div class="icon-tile">🌍</div><h3>Multi-pays dès l'origine</h3><p>L'architecture est internationale immédiatement. Chaque opération nourrit la base relationnelle du futur marché.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ÉCRANS DU PROTOTYPE ============ -->
+  <section class="section section-white">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Prototype interactif</span>
+        <h2>Parcourez les écrans du MVP</h2>
+        <p>Chaque écran est fonctionnel avec des données de démonstration, enregistrées dans votre navigateur.</p>
+      </div>
+      <div class="grid grid-4">
+        <a class="card" href="demande.html" style="color:inherit;">
+          <div class="icon-tile">📝</div>
+          <h3>Création de demande</h3>
+          <p>Formulaire RFQ complet : origine, destination, mode, marchandise, incoterm, ADR.</p>
+        </a>
+        <a class="card" href="transporteur.html" style="color:inherit;">
+          <div class="icon-tile">🚛</div>
+          <h3>Espace transporteur</h3>
+          <p>Inscription en 5 minutes, tableau de bord des RFQ avec filtres, réponse en un formulaire.</p>
+        </a>
+        <a class="card" href="comparateur.html" style="color:inherit;">
+          <div class="icon-tile">⚖️</div>
+          <h3>Comparateur &amp; acceptation</h3>
+          <p>Offres anonymes comparées, recommandation, acceptation ou refus avec motif.</p>
+        </a>
+        <a class="card" href="admin.html" style="color:inherit;">
+          <div class="icon-tile">📊</div>
+          <h3>Administration</h3>
+          <p>Tableau de bord stratégique par pays, vérification des transporteurs, contrôle de l'expansion.</p>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ DÉCISIONS FONDATRICES ============ -->
+  <section class="section">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Décisions fondatrices v0.1</span>
+        <h2>Les règles qui structurent la plateforme</h2>
+      </div>
+      <div class="grid grid-2">
+        <div class="card">
+          <ul style="list-style:none;font-size:14.5px;color:#5b6b84;line-height:2.2;">
+            <li><b style="color:#0b2545;">D01</b> — La plateforme est centrée sur le transport</li>
+            <li><b style="color:#0b2545;">D02</b> — Rémunération : commission transporteur de 8 %</li>
+            <li><b style="color:#0b2545;">D03</b> — Les offres concurrentes sont confidentielles</li>
+            <li><b style="color:#0b2545;">D04</b> — Les transporteurs cotent à l'aveugle</li>
+            <li><b style="color:#0b2545;">D05</b> — Identité du transporteur masquée avant acceptation</li>
+            <li><b style="color:#0b2545;">D06</b> — Coordonnées du donneur d'ordre protégées</li>
+            <li><b style="color:#0b2545;">D07</b> — Le MVP reste volontairement simple</li>
+          </ul>
+        </div>
+        <div class="card">
+          <ul style="list-style:none;font-size:14.5px;color:#5b6b84;line-height:2.2;">
+            <li><b style="color:#0b2545;">D08</b> — Routier, maritime et aérien prévus dans l'architecture</li>
+            <li><b style="color:#0b2545;">D09</b> — Les incoterms sont intégrés aux demandes</li>
+            <li><b style="color:#0b2545;">D10</b> — Marchandises dangereuses : traitement spécifique</li>
+            <li><b style="color:#0b2545;">D11</b> — L'architecture est multi-pays dès l'origine</li>
+            <li><b style="color:#0b2545;">D12</b> — Ouverture d'un nouveau pays : décision humaine de l'administrateur</li>
+            <li><b style="color:#0b2545;">D13</b> — Contacts import / export / logistique structurés</li>
+            <li><b style="color:#0b2545;">D15</b> — Statut juridique à valider avant commercialisation</li>
+          </ul>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ ROADMAP ============ -->
+  <section class="section section-white">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Architecture du projet</span>
+        <h2>Un développement en phases</h2>
+      </div>
+      <div class="grid grid-4">
+        <div class="card"><div class="icon-tile">1</div><h3>Fondations</h3><p>Modèle économique, règles métier, positionnement juridique, cahier des charges.</p></div>
+        <div class="card"><div class="icon-tile">2</div><h3>UX / UI</h3><p>Inscription, création RFQ, liste des RFQ, réponse, comparateur, acceptation, administration.</p></div>
+        <div class="card"><div class="icon-tile">3</div><h3>Architecture</h3><p>Base de données, API, authentification, droits, moteurs de matching et de comparaison, journal d'audit.</p></div>
+        <div class="card"><div class="icon-tile">4</div><h3>MVP</h3><p>Développement du cœur de la plateforme, autour de la boucle de cotation.</p></div>
+      </div>
+      <div class="grid grid-4" style="margin-top:22px;">
+        <div class="card"><div class="icon-tile">5</div><h3>Pilote</h3><p>Lancement limité : nombre d'entreprises, de transporteurs et de lignes.</p></div>
+        <div class="card"><div class="icon-tile">6</div><h3>Validation économique</h3><p>RFQ, taux de réponse, offres par RFQ, écart entre offres, taux d'acceptation, commissions, récurrence.</p></div>
+        <div class="card"><div class="icon-tile">7</div><h3>Industrialisation</h3><p>Automatisations, scoring, IA, mobile, API, assurance, tracking, services complémentaires.</p></div>
+        <div class="card"><div class="icon-tile">8</div><h3>Expansion</h3><p>Ouverture progressive des pays, chaque marché validé par l'administrateur.</p></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ CTA ============ -->
+  <section class="section">
+    <div class="container">
+      <div class="cta-band">
+        <h2>Prêt à mettre vos transports en concurrence ?</h2>
+        <p>Déposez votre première demande de cotation en moins de 5 minutes.</p>
+        <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
+          <a href="demande.html" class="btn btn-light btn-lg">Déposer une demande</a>
+          <a href="transporteur.html" class="btn btn-outline btn-lg" style="border-color:rgba(255,255,255,.5);color:#fff;background:transparent;">Je suis transporteur</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="footer">
+    <div class="container footer-grid">
+      <div>
+        <div class="logo"><span class="logo-mark">◆</span> Transia</div>
+        <p>Plateforme de mise en relation entre donneurs d'ordre et transporteurs pour le transport international. Prototype de démonstration — aucune donnée n'est transmise à un serveur.</p>
+      </div>
+      <div>
+        <h4>Plateforme</h4>
+        <ul>
+          <li><a href="demande.html">Créer une demande</a></li>
+          <li><a href="transporteur.html">Espace transporteur</a></li>
+          <li><a href="comparateur.html">Comparateur d'offres</a></li>
+          <li><a href="admin.html">Administration</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Cadre juridique</h4>
+        <ul>
+          <li><a href="#" data-soon>CGU donneurs d'ordre</a></li>
+          <li><a href="#" data-soon>Conditions transporteurs</a></li>
+          <li><a href="#" data-soon>Contrat de commission</a></li>
+          <li><a href="#" data-soon>Clause de non-contournement</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Confidentialité</h4>
+        <ul>
+          <li><a href="#" data-soon>Règles de confidentialité des cotations</a></li>
+          <li><a href="#" data-soon>Protection des données</a></li>
+          <li><a href="#" data-soon>Procédure de réclamation</a></li>
+          <li><a href="#" data-soon>Traçabilité des acceptations</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <span>© <span id="year"></span> Transia — Prototype v0.1 (document fondateur)</span>
+      <span>Incoterms® 2020 — marque de la CCI. Mentionnée à titre documentaire.</span>
+    </div>
+  </footer>
+
+  <div class="toast-zone"></div>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script>
+    document.querySelectorAll("[data-soon]").forEach(function (a) {
+      a.addEventListener("click", function (e) {
+        e.preventDefault();
+        toast("Document prévu dans le dossier juridique du projet.", "ok");
+      });
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Comparateur d'offres et acceptation — Transia</title>
+  <meta name="description" content="Comparez les reçues de cotation anonymes, découvrez la meilleure offre recommandée, acceptez ou refusez. Après acceptation : dévoilement des identités et enregistrement de l'affaire." />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+  <header class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="logo"><span class="logo-mark">◆</span> Transia</a>
+      <nav class="nav-links" id="navLinks">
+        <a href="index.html">Accueil</a>
+        <a href="demande.html">Créer une demande</a>
+        <a href="transporteur.html">Espace transporteur</a>
+        <a href="comparateur.html" class="active">Comparateur</a>
+        <a href="admin.html">Administration</a>
+      </nav>
+      <div class="nav-actions">
+        <a href="transporteur.html" class="btn btn-ghost">Je suis transporteur</a>
+        <a href="demande.html" class="btn btn-primary">Déposer une demande</a>
+        <button class="nav-toggle" id="navToggle" aria-label="Ouvrir le menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="page-head">
+    <div class="container">
+      <div class="breadcrumb"><a href="index.html">Accueil</a> / Comparateur d'offres</div>
+      <h1>Comparateur &amp; acceptation</h1>
+      <p>Prix + conformité + délai. La plateforme vérifie que les offres couvrent le même périmètre, puis recommande la meilleure.</p>
+    </div>
+  </section>
+
+  <section class="section" style="padding:36px 0;">
+    <div class="container layout-2">
+
+      <!-- ============ COLONNE PRINCIPALE ============ -->
+      <div>
+        <div class="panel" style="margin-bottom:22px;">
+          <h3 class="mt-0">Demande de cotation</h3>
+          <div class="field" style="margin-bottom:12px;">
+            <select id="selectRfq"></select>
+          </div>
+          <div id="rfqResume" style="font-size:14px;color:#5b6b84;"></div>
+        </div>
+
+        <!-- Sans offre -->
+        <div id="offersEmpty" class="panel hidden">
+          <div class="empty">
+            <div class="big">⏳</div>
+            <p style="margin-bottom:6px;"><b>En attente de réponses.</b></p>
+            <p>Les transporteurs consultent la demande et cotent à l'aveugle.</p>
+            <button class="btn btn-primary" id="btnSimuler" style="margin-top:18px;">Simuler des réponses de transporteurs</button>
+            <p class="form-note">Démo : génère des offres représentatives pour tester la comparaison.</p>
+          </div>
+        </div>
+
+        <!-- Offres -->
+        <div id="offersWrap" class="hidden">
+          <div class="results-bar">
+            <div class="count"><b id="countOffres">0</b> offres reçues — cotations confidentielles</div>
+            <span class="badge badge-blue">🔒 Identités masquées</span>
+          </div>
+          <div class="panel" style="padding:0;overflow:hidden;">
+            <div class="table-wrap">
+              <table class="table">
+                <thead>
+                  <tr>
+                    <th>Offre</th><th>Prix transport</th><th>Délai</th><th>Validité</th>
+                    <th>Conditions</th><th>Périmètre</th>
+                  </tr>
+                </thead>
+                <tbody id="offresBody"></tbody>
+              </table>
+            </div>
+          </div>
+          <div id="nonConformNote" class="info-banner" style="margin-top:16px;"></div>
+        </div>
+      </div>
+
+      <!-- ============ PANNEAU RECOMMANDATION ============ -->
+      <aside class="panel panel-sticky" id="recoBox"></aside>
+
+    </div>
+  </section>
+
+  <!-- ============ MODALE REFUS ============ -->
+  <div class="modal-backdrop" id="modalRefus">
+    <div class="modal" style="width:min(480px,100%);">
+      <div class="modal-head">
+        <h3>Pourquoi refusez-vous cette offre ?</h3>
+        <button class="modal-close" aria-label="Fermer">✕</button>
+      </div>
+      <div id="motifsList" style="display:flex;flex-direction:column;gap:10px;margin-bottom:16px;"></div>
+      <div class="field" id="autreField" style="display:none;">
+        <label>Précisez</label>
+        <textarea id="refusAutre" placeholder="Motif du refus…"></textarea>
+      </div>
+      <button class="btn btn-primary btn-block" id="btnConfirmerRefus">Confirmer le refus</button>
+      <p class="form-note text-center">Ces informations alimentent l'analyse commerciale de la plateforme.</p>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <div class="container footer-bottom" style="border:none;padding-top:0;">
+      <span>© <span id="year"></span> Transia — Prototype v0.1 · Démonstration, aucune donnée transmise</span>
+      <span><a href="index.html" style="color:#93c5fd;">Retour à l'accueil</a></span>
+    </div>
+  </footer>
+
+  <div class="toast-zone"></div>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/comparateur.js"></script>
+</body>
+</html>
