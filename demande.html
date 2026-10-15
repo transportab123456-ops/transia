@@ -43,12 +43,17 @@
         <div id="formWrap">
           <form id="formRfq" novalidate>
 
+            <!-- Listes défilantes : tous les pays + villes selon le pays -->
+            <datalist id="dlPays"></datalist>
+            <datalist id="dlVillesO"></datalist>
+            <datalist id="dlVillesD"></datalist>
+
             <!-- A — ORIGINE -->
             <div class="panel" style="margin-bottom:22px;">
               <h2>A — Origine</h2>
               <div class="form-row-3">
-                <div class="field"><label>Pays *</label><input id="oPays" type="text" placeholder="France" /></div>
-                <div class="field"><label>Ville *</label><input id="oVille" type="text" placeholder="Lyon" /></div>
+                <div class="field"><label>Pays *</label><input id="oPays" type="text" list="dlPays" placeholder="Tapez ou choisissez… (196 pays)" /></div>
+                <div class="field"><label>Ville *</label><input id="oVille" type="text" list="dlVillesO" placeholder="Ville selon le pays choisi" /></div>
                 <div class="field"><label>Code postal</label><input id="oCp" type="text" placeholder="69007" /></div>
               </div>
               <div class="form-row">
@@ -61,8 +66,8 @@
             <div class="panel" style="margin-bottom:22px;">
               <h2>B — Destination</h2>
               <div class="form-row-3">
-                <div class="field"><label>Pays *</label><input id="dPays" type="text" placeholder="Maroc" /></div>
-                <div class="field"><label>Ville *</label><input id="dVille" type="text" placeholder="Casablanca" /></div>
+                <div class="field"><label>Pays *</label><input id="dPays" type="text" list="dlPays" placeholder="Tapez ou choisissez… (196 pays)" /></div>
+                <div class="field"><label>Ville *</label><input id="dVille" type="text" list="dlVillesD" placeholder="Ville selon le pays choisi" /></div>
                 <div class="field"><label>Code postal</label><input id="dCp" type="text" placeholder="20000" /></div>
               </div>
               <div class="field"><label>Lieu de livraison *</label><input id="dLieu" type="text" placeholder="Adresse complète de livraison" /></div>
@@ -231,6 +236,7 @@
 
   <div class="toast-zone"></div>
   <script src="assets/js/data.js"></script>
+  <script src="assets/js/reference.js"></script>
   <script src="assets/js/app.js"></script>
   <script src="assets/js/demande.js"></script>
 </body>

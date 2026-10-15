@@ -35,6 +35,29 @@
   }
   renderCompte();
 
+  /* ---------- Listes défilantes : pays + devises ---------- */
+  var REF = window.REF || { pays: [], devises: [] };
+
+  var dlPaysT = get("dlPaysT");
+  if (dlPaysT) {
+    REF.pays.forEach(function (p) {
+      var o = document.createElement("option");
+      o.value = p.n;
+      dlPaysT.appendChild(o);
+    });
+  }
+
+  var rDevise = get("rDevise");
+  if (rDevise) {
+    REF.devises.forEach(function (d) {
+      var o = document.createElement("option");
+      o.value = d.c;
+      o.textContent = d.c + " — " + d.n;
+      rDevise.appendChild(o);
+    });
+    rDevise.value = "EUR";
+  }
+
   /* ---------- Modale inscription ---------- */
   var modesBox = get("iModes");
   DB.modes.forEach(function (m) {

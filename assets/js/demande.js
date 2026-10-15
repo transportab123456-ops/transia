@@ -4,6 +4,48 @@
 (function () {
   var DB = window.DB;
 
+  /* ---------- Listes défilantes : tous les pays + villes par pays ---------- */
+  var REF = window.REF || { pays: [], devises: [] };
+  var paysNames = REF.pays.map(function (p) { return p.n; });
+
+  function fillDatalist(listId, values) {
+    var dl = document.getElementById(listId);
+    if (!dl) return;
+    dl.innerHTML = "";
+    values.forEach(function (v) {
+      var o = document.createElement("option");
+      o.value = v;
+      dl.appendChild(o);
+    });
+  }
+
+  function citiesFor(paysName) {
+    var found = REF.pays.filter(function (p) { return p.n === paysName; })[0];
+    return found ? found.v : [];
+  }
+
+  /* Pays : les 196 pays, défilants */
+  fillDatalist("dlPays", paysNames);
+
+  /* Villes : recalées sur le pays saisi (origine + destination) */
+  var oPays = document.getElementById("oPays");
+  var dPays = document.getElementById("dPays");
+
+  function syncVillesOrigine() {
+    var villes = citiesFor(oPays.value.trim());
+    fillDatalist("dlVillesO", villes);
+  }
+  function syncVillesDest() {
+    var villes = citiesFor(dPays.value.trim());
+    fillDatalist("dlVillesD", villes);
+  }
+  oPays.addEventListener("input", syncVillesOrigine);
+  oPays.addEventListener("change", syncVillesOrigine);
+  dPays.addEventListener("input", syncVillesDest);
+  dPays.addEventListener("change", syncVillesDest);
+  syncVillesOrigine();
+  syncVillesDest();
+
   /* ---------- Remplissage des listes ---------- */
   var modeSel = document.getElementById("mode");
   DB.modes.forEach(function (m) {

@@ -119,7 +119,8 @@
       <h4 style="color:#0f2c4e;margin-bottom:12px;">Informations entreprise</h4>
       <div class="field"><label>Raison sociale *</label><input id="iRaison" type="text" placeholder="TransAtlas Logistics" /></div>
       <div class="form-row-3">
-        <div class="field"><label>Pays *</label><input id="iPays" type="text" placeholder="France" /></div>
+        <div class="field"><label>Pays *</label><input id="iPays" type="text" list="dlPaysT" placeholder="Tapez ou choisissez… (196 pays)" /></div>
+        <datalist id="dlPaysT"></datalist>
         <div class="field"><label>Numéro d'immatriculation *</label><input id="iImmat" type="text" placeholder="FR-812 449 302" /></div>
         <div class="field"><label>N° TVA / identifiant fiscal *</label><input id="iTva" type="text" placeholder="FR 42 812449302" /></div>
       </div>
@@ -170,10 +171,8 @@
         <div class="field"><label>Prix du transport *</label><input id="rPrix" type="number" min="0" placeholder="2090" /></div>
         <div class="field">
           <label>Devise *</label>
-          <select id="rDevise">
-            <option>EUR</option><option>USD</option><option>GBP</option><option>CHF</option>
-            <option>MAD</option><option>TND</option><option>CAD</option>
-          </select>
+          <select id="rDevise"></select>
+          <p class="form-note" style="margin-top:6px;">Toutes les devises du monde sont proposées (ISO 4217).</p>
         </div>
       </div>
       <div class="form-row">
@@ -196,6 +195,7 @@
 
   <div class="toast-zone"></div>
   <script src="assets/js/data.js"></script>
+  <script src="assets/js/reference.js"></script>
   <script src="assets/js/app.js"></script>
   <script src="assets/js/transporteur.js"></script>
 </body>
