@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Espace donneur d'ordre — mes demandes — Transia</title>
+  <meta name="description" content="Tableau de bord donneur d'ordre : vos demandes de cotation, les offres reçues, les affaires confirmées et l'historique. Cotation à l'aveugle jusqu'à acceptation." />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+  <header class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="logo"><span class="logo-mark">◆</span> Transia</a>
+      <nav class="nav-links" id="navLinks">
+        <a href="index.html">Accueil</a>
+        <a href="demande.html">Créer une demande</a>
+        <a href="espace-donneur.html" class="active">Espace donneur</a>
+        <a href="transporteur.html">Espace transporteur</a>
+        <a href="comparateur.html">Comparateur</a>
+        <a href="admin.html">Administration</a>
+      </nav>
+      <div class="nav-actions">
+        <a href="transporteur.html" class="btn btn-ghost">Je suis transporteur</a>
+        <a href="demande.html" class="btn btn-primary">Déposer une demande</a>
+        <button class="nav-toggle" id="navToggle" aria-label="Ouvrir le menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="page-head">
+    <div class="container">
+      <div class="breadcrumb"><a href="index.html">Accueil</a> / Espace donneur d'ordre</div>
+      <h1>Tableau de bord donneur d'ordre</h1>
+      <p>Suivez vos demandes de cotation, les offres reçues et vos affaires confirmées. Les transporteurs cotent à l'aveugle — le détail des offres n'apparaît qu'au comparateur.</p>
+    </div>
+  </section>
+
+  <section class="section" style="padding:36px 0;">
+    <div class="container">
+
+      <!-- Action centrale -->
+      <div class="panel" style="margin-bottom:24px;display:flex;justify-content:space-between;align-items:center;gap:18px;flex-wrap:wrap;">
+        <div>
+          <h3 class="mt-0 mb-0">Vos opérations de transport</h3>
+          <p class="muted" style="font-size:14.5px;margin:6px 0 0;">Déposez une demande, recevez des offres concurrentes, laissez la plateforme comparer.</p>
+        </div>
+        <a href="demande.html" class="btn btn-primary btn-lg">+ Nouvelle demande de transport</a>
+      </div>
+
+      <!-- KPI -->
+      <div class="grid grid-4" id="donneurKpis" style="margin-bottom:26px;"></div>
+
+      <!-- Mes demandes -->
+      <div class="panel" style="margin-bottom:26px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
+          <h3 class="mt-0 mb-0">📋 Mes demandes</h3>
+          <span class="badge badge-blue">🔒 Cotation à l'aveugle</span>
+        </div>
+        <p class="muted" style="font-size:14px;margin-bottom:16px;">Le nombre de réponses vous est indiqué, mais jamais le détail ni les prix avant que la plateforme ne vous recommande la meilleure offre.</p>
+        <div class="table-wrap">
+          <table class="table">
+            <thead>
+              <tr><th>Réf.</th><th>Trajet</th><th>Mode</th><th>Date enlèv.</th><th>Offres</th><th>Statut</th><th></th></tr>
+            </thead>
+            <tbody id="mesDemandesBody"></tbody>
+          </table>
+        </div>
+        <div class="empty hidden" id="donneurEmpty">
+          <div class="big">🗂️</div>
+          <p>Aucune demande pour l'instant.</p>
+          <a href="demande.html" class="btn btn-primary" style="margin-top:14px;">Déposer ma première demande</a>
+        </div>
+      </div>
+
+      <!-- Offres à valider / affaires -->
+      <div class="layout-2">
+        <div class="panel">
+          <h3 class="mt-0">🔔 Offres à valider</h3>
+          <p style="font-size:13.5px;color:#617795;margin-bottom:16px;">Dès qu'une recommandation vous est présentée, acceptez ou refusez — l'identité du transporteur reste masquée jusqu'à acceptation.</p>
+          <div id="offresValider"></div>
+        </div>
+        <div class="panel">
+          <h3 class="mt-0">✅ Transports confirmés</h3>
+          <p style="font-size:13.5px;color:#617795;margin-bottom:16px;">Après double confirmation, les identités sont dévoilées et l'affaire est enregistrée.</p>
+          <div id="affairesConfirmees"></div>
+        </div>
+      </div>
+
+      <!-- Historique -->
+      <div class="panel" style="margin-top:26px;">
+        <h3 class="mt-0">🗄️ Historique</h3>
+        <p class="muted" style="font-size:14px;margin-bottom:16px;">Demandes passées, prix acceptés, dates, modes et statuts — y compris les refus (motifs utiles à l'analyse).</p>
+        <div id="historiqueList"></div>
+      </div>
+
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container footer-bottom" style="border:none;padding-top:0;">
+      <span>© <span id="year"></span> Transia — Prototype v0.1 · Démonstration, aucune donnée transmise</span>
+      <span><a href="index.html" style="color:#a6c8f3;">Retour à l'accueil</a></span>
+    </div>
+  </footer>
+
+  <div class="toast-zone"></div>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/moteur.js"></script>
+  <script src="assets/js/espace-donneur.js"></script>
+</body>
+</html>

@@ -15,6 +15,7 @@
       <nav class="nav-links" id="navLinks">
         <a href="index.html">Accueil</a>
         <a href="demande.html">Créer une demande</a>
+        <a href="espace-donneur.html">Espace donneur</a>
         <a href="transporteur.html">Espace transporteur</a>
         <a href="comparateur.html">Comparateur</a>
         <a href="admin.html" class="active">Administration</a>
@@ -40,6 +41,73 @@
 
       <!-- ============ KPI ============ -->
       <div class="grid grid-4" id="kpiGrid" style="margin-bottom:26px;"></div>
+
+      <!-- ============ FILE DE TRAVAIL ============ -->
+      <div class="panel" style="margin-bottom:26px;" id="aFaire">
+        <h3 class="mt-0">☑️ À faire aujourd'hui</h3>
+        <p class="muted" style="font-size:14px;margin-bottom:14px;">File de travail priorisée — l'administrateur n'a pas à parcourir toute la plateforme.</p>
+        <div class="grid grid-4" id="todoGrid"></div>
+      </div>
+
+      <!-- ============ VALIDATION RECOMMANDATION (COMPARATEUR) ============ -->
+      <div class="panel" style="margin-bottom:26px;" id="comparateur">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
+          <h3 class="mt-0 mb-0">🧮 Validation des recommandations</h3>
+          <span class="badge badge-amber">L'algorithme propose · l'admin décide</span>
+        </div>
+        <p class="muted" style="font-size:14px;margin-bottom:16px;">Le moteur classe les offres normalisées. Aucune recommandation n'est envoyée au client sans validation humaine. Tout écart au n°1 exige un motif (journalisé).</p>
+        <div class="field" style="max-width:520px;margin-bottom:16px;">
+          <label>Demande de cotation</label>
+          <select id="adminSelectRfq"></select>
+        </div>
+        <div id="adminClassement"></div>
+      </div>
+
+      <!-- ============ DONNEURS D'ORDRE ============ -->
+      <div class="panel" style="margin-bottom:26px;">
+        <h3 class="mt-0">🏢 Donneurs d'ordre</h3>
+        <p class="muted" style="font-size:14px;margin-bottom:16px;">Vue client : fiche, RFQ, affaires, contacts import/export/logistique et motifs de refus.</p>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Entreprise</th><th>Pays</th><th>Contact principal</th><th>RFQ</th><th>Affaires</th><th>Statut</th></tr></thead>
+            <tbody id="donneursBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ============ COTATIONS ============ -->
+      <div class="panel" style="margin-bottom:26px;">
+        <h3 class="mt-0">📝 Toutes les cotations</h3>
+        <p class="muted" style="font-size:14px;margin-bottom:16px;">Vue normalisée du moteur : prix comparable converti, statut technique. Les données tarifaires d'un transporteur ne sont jamais communiquées à un concurrent.</p>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>RFQ</th><th>Offre</th><th>Transport</th><th>Frais obl.</th><th>Total comparable</th><th>Devise</th><th>Délai</th><th>Conformité</th></tr></thead>
+            <tbody id="cotationsBody"></tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- ============ INCIDENTS ============ -->
+      <div class="panel" style="margin-bottom:26px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
+          <h3 class="mt-0 mb-0">⚠️ Incidents</h3>
+          <span class="badge badge-red" id="incidentsCount">0 à traiter</span>
+        </div>
+        <p class="muted" style="font-size:14px;margin-bottom:16px;">Contournement, non-confirmation, annulation, document expiré, litige sur commission.</p>
+        <div id="incidentsList"></div>
+      </div>
+
+      <!-- ============ CONTACTS INTERNATIONAUX ============ -->
+      <div class="panel" style="margin-bottom:26px;">
+        <h3 class="mt-0">🌐 Contacts internationaux</h3>
+        <p class="muted" style="font-size:14px;margin-bottom:16px;">Base stratégique collectée au fil des opérations. Ils n'activent rien automatiquement — seul l'admin décide d'ouvrir un marché.</p>
+        <div class="table-wrap">
+          <table class="table">
+            <thead><tr><th>Entreprise</th><th>Pays</th><th>Type</th><th>Contact</th><th>Fonction</th><th>Source</th><th>Collecté le</th></tr></thead>
+            <tbody id="contactsBody"></tbody>
+          </table>
+        </div>
+      </div>
 
       <!-- ============ PAYS ============ -->
       <div class="panel" style="margin-bottom:26px;">
@@ -87,6 +155,13 @@
         </div>
       </div>
 
+      <!-- ============ RAPPORTS ============ -->
+      <div class="panel" style="margin-bottom:26px;">
+        <h3 class="mt-0">📊 Rapports</h3>
+        <p class="muted" style="font-size:14px;margin-bottom:16px;">Performance par ligne (origine → destination) : volume, offres par RFQ, prix médian et taux d'acceptation.</p>
+        <div class="grid grid-3" id="rapportsGrid"></div>
+      </div>
+
       <!-- ============ VALIDATION ÉCONOMIQUE ============ -->
       <div class="panel">
         <h3 class="mt-0">📈 Validation économique (phase 6)</h3>
@@ -122,6 +197,7 @@
   <div class="toast-zone"></div>
   <script src="assets/js/data.js"></script>
   <script src="assets/js/app.js"></script>
+  <script src="assets/js/moteur.js"></script>
   <script src="assets/js/admin.js"></script>
 </body>
 </html>

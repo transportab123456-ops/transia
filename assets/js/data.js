@@ -22,12 +22,13 @@ window.DB = {
   /* ---------- Modes ---------- */
   modes: ["Routier", "Maritime", "Aérien", "Multimodal"],
 
-  /* ---------- Motifs de refus (section 14) ---------- */
+  /* ---------- Motifs de refus (section 14 + module donneur) ---------- */
   motifsRefus: [
     "Prix trop élevé",
     "Délai",
     "Besoin annulé",
     "Transport déjà attribué",
+    "Modification du besoin",
     "Autre"
   ],
 

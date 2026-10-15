@@ -6,7 +6,11 @@
   var DB = window.DB;
   function get(id) { return document.getElementById(id); }
 
-  var COMMISSION = 0.08;
+  var COMMISSION = Moteur.COMMISSION;
+  var DEVISE_RFQ = Moteur.DEVISE_RFQ;
+
+  /* Les fonctions du moteur (conversion, normalisation, classement, validation)
+     sont partagées via assets/js/moteur.js — voir Moteur.* */
 
   /* ---------- Sélection de la RFQ ---------- */
   var select = get("selectRfq");
@@ -41,23 +45,30 @@
   /* ---------- Génération d'offres de démonstration ---------- */
   function genererOffres(rfq) {
     var base = { "Routier": 2200, "Maritime": 3700, "Aérien": 1850, "Multimodal": 2600 }[rfq.mode] || 2000;
-    var delais = { "Routier": ["5 jours", "6 jours", "4 jours"], "Maritime": ["7 jours", "6 jours", "9 jours"], "Aérien": ["48 h", "72 h"], "Multimodal": ["6 jours", "8 jours"] }[rfq.mode] || ["6 jours"];
+    var delais = { "Routier": ["5 jours", "6 jours", "4 jours", "8 jours"], "Maritime": ["7 jours", "6 jours", "9 jours", "12 jours"], "Aérien": ["48 h", "72 h", "48 h", "96 h"], "Multimodal": ["6 jours", "8 jours", "5 jours", "11 jours"] }[rfq.mode] || ["6 jours"];
+    var delaiJours = { "Routier": [5, 6, 4, 8], "Maritime": [7, 6, 9, 12], "Aérien": [2, 3, 2, 4], "Multimodal": [6, 8, 5, 11] }[rfq.mode] || [6];
     var noms = ["TransAtlas Logistics", "EuroBridge Transport", "Maghreb Express", "Alpina Trans"];
-    var variantes = [-0.11, -0.05, 0.04, 0.09];
+    /* Variantes de prix TRANSPORT (avant frais obligatoires) :
+       l'offre C (non conforme) est volontairement la MOINS CHÈRE pour illustrer
+       la règle du moteur : le prix bas ne gagne pas s'il n'est pas comparable. */
+    var variantes = [-0.02, -0.05, -0.11, 0.09];
     var start = getOffres(rfq.ref).length;
     var out = [];
     for (var i = 0; i < 4; i++) {
       var prix = Math.round((base * (1 + variantes[i])) / 10) * 10;
-      out.push({
+      var offre = {
         lettre: String.fromCharCode(65 + start + i),
         prix: prix,
         devise: "EUR",
+        fraisObligatoires: 0,
+        fraisAPreciser: false,
         delai: delais[i % delais.length],
+        delaiJours: delaiJours[i % delaiJours.length],
         validite: "30/09/2026",
-        conditions: i === 3 ? "Hors manutention à l'arrivée — périmètre non comparable." : "Port payé. TVA incluse. Assurance standard incluse.",
+        conditions: "Port payé. TVA incluse. Assurance standard incluse.",
         services: i === 0 ? "Groupage hebdomadaire, suivi inclus" : "—",
-        conforme: i !== 3,
-        motifNonConformite: i === 3 ? "Périmètre différent : manutention d'arrivée exclue. Offre écartée de la recommandation." : null,
+        conforme: true,
+        motifNonConformite: null,
         source: "simu",
         dateDepot: nowFr(),
         qualite: {
@@ -68,7 +79,27 @@
           affaires: [210, 145, 305, 175][i] + " affaires sur la plateforme"
         },
         nomDemo: noms[i]
-      });
+      };
+
+      /* Exercice du moteur — cas particuliers pour tester la normalisation */
+      if (i === 1) {
+        /* Offre B : frais obligatoires NON précisés → À VÉRIFIER */
+        offre.fraisAPreciser = true;
+        offre.conditions = "Frais de passage et de manutention à ajouter (montant non précisé).";
+        offre.services = "—";
+      } else if (i === 2) {
+        /* Offre C : périmètre différent (livraison déchargée exclue) → NON CONFORME */
+        offre.motifNonConformite = "Périmètre différent : manutention d'arrivée exclue. Offre écartée de la recommandation.";
+        offre.conditions = "Hors manutention à l'arrivée — périmètre non comparable.";
+      } else if (i === 3) {
+        /* Offre D : transport en USD + frais obligatoires explicites → conversion + normalisation */
+        offre.devise = "USD";
+        offre.prix = Math.round(prix / 0.92); /* prix exprimé en USD */
+        offre.fraisObligatoires = 140; /* frais obligatoires (même devise) */
+        offre.conditions = "Port payé. Frais de dossier obligatoires 140 USD. TVA incluse.";
+      }
+
+      out.push(offre);
     }
     out.forEach(function (o) { saveOffre(rfq.ref, o); });
     return out;
@@ -127,46 +158,70 @@
       return;
     }
 
-    /* Tableau des offres, trié par prix */
-    var triees = offres.slice().sort(function (a, b) { return a.prix - b.prix; });
-    var conformes = triees.filter(function (o) { return o.conforme; });
-    var reco = conformes[0] || null;
+    /* Tableau des offres — normalisées et classées par le moteur */
+    var classement = Moteur.classer(offres);
+    var ordonnees = classement.conforme.concat(classement.aVerifier, classement.ecartees);
+    var reco = classement.recommandee;
+    var validee = Moteur.estValidee(ref);
 
     get("countOffres").textContent = offres.length;
     var body = get("offresBody");
     body.innerHTML = "";
-    triees.forEach(function (o) {
+    ordonnees.forEach(function (o) {
       var tr = document.createElement("tr");
-      if (reco && o.lettre === reco.lettre && !affaire) tr.style.background = "var(--blue-light)";
+      var estReco = reco && o.lettre === reco.lettre;
+      if (estReco && !affaire) tr.style.background = "var(--blue-light)";
+
+      var badgeStatutOffre;
+      if (o.statutTechnique === "NON_CONFORME") badgeStatutOffre = "<span class='badge badge-red'>Non conforme</span>";
+      else if (o.statutTechnique === "A_VERIFIER") badgeStatutOffre = "<span class='badge badge-amber'>À vérifier</span>";
+      else badgeStatutOffre = "<span class='badge badge-green'>Conforme</span>";
+
+      var prixAffiche = o.prixComparable == null
+        ? "<span style='color:#96650f;'>à déterminer</span>"
+        : "<b>" + formatEuro(o.prixComparable) + "</b> <span style='font-size:11.5px;color:#9fb2cc;'>" + escapeHtml(DEVISE_RFQ) + "</span>";
+
+      /* détail de la normalisation sous le prix */
+      var detail = o.prixComparable == null ? "frais obligatoires non précisés"
+        : (o.fraisObligatoires > 0 || o.devise !== "EUR"
+            ? "transport " + formatEuro(o.transportComparaison) + (o.fraisObligatoires > 0 ? " + frais " + formatEuro(o.fraisComparaison) : "") + (o.devise !== "EUR" ? " · conv. " + o.tauxChange : "")
+            : "tout compris");
+
       tr.innerHTML =
         "<td><b>Offre " + escapeHtml(o.lettre) + "</b>" +
-        (reco && o.lettre === reco.lettre && !affaire ? " <span class='badge badge-green'>Recommandée</span>" : "") + "</td>" +
-        "<td><b>" + formatEuro(o.prix) + "</b> " + escapeHtml(o.devise) + "</td>" +
+        (estReco && !affaire ? " <span class='badge badge-blue'>Recommandée</span>" : "") +
+        "<br /><span style='font-size:11.5px;color:#9fb2cc;'>" + escapeHtml(o.devise) + " origine</span></td>" +
+        "<td>" + prixAffiche + "<br /><span style='font-size:11.5px;color:#9fb2cc;'>" + detail + "</span></td>" +
         "<td>" + escapeHtml(o.delai) + "</td>" +
         "<td>" + escapeHtml(o.validite) + "</td>" +
         "<td style='font-size:13px;'>" + escapeHtml(o.conditions) + "</td>" +
-        "<td>" + (o.conforme
-          ? "<span class='badge badge-green'>Conforme</span>"
-          : "<span class='badge badge-red'>Non comparable</span>") + "</td>";
+        "<td>" + badgeStatutOffre + "</td>";
       body.appendChild(tr);
     });
 
-    var nonConf = triees.filter(function (o) { return !o.conforme; });
+    /* Note d'exclusion / clarification */
     var note = get("nonConformNote");
-    if (nonConf.length) {
+    var messages = [];
+    if (classement.ecartees.length) {
+      messages.push("⚖️ <span><b>Offres écartées :</b> " +
+        classement.ecartees.map(function (o) { return "Offre " + escapeHtml(o.lettre) + " — " + escapeHtml(o.motifNonConformite || "périmètre différent"); }).join(" · ") + "</span>");
+    }
+    if (classement.aVerifier.length) {
+      messages.push("🔎 <span><b>À clarifier :</b> " +
+        classement.aVerifier.map(function (o) { return "Offre " + escapeHtml(o.lettre) + " — frais obligatoires à préciser"; }).join(" · ") + "</span>");
+    }
+    if (messages.length) {
       note.classList.remove("hidden");
-      note.innerHTML = "⚖️ <span><b>Contrôle de périmètre :</b> " +
-        nonConf.map(function (o) { return "Offre " + escapeHtml(o.lettre) + " — " + escapeHtml(o.motifNonConformite || "périmètre différent"); }).join(" · ") +
-        "</span>";
+      note.innerHTML = messages.join("<br />");
     } else {
       note.classList.add("hidden");
     }
 
-    rendreReco(rfq, reco, affaire, refusee);
+    rendreReco(rfq, reco, affaire, refusee, classement, validee);
   }
 
   /* ---------- Panneau recommandation ---------- */
-  function rendreReco(rfq, reco, affaire, refusee) {
+  function rendreReco(rfq, reco, affaire, refusee, classement, validee) {
     var box = get("recoBox");
 
     /* Affaire confirmée : dévoilement */
@@ -220,20 +275,63 @@
     }
 
     /* Offre recommandée */
+    var secoursHtml = "";
+    if (classement && classement.secours.length) {
+      secoursHtml = "<div class='divider'></div><h4 style='color:#0f2c4e;font-size:14px;margin-bottom:8px;'>🛟 Offres de secours (internes)</h4>" +
+        "<p style='font-size:12.5px;color:#9fb2cc;margin-bottom:8px;'>Si le transporteur n°1 ne confirme pas, la suivante est proposée sans relancer l'appel d'offres.</p>" +
+        classement.secours.map(function (s, idx) {
+          return "<div style='display:flex;justify-content:space-between;font-size:13px;color:#617795;padding:6px 0;border-bottom:1px dashed var(--line);'>" +
+            "<span>Secours n°" + (idx + 1) + " — Offre " + escapeHtml(s.lettre) + "</span>" +
+            "<b>" + formatEuro(s.prixComparable) + "</b></div>";
+        }).join("");
+    }
+
+    var assiette = reco.assietteCommission;
+    var commission = Math.round(assiette * COMMISSION);
+
+    /* Gate : l'algorithme propose, l'administrateur valide avant envoi au client */
+    if (!validee) {
+      box.innerHTML =
+        "<h3 class='mt-0'>🏆 Offre recommandée par le moteur</h3>" +
+        "<p style='font-size:13px;color:#617795;'>Meilleur prix comparable parmi les offres conformes et de même périmètre.</p>" +
+        "<div style='background:var(--blue-light);border-radius:12px;padding:18px;margin:14px 0;'>" +
+        "<div class='price-tag' style='text-align:left;'><b style='font-size:32px;'>" + formatEuro(reco.prixComparable) + "</b>" +
+        "<span>prix comparable (transport + frais obligatoires) en " + escapeHtml(DEVISE_RFQ) + "</span></div>" +
+        "<div style='display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:13.5px;color:#617795;'>" +
+        "<span>⏱️ <b style='color:#1b2d49;'>" + escapeHtml(reco.delai) + "</b></span>" +
+        "<span>📅 Validité <b style='color:#1b2d49;'>" + escapeHtml(reco.validite) + "</b></span>" +
+        "<span>Offre <b style='color:#1b2d49;'>" + escapeHtml(reco.lettre) + "</b></span></div></div>" +
+        "<div class='info-banner' style='margin:14px 0;'>🧮 <span><b>Normalisation appliquée :</b> prix comparable = transport + frais obligatoires (options exclues), converti en " + escapeHtml(DEVISE_RFQ) + ". L'assiette de commission reste la seule partie transport.</span></div>" +
+        secoursHtml +
+        "<div class='divider'></div>" +
+        "<div class='info-banner' style='margin:14px 0;'>🛡️ <span><b>Validation administrateur requise.</b> L'algorithme propose — l'administrateur contrôle avant que l'offre ne vous soit présentée pour acceptation.</span></div>" +
+        "<a href='admin.html#comparateur' class='btn btn-primary btn-block btn-lg'>Valider côté administration</a>" +
+        "<p class='form-note text-center'>Aucune offre n'est envoyée automatiquement au client au lancement.</p>";
+      return;
+    }
+
+    var valInfo = Moteur.getValidations()[rfq.ref];
     box.innerHTML =
       "<h3 class='mt-0'>🏆 Offre recommandée</h3>" +
-      "<p style='font-size:13px;color:#617795;'>La moins chère parmi les offres couvrant le même périmètre.</p>" +
+      "<p style='font-size:13px;color:#617795;'>Validée par l'administrateur le " + escapeHtml(valInfo ? valInfo.date : "—") +
+      (valInfo && valInfo.motif ? " · écart n°1 motivé : " + escapeHtml(valInfo.motif) : " · conforme à la proposition du moteur") + ".</p>" +
       "<div style='background:var(--blue-light);border-radius:12px;padding:18px;margin:14px 0;'>" +
-      "<div class='price-tag' style='text-align:left;'><b style='font-size:32px;'>" + formatEuro(reco.prix) + "</b>" +
-      "<span>" + escapeHtml(reco.devise) + " · transport seul</span></div>" +
+      "<div class='price-tag' style='text-align:left;'><b style='font-size:32px;'>" + formatEuro(reco.prixComparable) + "</b>" +
+      "<span>prix comparable en " + escapeHtml(DEVISE_RFQ) + "</span></div>" +
       "<div style='display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:13.5px;color:#617795;'>" +
       "<span>⏱️ Délai : <b style='color:#1b2d49;'>" + escapeHtml(reco.delai) + "</b></span>" +
       "<span>📅 Validité : <b style='color:#1b2d49;'>" + escapeHtml(reco.validite) + "</b></span>" +
       "<span>Offre <b style='color:#1b2d49;'>" + escapeHtml(reco.lettre) + "</b></span>" +
       "</div></div>" +
+      "<div class='divider'></div>" +
+      "<div style='display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;'>" +
+      "<div class='box'><span>Prix comparable</span><b>" + formatEuro(reco.prixComparable) + "</b></div>" +
+      "<div class='box'><span>Commission 8 % sur " + formatEuro(assiette) + "</span><b>" + formatEuro(commission) + "</b></div>" +
+      "</div>" +
       "<h4 style='color:#0f2c4e;font-size:14.5px;margin-bottom:8px;'>Conditions importantes</h4>" +
       "<p style='font-size:13.5px;color:#617795;margin-bottom:6px;'>" + escapeHtml(reco.conditions) + "</p>" +
       "<p style='font-size:13.5px;color:#617795;'><b>Services :</b> " + escapeHtml(reco.services || "—") + "</p>" +
+      secoursHtml +
       "<div class='divider'></div>" +
       "<h4 style='color:#0f2c4e;font-size:14.5px;margin-bottom:10px;'>Qualification du transporteur</h4>" +
       "<ul style='list-style:none;font-size:13px;color:#617795;line-height:1.9;'>" +
@@ -254,16 +352,19 @@
   /* ---------- Acceptation ---------- */
   function accepter(rfq, reco) {
     var t = choisirTransporteur(rfq);
-    var commission = Math.round(reco.prix * COMMISSION);
+    var assiette = reco.assietteCommission != null ? reco.assietteCommission : reco.prix;
+    var commission = Math.round(assiette * COMMISSION);
     var affaire = {
       ref: rfq.ref,
       ligne: rfq.origine.ville + " → " + rfq.dest.ville,
       mode: rfq.mode,
       offre: reco.lettre,
-      prix: reco.prix,
-      devise: reco.devise,
+      prix: reco.prixComparable != null ? reco.prixComparable : reco.prix,
+      devise: reco.deviseComparaison || reco.devise,
+      assietteCommission: assiette,
       commission: commission,
       date: nowFr(),
+      valideePar: (Moteur.getValidations()[rfq.ref] || {}).par || "Administrateur",
       transporteur: {
         id: t.id,
         nom: t.nom,
@@ -278,7 +379,7 @@
     Store.set("confirmees", conf);
     saveAffaire(affaire);
     rendre();
-    toast("Affaire confirmée — identités dévoilées, commission de " + formatEuro(commission) + " enregistrée.", "ok");
+    toast("Affaire confirmée — identités dévoilées, commission de " + formatEuro(commission) + " enregistrée (assiette " + formatEuro(assiette) + ").", "ok");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
