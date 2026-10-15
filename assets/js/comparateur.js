@@ -112,7 +112,7 @@
 
     /* Résumé RFQ */
     get("rfqResume").innerHTML =
-      "<b style='color:#0b2545;'>" + escapeHtml(rfq.origine.ville) + " (" + escapeHtml(rfq.origine.pays) + ") → " +
+      "<b style='color:#0f2c4e;'>" + escapeHtml(rfq.origine.ville) + " (" + escapeHtml(rfq.origine.pays) + ") → " +
       escapeHtml(rfq.dest.ville) + " (" + escapeHtml(rfq.dest.pays) + ")</b> · " +
       escapeHtml(rfq.mode) + " · " + escapeHtml(rfq.marchandise.type) + " · " + escapeHtml(String(rfq.marchandise.poids)) +
       "<br />Incoterm " + escapeHtml(rfq.incoterm) + " · enlèvement " + escapeHtml(rfq.origine.date) +
@@ -174,25 +174,25 @@
       var t = affaire.transporteur;
       box.innerHTML =
         "<h3 class='mt-0'>✅ Affaire confirmée</h3>" +
-        "<p style='font-size:13.5px;color:#5b6b84;'>Horodatée le " + escapeHtml(affaire.date) + " · réf. " + escapeHtml(affaire.ref) + "</p>" +
+        "<p style='font-size:13.5px;color:#617795;'>Horodatée le " + escapeHtml(affaire.date) + " · réf. " + escapeHtml(affaire.ref) + "</p>" +
         "<div class='divider'></div>" +
         "<div class='track-summary' style='grid-template-columns:1fr 1fr;'>" +
         "<div class='box'><span>Prix accepté</span><b>" + formatEuro(affaire.prix) + " " + escapeHtml(affaire.devise) + "</b></div>" +
         "<div class='box'><span>Commission 8 %</span><b>" + formatEuro(affaire.commission) + "</b></div>" +
         "</div>" +
-        "<p style='font-size:12.5px;color:#5b6b84;'>Assiette : la partie transport de l'opération. Facturée au transporteur. Les prestations annexes hors transport sont exclues de l'assiette.</p>" +
+        "<p style='font-size:12.5px;color:#617795;'>Assiette : la partie transport de l'opération. Facturée au transporteur. Les prestations annexes hors transport sont exclues de l'assiette.</p>" +
         "<div class='divider'></div>" +
-        "<h4 style='color:#0b2545;margin-bottom:12px;'>🔓 Identités dévoilées</h4>" +
+        "<h4 style='color:#0f2c4e;margin-bottom:12px;'>🔓 Identités dévoilées</h4>" +
         "<div style='border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:10px;'>" +
-        "<b style='color:#0b2545;'>" + escapeHtml(t.nom) + "</b> <span class='badge badge-green'>Transporteur</span>" +
-        "<p style='font-size:13px;color:#5b6b84;margin-top:6px;'>" + escapeHtml(t.contact) + " — " + escapeHtml(t.fonction) + "<br />" +
+        "<b style='color:#0f2c4e;'>" + escapeHtml(t.nom) + "</b> <span class='badge badge-green'>Transporteur</span>" +
+        "<p style='font-size:13px;color:#617795;margin-top:6px;'>" + escapeHtml(t.contact) + " — " + escapeHtml(t.fonction) + "<br />" +
         escapeHtml(t.tel) + " · " + escapeHtml(t.email) + "</p></div>" +
         "<div style='border:1px solid var(--line);border-radius:10px;padding:14px;'>" +
-        "<b style='color:#0b2545;'>" + escapeHtml(rfq.contact ? rfq.contact.entreprise || "Donneur d'ordre" : "Industrie & Composants SAS") + "</b> <span class='badge badge-blue'>Donneur d'ordre</span>" +
-        "<p style='font-size:13px;color:#5b6b84;margin-top:6px;'>" +
+        "<b style='color:#0f2c4e;'>" + escapeHtml(rfq.contact ? rfq.contact.entreprise || "Donneur d'ordre" : "Industrie & Composants SAS") + "</b> <span class='badge badge-blue'>Donneur d'ordre</span>" +
+        "<p style='font-size:13px;color:#617795;margin-top:6px;'>" +
         escapeHtml(rfq.contact ? rfq.contact.nom + " — " + rfq.contact.fonction : "Karine Lopez — Responsable import") + "<br />" +
         escapeHtml(rfq.contact ? rfq.contact.tel + " · " + rfq.contact.email : "+33 1 44 55 66 77 · k.lopez@iec-sas.example") + "</p></div>" +
-        "<p style='font-size:12.5px;color:#5b6b84;margin-top:12px;'>Contrat de transport conclu directement entre les parties. Les échanges passent désormais hors plateforme, sous clause de non-contournement.</p>" +
+        "<p style='font-size:12.5px;color:#617795;margin-top:12px;'>Contrat de transport conclu directement entre les parties. Les échanges passent désormais hors plateforme, sous clause de non-contournement.</p>" +
         "<a href='admin.html' class='btn btn-outline btn-block' style='margin-top:12px;'>Voir dans le journal des affaires →</a>";
       return;
     }
@@ -201,10 +201,10 @@
     if (refusee) {
       box.innerHTML =
         "<h3 class='mt-0'>❌ Offre refusée</h3>" +
-        "<p style='font-size:14px;color:#5b6b84;'>Motif : <b>" + escapeHtml(refusee.motif) + "</b></p>" +
-        "<p style='font-size:13px;color:#5b6b84;'>Enregistré le " + escapeHtml(refusee.date) + " — utilisé pour l'analyse commerciale.</p>" +
+        "<p style='font-size:14px;color:#617795;'>Motif : <b>" + escapeHtml(refusee.motif) + "</b></p>" +
+        "<p style='font-size:13px;color:#617795;'>Enregistré le " + escapeHtml(refusee.date) + " — utilisé pour l'analyse commerciale.</p>" +
         "<div class='divider'></div>" +
-        "<p style='font-size:13.5px;color:#5b6b84;'>La demande peut rester ouverte aux autres transporteurs, ou être clôturée.</p>" +
+        "<p style='font-size:13.5px;color:#617795;'>La demande peut rester ouverte aux autres transporteurs, ou être clôturée.</p>" +
         "<a href='demande.html' class='btn btn-primary btn-block' style='margin-top:12px;'>Déposer une nouvelle demande</a>";
       return;
     }
@@ -213,30 +213,30 @@
     if (!reco) {
       box.innerHTML =
         "<h3 class='mt-0'>⏳ En attente d'offres</h3>" +
-        "<p style='font-size:14px;color:#5b6b84;'>Dès qu'au moins une offre conforme sera reçue, la plateforme recommandera la meilleure : prix + conformité + délai.</p>" +
+        "<p style='font-size:14px;color:#617795;'>Dès qu'au moins une offre conforme sera reçue, la plateforme recommandera la meilleure : prix + conformité + délai.</p>" +
         "<div class='divider'></div>" +
-        "<p style='font-size:13px;color:#5b6b84;'>Rappel : les transporteurs cotent à l'aveugle — le nombre d'offres n'est jamais communiqué.</p>";
+        "<p style='font-size:13px;color:#617795;'>Rappel : les transporteurs cotent à l'aveugle — le nombre d'offres n'est jamais communiqué.</p>";
       return;
     }
 
     /* Offre recommandée */
     box.innerHTML =
       "<h3 class='mt-0'>🏆 Offre recommandée</h3>" +
-      "<p style='font-size:13px;color:#5b6b84;'>La moins chère parmi les offres couvrant le même périmètre.</p>" +
+      "<p style='font-size:13px;color:#617795;'>La moins chère parmi les offres couvrant le même périmètre.</p>" +
       "<div style='background:var(--blue-light);border-radius:12px;padding:18px;margin:14px 0;'>" +
       "<div class='price-tag' style='text-align:left;'><b style='font-size:32px;'>" + formatEuro(reco.prix) + "</b>" +
       "<span>" + escapeHtml(reco.devise) + " · transport seul</span></div>" +
-      "<div style='display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:13.5px;color:#5b6b84;'>" +
-      "<span>⏱️ Délai : <b style='color:#16233b;'>" + escapeHtml(reco.delai) + "</b></span>" +
-      "<span>📅 Validité : <b style='color:#16233b;'>" + escapeHtml(reco.validite) + "</b></span>" +
-      "<span>Offre <b style='color:#16233b;'>" + escapeHtml(reco.lettre) + "</b></span>" +
+      "<div style='display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:13.5px;color:#617795;'>" +
+      "<span>⏱️ Délai : <b style='color:#1b2d49;'>" + escapeHtml(reco.delai) + "</b></span>" +
+      "<span>📅 Validité : <b style='color:#1b2d49;'>" + escapeHtml(reco.validite) + "</b></span>" +
+      "<span>Offre <b style='color:#1b2d49;'>" + escapeHtml(reco.lettre) + "</b></span>" +
       "</div></div>" +
-      "<h4 style='color:#0b2545;font-size:14.5px;margin-bottom:8px;'>Conditions importantes</h4>" +
-      "<p style='font-size:13.5px;color:#5b6b84;margin-bottom:6px;'>" + escapeHtml(reco.conditions) + "</p>" +
-      "<p style='font-size:13.5px;color:#5b6b84;'><b>Services :</b> " + escapeHtml(reco.services || "—") + "</p>" +
+      "<h4 style='color:#0f2c4e;font-size:14.5px;margin-bottom:8px;'>Conditions importantes</h4>" +
+      "<p style='font-size:13.5px;color:#617795;margin-bottom:6px;'>" + escapeHtml(reco.conditions) + "</p>" +
+      "<p style='font-size:13.5px;color:#617795;'><b>Services :</b> " + escapeHtml(reco.services || "—") + "</p>" +
       "<div class='divider'></div>" +
-      "<h4 style='color:#0b2545;font-size:14.5px;margin-bottom:10px;'>Qualification du transporteur</h4>" +
-      "<ul style='list-style:none;font-size:13px;color:#5b6b84;line-height:1.9;'>" +
+      "<h4 style='color:#0f2c4e;font-size:14.5px;margin-bottom:10px;'>Qualification du transporteur</h4>" +
+      "<ul style='list-style:none;font-size:13px;color:#617795;line-height:1.9;'>" +
       "<li>🛡️ " + escapeHtml(reco.qualite.statut) + "</li>" +
       "<li>⭐ Note " + escapeHtml(reco.qualite.note) + "</li>" +
       "<li>📄 " + escapeHtml(reco.qualite.licence) + "</li>" +

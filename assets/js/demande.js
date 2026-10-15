@@ -163,7 +163,7 @@
     zone.innerHTML = "";
     if (cibles.length) {
       var titre = document.createElement("p");
-      titre.style.cssText = "font-weight:700;color:#0b2545;margin-bottom:10px;";
+      titre.style.cssText = "font-weight:700;color:#0f2c4e;margin-bottom:10px;";
       titre.textContent = "Transporteurs notifiés (anonymes jusqu'à acceptation) :";
       zone.appendChild(titre);
     }
@@ -172,7 +172,7 @@
       row.className = "match-item";
       row.innerHTML =
         '<div class="avatar">' + initials(t.nom) + "</div>" +
-        "<div><b>Transporteur " + escapeHtml(t.id) + "</b><br /><span style='font-size:12.5px;color:#5b6b84;'>" +
+        "<div><b>Transporteur " + escapeHtml(t.id) + "</b><br /><span style='font-size:12.5px;color:#617795;'>" +
         escapeHtml(t.modes.join(" · ")) + " — couvre " + escapeHtml(t.lignes) + "</span></div>" +
         '<span class="badge badge-blue">' + escapeHtml(t.statut) + "</span>";
       zone.appendChild(row);

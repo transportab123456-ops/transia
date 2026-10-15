@@ -53,8 +53,8 @@
     get("kpiGrid").innerHTML = kpis.map(function (k) {
       return "<div class='card' style='text-align:center;'>" +
         "<div class='icon-tile' style='margin:0 auto 12px;'>" + k.icone + "</div>" +
-        "<b style='display:block;font-size:26px;color:#0b2545;letter-spacing:-1px;'>" + k.valeur + "</b>" +
-        "<span style='font-size:13px;color:#5b6b84;'>" + k.label + "</span></div>";
+        "<b style='display:block;font-size:26px;color:#0f2c4e;letter-spacing:-1px;'>" + k.valeur + "</b>" +
+        "<span style='font-size:13px;color:#617795;'>" + k.label + "</span></div>";
     }).join("");
   }
 
@@ -75,9 +75,9 @@
         "<td>" + p.cotations.toLocaleString("fr-FR") + "</td>" +
         "<td>" + p.affaires + "</td>" +
         "<td><div style='display:flex;align-items:center;gap:8px;'>" +
-        "<div style='flex:1;height:7px;background:#eef1f7;border-radius:99px;overflow:hidden;min-width:70px;'>" +
+        "<div style='flex:1;height:7px;background:#edf1f7;border-radius:99px;overflow:hidden;min-width:70px;'>" +
         "<div style='width:" + p.maturite + "%;height:100%;background:var(--blue);border-radius:99px;'></div></div>" +
-        "<span style='font-size:12.5px;color:#5b6b84;'>" + p.maturite + "/100</span></div></td>" +
+        "<span style='font-size:12.5px;color:#617795;'>" + p.maturite + "/100</span></div></td>" +
         "<td>" + (actif
           ? "<span class='muted' style='font-size:13px;'>—</span>"
           : "<button class='btn btn-outline btn-sm' data-pays='" + escapeHtml(p.pays) + "'>Ouvrir</button>") + "</td>";
@@ -129,12 +129,12 @@
         "<div style='display:flex;justify-content:space-between;gap:14px;flex-wrap:wrap;align-items:center;'>" +
         "<div style='display:flex;gap:12px;align-items:center;'>" +
         "<div class='avatar'>" + initials(t.nom) + "</div>" +
-        "<div><b style='color:#0b2545;'>" + escapeHtml(t.nom) + "</b> " + badgeStatut(statut) +
-        "<br /><span style='font-size:12.5px;color:#5b6b84;'>" + escapeHtml(t.pays + " · " + t.ville) +
+        "<div><b style='color:#0f2c4e;'>" + escapeHtml(t.nom) + "</b> " + badgeStatut(statut) +
+        "<br /><span style='font-size:12.5px;color:#617795;'>" + escapeHtml(t.pays + " · " + t.ville) +
         " · " + escapeHtml(t.modes.join(" · ")) + " · Immat. " + escapeHtml(t.immat) + " · TVA " + escapeHtml(t.tva) + "</span></div></div>" +
         "<div style='display:flex;gap:8px;flex-wrap:wrap;'>" + actions + "</div></div>" +
         ((statut === "INSCRIT" || statut === "À VÉRIFIER")
-          ? "<div style='margin-top:10px;font-size:12.5px;color:#5b6b84;'>Justificatifs reçus : " +
+          ? "<div style='margin-top:10px;font-size:12.5px;color:#617795;'>Justificatifs reçus : " +
             (t.justificatifs && t.justificatifs.length
               ? t.justificatifs.map(function (j) { return "<span class='badge badge-blue' style='margin-right:6px;'>" + escapeHtml(j) + "</span>"; }).join("")
               : "<span class='badge badge-amber'>Aucun justificatif</span>") +
@@ -221,9 +221,9 @@
     ];
     get("metriquesGrid").innerHTML = m.map(function (x) {
       return "<div class='card' style='padding:20px;'>" +
-        "<span style='font-size:12.5px;color:#5b6b84;text-transform:uppercase;letter-spacing:.6px;'>" + x.label + "</span>" +
-        "<b style='display:block;font-size:24px;color:#0b2545;margin:6px 0;'>" + x.valeur + "</b>" +
-        "<span style='font-size:12.5px;color:#9aa8c0;'>" + x.note + "</span></div>";
+        "<span style='font-size:12.5px;color:#617795;text-transform:uppercase;letter-spacing:.6px;'>" + x.label + "</span>" +
+        "<b style='display:block;font-size:24px;color:#0f2c4e;margin:6px 0;'>" + x.valeur + "</b>" +
+        "<span style='font-size:12.5px;color:#9fb2cc;'>" + x.note + "</span></div>";
     }).join("");
   }
 

@@ -154,7 +154,7 @@
       escapeHtml(String(r.marchandise.desc)) + " · " + escapeHtml(String(r.marchandise.poids)) +
       " · " + escapeHtml(String(r.marchandise.volume)) + "<br />" +
       "Incoterm " + escapeHtml(r.incoterm) + " · enlèvement le " + escapeHtml(r.origine.date) +
-      (r.dangereuse ? "<br /><b style='color:#b45309;'>⚠️ Marchandise dangereuse : " + escapeHtml(r.dangerInfo.onu + " — " + r.dangerInfo.classe) + "</b>" : "");
+      (r.dangereuse ? "<br /><b style='color:#96650f;'>⚠️ Marchandise dangereuse : " + escapeHtml(r.dangerInfo.onu + " — " + r.dangerInfo.classe) + "</b>" : "");
     openModal("modalReponse");
   }
 
@@ -213,12 +213,12 @@
         div.style.cssText = "border:1px solid var(--line);border-radius:10px;padding:12px 14px;margin-bottom:10px;";
         div.innerHTML =
           "<div style='display:flex;justify-content:space-between;align-items:center;gap:8px;'>" +
-          "<b style='color:#0b2545;'>" + escapeHtml(ref) + "</b>" +
+          "<b style='color:#0f2c4e;'>" + escapeHtml(ref) + "</b>" +
           "<span class='badge badge-amber'>En attente d'analyse</span></div>" +
-          "<div style='font-size:13px;color:#5b6b84;margin-top:4px;'>" +
+          "<div style='font-size:13px;color:#617795;margin-top:4px;'>" +
           (r ? escapeHtml(r.origine.ville) + " → " + escapeHtml(r.dest.ville) + " · " : "") +
-          "<b style='color:#16233b;'>" + formatEuro(o.prix) + "</b> · délai " + escapeHtml(o.delai) + "</div>" +
-          "<div style='font-size:12px;color:#9aa8c0;margin-top:4px;'>Déposée le " + escapeHtml(o.dateDepot || "—") + " · Offre " + escapeHtml(o.lettre) + "</div>";
+          "<b style='color:#1b2d49;'>" + formatEuro(o.prix) + "</b> · délai " + escapeHtml(o.delai) + "</div>" +
+          "<div style='font-size:12px;color:#9fb2cc;margin-top:4px;'>Déposée le " + escapeHtml(o.dateDepot || "—") + " · Offre " + escapeHtml(o.lettre) + "</div>";
         zone.appendChild(div);
       });
     });
