@@ -1,0 +1,13 @@
+{
+  "name": "transia",
+  "version": "0.2.0",
+  "private": true,
+  "description": "Transia — plateforme B2B de mise en relation transport international (site statique + API serverless)",
+  "type": "commonjs",
+  "dependencies": {
+    "pg": "^8.13.1"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
