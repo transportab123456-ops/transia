@@ -78,6 +78,40 @@ function makeClient() {
   if (reg.body.company) idsToDelete.companies.push(reg.body.company.company_id);
   if (reg.body.user) idsToDelete.users.push(reg.body.user.user_id);
 
+  /* Deux modes possibles selon la configuration du serveur :
+     - transport e-mail actif → requiresEmailVerification, le compte
+       s'active par le jeton contenu dans l'e-mail (outbox) ;
+     - sans transport → compte actif, e-mail de bienvenue journalisé
+       (statut LOGGED, jamais envoyé). */
+  const { query: q2 } = require("../api/_lib/db");
+  if (reg.body.requiresEmailVerification) {
+    const vmail = await q2(
+      `SELECT body_text FROM outbox_emails
+        WHERE recipient_email = $1 AND event_type = 'email_verification'
+        ORDER BY email_id DESC LIMIT 1`,
+      [sEmail]
+    );
+    const m = vmail.rows.length ? String(vmail.rows[0].body_text).match(/verify=([a-f0-9]{64})/) : null;
+    check("e-mail de vérification émis + jeton récupérable", !!m, vmail.rows[0] && String(vmail.rows[0].body_text).slice(0, 120));
+    if (m) {
+      const ver = await shipper("POST", "/api/auth/verify-email", { token: m[1] });
+      check("vérification → session ouverte", ver.status === 200 && ver.body.verified === true, ver.body);
+    }
+  } else {
+    const outbox = await q2(
+      `SELECT event_type, status, recipient_email FROM outbox_emails
+        WHERE recipient_email = $1 ORDER BY email_id DESC LIMIT 1`,
+      [sEmail]
+    );
+    check("outbox : e-mail de bienvenue journalisé", outbox.rows.length === 1 && outbox.rows[0].event_type === "welcome" && ["LOGGED", "SENT", "PENDING"].includes(outbox.rows[0].status), outbox.rows[0]);
+
+    const resend = await shipper("POST", "/api/auth/verify-email", { action: "resend", email: sEmail });
+    check("renvoi vérification : réponse générique 200", resend.status === 200 && !!resend.body.message, resend.body);
+  }
+
+  const flushOpen = await fetch(BASE + "/api/health?flush=emails");
+  check("drain outbox protégé (401 sans secret)", flushOpen.status === 401, flushOpen.status);
+
   const carriers = [];
   for (let i = 0; i < 3; i++) {
     const c = makeClient();
@@ -222,7 +256,8 @@ function makeClient() {
     if (idsToDelete.deals.length) await query(`DELETE FROM deals WHERE deal_id = ANY($1)`, [idsToDelete.deals]);
     if (idsToDelete.rfqs.length) await query(`DELETE FROM rfqs WHERE rfq_id = ANY($1)`, [idsToDelete.rfqs]);
     if (idsToDelete.companies.length) await query(`DELETE FROM companies WHERE company_id = ANY($1)`, [idsToDelete.companies]);
-    console.log(`  Nettoyé : ${idsToDelete.companies.length} entreprises, ${idsToDelete.rfqs.length} RFQ, ${idsToDelete.deals.length} affaires.`);
+    await query(`DELETE FROM outbox_emails WHERE recipient_email LIKE 'smoke-%' OR recipient_email LIKE 'smoke-carrier%'`);
+    console.log(`  Nettoyé : ${idsToDelete.companies.length} entreprises, ${idsToDelete.rfqs.length} RFQ, ${idsToDelete.deals.length} affaires + outbox de test.`);
   } catch (e) {
     console.log("  ! Nettoyage partiel :", e.message);
   }
