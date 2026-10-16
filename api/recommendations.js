@@ -14,6 +14,7 @@ const { handler, json, readBody, fail } = require("./_lib/respond");
 const { getPool, query } = require("./_lib/db");
 const { requireAuth } = require("./_lib/auth");
 const { loadFx, normalizeQuote, classify } = require("./_lib/ranking");
+const { enqueueEmail, flushOutbox, companyEmails } = require("./_lib/notify");
 
 const PLATFORM_ROLES = ["PLATFORM_OPERATIONS", "PLATFORM_ADMIN", "SUPER_ADMIN"];
 const SHIPPER_ROLES = ["SHIPPER_USER", "SHIPPER_ADMIN"];
@@ -257,7 +258,28 @@ module.exports = handler(async (req, res) => {
          overrideReason]
       );
 
+      /* Notification transactionnelle : le comparatif est prêt —
+         le donneur d'ordre est invité à accepter ou refuser. */
+      const rfqFull = await client.query(
+        `SELECT r.shipper_company_id, r.origin_city, r.destination_city
+           FROM rfqs r WHERE r.rfq_id = $1`,
+        [rfqId]
+      );
+      const shipper = await companyEmails(client, rfqFull.rows[0].shipper_company_id);
+      if (shipper) {
+        await enqueueEmail(client, {
+          dedupeKey: "recommendation_ready:" + rfqId + ":" + rec.rows[0].recommendation_id,
+          eventType: "recommendation_ready",
+          entityType: "rfqs",
+          entityId: rfqId,
+          to: shipper.email,
+          userId: shipper.user_id,
+          vars: { firstName: shipper.first_name, rfqNumber, offers: classement.conforme.length }
+        });
+      }
+
       await client.query("COMMIT");
+      await flushOutbox();
 
       return json(res, 200, {
         rfqNumber,

@@ -620,3 +620,55 @@ CREATE INDEX IF NOT EXISTS idx_rfqs_origin_city ON rfqs (origin_city);
 CREATE INDEX IF NOT EXISTS idx_rfqs_dest_city   ON rfqs (destination_city);
 
 COMMIT;
+
+/* ============================================================
+   Migrations (idempotentes) — incrément 3 : notifications
+   transactionnelles + vérification d'e-mail
+   ============================================================ */
+BEGIN;
+
+-- Colonne de vérification d'e-mail sur l'utilisateur
+ALTER TABLE users ADD COLUMN IF NOT EXISTS email_verified_at timestamptz;
+
+-- Vérification d'e-mail à l'inscription : jeton haché (un vol de
+-- la base ne donne pas de lien de vérification utilisable).
+CREATE TABLE IF NOT EXISTS email_verifications (
+  token_hash text PRIMARY KEY,
+  user_id    uuid NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  email      text NOT NULL,
+  expires_at timestamptz NOT NULL,
+  used_at    timestamptz,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_email_verif_user ON email_verifications (user_id);
+
+-- Outbox transactionnelle : l'e-mail est écrit DANS LA MÊME
+-- TRANSACTION que l'événement métier (jamais d'envoi direct au sein
+-- d'une requête : échec réseau = événement perdu). Un worker (cron
+-- Vercel) draine la file avec backoff exponentiel et verrouillage
+-- optimiste — robuste face aux instances serverless multiples.
+CREATE TABLE IF NOT EXISTS outbox_emails (
+  email_id          bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  dedupe_key        text UNIQUE,           -- anti double-envoi sur rejeu
+  event_type        text NOT NULL,         -- rfq_created, recommendation_ready, ...
+  entity_type       text,                  -- rfqs, deals, companies...
+  entity_id         uuid,
+  recipient_email   text NOT NULL,
+  recipient_user_id uuid,
+  subject           text NOT NULL,
+  body_text         text NOT NULL,
+  body_html         text NOT NULL,
+  status            text NOT NULL DEFAULT 'PENDING'
+                    CHECK (status IN ('PENDING','SENDING','SENT','LOGGED','FAILED')),
+  attempts          int NOT NULL DEFAULT 0,
+  last_error        text,
+  locked_at         timestamptz,
+  sent_at           timestamptz,
+  created_at        timestamptz NOT NULL DEFAULT now()
+);
+
+-- Horodatage du prochain essai (backoff : 30 s, 2 min, 10 min, 1 h)
+ALTER TABLE outbox_emails ADD COLUMN IF NOT EXISTS next_attempt_at timestamptz NOT NULL DEFAULT now();
+CREATE INDEX IF NOT EXISTS idx_outbox_pending ON outbox_emails (status, next_attempt_at);
+
+COMMIT;

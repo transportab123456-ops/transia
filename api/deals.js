@@ -16,6 +16,7 @@
 const { handler, json, readBody, fail } = require("./_lib/respond");
 const { getPool, query } = require("./_lib/db");
 const { requireAuth } = require("./_lib/auth");
+const { enqueueEmail, flushOutbox, companyEmails } = require("./_lib/notify");
 
 const PLATFORM_ROLES = ["PLATFORM_OPERATIONS", "PLATFORM_FINANCE", "PLATFORM_ADMIN", "SUPER_ADMIN"];
 const SHIPPER_ROLES = ["SHIPPER_USER", "SHIPPER_ADMIN"];
@@ -104,7 +105,8 @@ module.exports = handler(async (req, res) => {
     await client.query("BEGIN");
 
     const rfq = await client.query(
-      `SELECT rfq_id, shipper_company_id, status FROM rfqs WHERE rfq_number = $1 FOR UPDATE`,
+      `SELECT rfq_id, shipper_company_id, status, origin_city, destination_city
+         FROM rfqs WHERE rfq_number = $1 FOR UPDATE`,
       [rfqNumber]
     );
     if (!rfq.rows.length) { await client.query("ROLLBACK"); return fail(res, 404, "Demande introuvable.", "NOT_FOUND"); }
@@ -172,7 +174,27 @@ module.exports = handler(async (req, res) => {
         [user.user_id, rfqRow.rfq_id, JSON.stringify({ quoteId: quoteRow.quote_id, acceptanceId: acc.rows[0].acceptance_id })]
       );
 
+      /* Le transporteur pressenti doit confirmer sous 48 h */
+      const carrier = await companyEmails(client, quoteRow.carrier_company_id);
+      if (carrier) {
+        await enqueueEmail(client, {
+          dedupeKey: "quote_accepted:" + acc.rows[0].acceptance_id,
+          eventType: "quote_accepted",
+          entityType: "quote_acceptances",
+          entityId: acc.rows[0].acceptance_id,
+          to: carrier.email,
+          userId: carrier.user_id,
+          vars: {
+            firstName: carrier.first_name, rfqNumber,
+            price: (quoteRow.currency || "EUR") === "EUR"
+              ? new Intl.NumberFormat("fr-FR", { style: "currency", currency: "EUR" }).format(parseFloat(quoteRow.comparable_total))
+              : quoteRow.comparable_total + " " + quoteRow.currency
+          }
+        });
+      }
+
       await client.query("COMMIT");
+      await flushOutbox();
       return json(res, 201, {
         status: "AWAITING_CARRIER",
         acceptance_id: acc.rows[0].acceptance_id,
@@ -250,7 +272,30 @@ module.exports = handler(async (req, res) => {
         [user.user_id, deal.rows[0].deal_id, JSON.stringify({ dealNumber, rate, commissionAmount })]
       );
 
+      /* Les deux parties sont informées : identités dévoilées */
+      const fmt = (v) => new Intl.NumberFormat("fr-FR", { style: "currency", currency: a.currency || "EUR" }).format(parseFloat(v));
+      const dealVars = {
+        rfqNumber, dealNumber,
+        route: rfqRow.origin_city + " → " + rfqRow.destination_city,
+        price: fmt(a.comparable_total != null ? a.comparable_total : a.base_transport_price),
+        commission: fmt(commissionAmount),
+        rate: (rate * 100).toFixed(0) + " %"
+      };
+      for (const party of [await companyEmails(client, rfqRow.shipper_company_id), await companyEmails(client, a.carrier_company_id)]) {
+        if (!party) continue;
+        await enqueueEmail(client, {
+          dedupeKey: "deal_confirmed:" + deal.rows[0].deal_id + ":" + party.email,
+          eventType: "deal_confirmed",
+          entityType: "deals",
+          entityId: deal.rows[0].deal_id,
+          to: party.email,
+          userId: party.user_id,
+          vars: Object.assign({ firstName: party.first_name }, dealVars)
+        });
+      }
+
       await client.query("COMMIT");
+      await flushOutbox();
       return json(res, 201, {
         status: "CONFIRMED",
         deal: {

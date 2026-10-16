@@ -12,6 +12,7 @@
 const { handler, json, readBody, fail } = require("./_lib/respond");
 const { getPool, query } = require("./_lib/db");
 const { requireAuth } = require("./_lib/auth");
+const { enqueueEmail, flushOutbox, companyEmails } = require("./_lib/notify");
 
 const PLATFORM_ROLES = ["PLATFORM_OPERATIONS", "PLATFORM_FINANCE", "PLATFORM_ADMIN", "SUPER_ADMIN"];
 
@@ -172,7 +173,22 @@ module.exports = handler(async (req, res) => {
          motif]
       );
 
+      /* Le transporteur est informé de la décision (transactionnel) */
+      const contact = await companyEmails(client, companyId);
+      if (contact) {
+        await enqueueEmail(client, {
+          dedupeKey: "carrier_decision:" + companyId + ":" + decision + ":" + Date.now(),
+          eventType: "carrier_decision",
+          entityType: "companies",
+          entityId: companyId,
+          to: contact.email,
+          userId: contact.user_id,
+          vars: { firstName: contact.first_name, decision, reason: motif }
+        });
+      }
+
       await client.query("COMMIT");
+      await flushOutbox();
       return json(res, 200, {
         company_id: companyId,
         validation_status: decision,

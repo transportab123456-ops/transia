@@ -54,6 +54,11 @@ module.exports = handler(async (req, res) => {
     await recordAttempt("login", ip, false);
     return fail(res, 401, GENERIC, "INVALID_CREDENTIALS");
   }
+  /* Mot de passe correct : on peut différencier les blocages sans
+     risque d'énumération (l'attaquant possède déjà le mot de passe). */
+  if (user.status === "PENDING_EMAIL") {
+    return fail(res, 403, "E-mail non vérifié : cliquez sur le lien reçu à l'inscription (un renvoi est possible depuis la page de connexion).", "EMAIL_NOT_VERIFIED");
+  }
   if (user.status !== "ACTIVE") return fail(res, 403, "Compte inactif ou suspendu.", "ACCOUNT_DISABLED");
 
   await recordAttempt("login", email, true);

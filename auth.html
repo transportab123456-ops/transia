@@ -45,6 +45,20 @@
         <button class="btn btn-outline" id="tabRegisterCarrier">Créer un compte transporteur</button>
       </div>
 
+      <!-- Attente de vérification e-mail -->
+      <div class="panel hidden" id="verifyPendingBox">
+        <h3 class="mt-0">📩 Vérifiez votre boîte mail</h3>
+        <p style="font-size:14.5px;color:#617795;line-height:1.6;">
+          Un lien de vérification vient d'être envoyé à <b id="vpEmail"></b>.
+          Cliquez dessus pour activer votre compte (le lien expire dans 24 heures).
+        </p>
+        <p style="font-size:13px;color:#8aa0bb;">Vous ne l'avez pas reçu ? Vérifiez vos indésirables, ou renvoyez le lien.</p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
+          <button class="btn btn-primary" id="btnResendVerify">Renvoyer le lien</button>
+          <button class="btn btn-outline" id="btnChangeEmail">Changer d'adresse</button>
+        </div>
+      </div>
+
       <!-- Session existante -->
       <div class="panel hidden" id="alreadyBox">
         <h3 class="mt-0">Vous êtes connecté</h3>

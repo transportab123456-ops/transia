@@ -9,10 +9,24 @@
    ============================================================ */
 "use strict";
 
+const crypto = require("crypto");
 const { handler, json, readBody, fail } = require("./_lib/respond");
 const { getPool, query } = require("./_lib/db");
 const { hashPassword, createSession, sessionCookie, requireAuth } = require("./_lib/auth");
 const { rateLimit, recordAttempt, clientIp } = require("./_lib/security");
+const { mailEnabled } = require("./_lib/mailer");
+const { enqueueEmail, flushOutbox } = require("./_lib/notify");
+
+function verificationRequired() {
+  const flag = process.env.REQUIRE_EMAIL_VERIFY;
+  if (flag === "true") return true;
+  if (flag === "false") return false;
+  return mailEnabled();
+}
+
+function sha256(v) {
+  return crypto.createHash("sha256").update(String(v)).digest("hex");
+}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 const MODES = ["ROAD", "SEA", "AIR", "MULTIMODAL"];
@@ -128,21 +142,56 @@ module.exports = handler(async (req, res) => {
         );
       }
 
+      const needVerify = verificationRequired();
       const user = await client.query(
         `INSERT INTO users (company_id, first_name, last_name, email, phone, password_hash, role, status)
-         VALUES ($1,$2,$3,$4,$5,$6,'CARRIER_USER','ACTIVE')
+         VALUES ($1,$2,$3,$4,$5,$6,'CARRIER_USER',$7)
          RETURNING user_id, email, first_name, last_name, role, company_id`,
-        [companyId, firstName, lastName, email, phone, passwordHash]
+        [companyId, firstName, lastName, email, phone, passwordHash, needVerify ? "PENDING_EMAIL" : "ACTIVE"]
       );
+      const userId = user.rows[0].user_id;
 
       await client.query(
         `INSERT INTO audit_log (user_id, action_type, entity_type, entity_id, new_value)
          VALUES ($1,'CARRIER_REGISTERED','companies',$2,$3)`,
-        [user.rows[0].user_id, companyId, JSON.stringify({ legalName, modes: cleanModes })]
+        [userId, companyId, JSON.stringify({ legalName, modes: cleanModes })]
       );
+
+      /* E-mail de vérification écrit dans la transaction (outbox). */
+      if (needVerify) {
+        const verifyToken = crypto.randomBytes(32).toString("hex");
+        await client.query(
+          `INSERT INTO email_verifications (token_hash, user_id, email, expires_at)
+           VALUES ($1,$2,$3, now() + make_interval(hours => 24))`,
+          [sha256(verifyToken), userId, email]
+        );
+        await enqueueEmail(client, {
+          dedupeKey: "verify:" + userId,
+          eventType: "email_verification",
+          entityType: "users",
+          entityId: userId,
+          to: email,
+          userId,
+          vars: { firstName, companyName: legalName, token: verifyToken }
+        });
+      }
 
       await client.query("COMMIT");
       await recordAttempt("carrier-register", clientIp(req), true);
+      await flushOutbox();
+
+      if (needVerify) {
+        return json(res, 201, {
+          user: {
+            user_id: userId, email, first_name: firstName,
+            last_name: lastName, role: "CARRIER_USER", company_id: companyId
+          },
+          company: { company_id: companyId, legal_name: legalName, status: "PENDING" },
+          verification: { status: "PENDING" },
+          requiresEmailVerification: true,
+          message: "Compte créé. Un e-mail de vérification vient de vous être envoyé ; votre dossier sera ensuite examiné par la plateforme."
+        });
+      }
 
       const { token, expires } = await createSession(user.rows[0], req);
       res.setHeader("Set-Cookie", sessionCookie(token, expires));

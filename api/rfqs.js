@@ -13,6 +13,7 @@
 const { handler, json, readBody, fail } = require("./_lib/respond");
 const { getPool, query } = require("./_lib/db");
 const { requireAuth } = require("./_lib/auth");
+const { enqueueEmail, flushOutbox } = require("./_lib/notify");
 
 const PLATFORM_ROLES = ["PLATFORM_OPERATIONS", "PLATFORM_FINANCE", "PLATFORM_ADMIN", "SUPER_ADMIN"];
 const SHIPPER_ROLES = ["SHIPPER_USER", "SHIPPER_ADMIN"];
@@ -173,7 +174,23 @@ module.exports = handler(async (req, res) => {
         [user.user_id, rfqId, JSON.stringify({ rfqNumber, mode: modeCode })]
       );
 
+      /* Notification transactionnelle : confirmation de publication */
+      await enqueueEmail(client, {
+        dedupeKey: "rfq_created:" + rfqId + ":" + user.user_id,
+        eventType: "rfq_created",
+        entityType: "rfqs",
+        entityId: rfqId,
+        to: user.email,
+        userId: user.user_id,
+        vars: {
+          firstName: user.first_name, rfqNumber,
+          route: originCity + " → " + destCity,
+          mode: { ROAD: "Routier", SEA: "Maritime", AIR: "Aérien", MULTIMODAL: "Multimodal" }[modeCode] || modeCode
+        }
+      });
+
       await client.query("COMMIT");
+      await flushOutbox();
       return json(res, 201, { rfq: rfq.rows[0] });
     } catch (err) {
       await client.query("ROLLBACK").catch(() => {});

@@ -1,16 +1,41 @@
 /* ============================================================
    Transia — POST /api/auth/register
    Crée une entreprise (donneur d'ordre) + son utilisateur en
-   transaction, puis ouvre une session.
-   Validation e-mail simulée (statut ACTIVE) : le schéma prévoit
-   déjà PENDING_EMAIL dès que l'envoi d'e-mail sera branché.
+   transaction.
+   Vérification d'e-mail : quand le transport e-mail est actif
+   (RESEND_API_KEY présent et REQUIRE_EMAIL_VERIFY != "false"),
+   l'utilisateur est créé en PENDING_EMAIL et reçoit un lien de
+   vérification ; la session n'est ouverte qu'après vérification.
+   Sans transport e-mail (mode log/démo) : compte actif
+   immédiatement, comme avant — rien ne casse.
    ============================================================ */
 "use strict";
 
+const crypto = require("crypto");
 const { handler, json, readBody, fail } = require("../_lib/respond");
 const { getPool, query } = require("../_lib/db");
 const { hashPassword, sessionCookie, createSession } = require("../_lib/auth");
 const { rateLimit, recordAttempt, clientIp } = require("../_lib/security");
+const { mailEnabled } = require("../_lib/mailer");
+const { enqueueEmail, flushOutbox } = require("../_lib/notify");
+
+/* Activation de la vérification :
+   - REQUIRE_EMAIL_VERIFY=true  → exigée même sans transport
+     (l'e-mail part alors en mode log, corps visible en base :
+     utile pour les tests et la démonstration) ;
+   - REQUIRE_EMAIL_VERIFY=false → désactivée même avec une clé
+     (staging) ;
+   - non défini → exigée dès qu'un transport est configuré. */
+function verificationRequired() {
+  const flag = process.env.REQUIRE_EMAIL_VERIFY;
+  if (flag === "true") return true;
+  if (flag === "false") return false;
+  return mailEnabled();
+}
+
+function sha256(v) {
+  return crypto.createHash("sha256").update(String(v)).digest("hex");
+}
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -76,23 +101,68 @@ module.exports = handler(async (req, res) => {
       [companyId]
     );
 
+    const needVerify = verificationRequired();
     const user = await client.query(
       `INSERT INTO users (company_id, first_name, last_name, email, password_hash, role, status)
-       VALUES ($1, $2, $3, $4, $5, 'SHIPPER_USER', 'ACTIVE')
+       VALUES ($1, $2, $3, $4, $5, 'SHIPPER_USER', $6)
        RETURNING user_id, email, first_name, last_name, role, company_id`,
-      [companyId, firstName, lastName, email, passwordHash]
+      [companyId, firstName, lastName, email, passwordHash, needVerify ? "PENDING_EMAIL" : "ACTIVE"]
     );
+    const userId = user.rows[0].user_id;
 
     await client.query(
       `INSERT INTO audit_log (user_id, action_type, entity_type, entity_id, new_value)
        VALUES ($1, 'ACCOUNT_REGISTERED', 'users', $1, $2)`,
-      [user.rows[0].user_id, JSON.stringify({ email, companyName })]
+      [userId, JSON.stringify({ email, companyName })]
     );
+
+    /* Événement d'e-mail écrit DANS LA TRANSACTION : soit le lien
+       de vérification, soit la bienvenue (mode log = journalisé). */
+    if (needVerify) {
+      const verifyToken = crypto.randomBytes(32).toString("hex");
+      await client.query(
+        `INSERT INTO email_verifications (token_hash, user_id, email, expires_at)
+         VALUES ($1,$2,$3, now() + make_interval(hours => 24))`,
+        [sha256(verifyToken), userId, email]
+      );
+      await enqueueEmail(client, {
+        dedupeKey: "verify:" + userId,
+        eventType: "email_verification",
+        entityType: "users",
+        entityId: userId,
+        to: email,
+        userId,
+        vars: { firstName, companyName, token: verifyToken }
+      });
+    } else {
+      await enqueueEmail(client, {
+        dedupeKey: "welcome:" + userId,
+        eventType: "welcome",
+        entityType: "users",
+        entityId: userId,
+        to: email,
+        userId,
+        vars: { firstName, companyName }
+      });
+    }
 
     await client.query("COMMIT");
     await recordAttempt("register", clientIp(req), true);
+    await flushOutbox();
 
-    /* Session */
+    /* Session : ouverte seulement si la vérification n'est pas exigée */
+    if (needVerify) {
+      return json(res, 201, {
+        user: {
+          user_id: userId, email, first_name: firstName,
+          last_name: lastName, role: "SHIPPER_USER", company_id: companyId
+        },
+        company: { company_id: companyId, legal_name: companyName },
+        requiresEmailVerification: true,
+        message: "Votre compte est créé. Un e-mail de vérification vient de vous être envoyé : cliquez sur le lien pour activer votre compte."
+      });
+    }
+
     const { token, expires } = await createSession(user.rows[0], req);
     res.setHeader("Set-Cookie", sessionCookie(token, expires));
 

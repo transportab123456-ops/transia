@@ -18,6 +18,7 @@ const { handler, json, readBody, fail } = require("./_lib/respond");
 const { getPool, query } = require("./_lib/db");
 const { requireAuth } = require("./_lib/auth");
 const { loadFx, normalizeQuote, classify } = require("./_lib/ranking");
+const { enqueueEmail, flushOutbox, adminEmails } = require("./_lib/notify");
 
 const PLATFORM_ROLES = ["PLATFORM_OPERATIONS", "PLATFORM_FINANCE", "PLATFORM_ADMIN", "SUPER_ADMIN"];
 const CARRIER_ROLES = ["CARRIER_USER", "CARRIER_ADMIN"];
@@ -72,7 +73,8 @@ module.exports = handler(async (req, res) => {
       await client.query("BEGIN");
 
       const rfq = await client.query(
-        `SELECT r.rfq_id, r.status, r.quote_deadline, r.origin_private_address, r.destination_private_address
+        `SELECT r.rfq_id, r.status, r.quote_deadline, r.origin_city, r.destination_city,
+                r.shipper_company_id, r.origin_private_address, r.destination_private_address
            FROM rfqs r WHERE r.rfq_number = $1`,
         [rfqNumber]
       );
@@ -171,7 +173,41 @@ module.exports = handler(async (req, res) => {
         [user.user_id, q.rows[0].quote_id, JSON.stringify({ rfqNumber, version, currency, basePrice })]
       );
 
+      /* Notifications transactionnelles : au donneur d'ordre (sans
+         montant : la confidentialité des offres est préservée) et à
+         la plateforme (file de travail). */
+      const shipper = await client.query(
+        `SELECT u.user_id, u.email, u.first_name
+           FROM users u
+          WHERE u.company_id = $1 AND u.status = 'ACTIVE'
+          ORDER BY (u.last_login_at IS NULL), u.last_login_at DESC NULLS LAST
+          LIMIT 1`,
+        [rfqRow.shipper_company_id]
+      );
+      if (shipper.rows.length) {
+        await enqueueEmail(client, {
+          dedupeKey: "quote_received:" + q.rows[0].quote_id,
+          eventType: "quote_received",
+          entityType: "quotes",
+          entityId: q.rows[0].quote_id,
+          to: shipper.rows[0].email,
+          userId: shipper.rows[0].user_id,
+          vars: { firstName: shipper.rows[0].first_name, rfqNumber }
+        });
+      }
+      for (const admin of await adminEmails(client)) {
+        await enqueueEmail(client, {
+          dedupeKey: "quote_received_admin:" + q.rows[0].quote_id + ":" + admin.email,
+          eventType: "quote_received_admin",
+          entityType: "quotes",
+          entityId: q.rows[0].quote_id,
+          to: admin.email,
+          vars: { rfqNumber, route: rfqRow.origin_city + " → " + rfqRow.destination_city }
+        });
+      }
+
       await client.query("COMMIT");
+      await flushOutbox();
       return json(res, 201, {
         quote: {
           quote_id: q.rows[0].quote_id,
