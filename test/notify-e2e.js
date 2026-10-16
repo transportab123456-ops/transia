@@ -92,7 +92,7 @@ const quotes = require("../api/quotes");
 const recommendations = require("../api/recommendations");
 const deals = require("../api/deals");
 const admin = require("../api/admin");
-const flushCron = require("../api/cron/flush-emails");
+const flushCron = require("../api/health"); /* ?flush=emails : drain outbox */
 const { query } = require("../api/_lib/db");
 const { hashPassword } = require("../api/_lib/auth");
 const { enqueueEmail } = require("../api/_lib/notify");
@@ -326,13 +326,15 @@ function tokenFrom(mail) {
   /* Aucune donnée sensible dans l'e-mail transporteur */
   check("quote_accepted ne contient pas l'adresse privée du donneur", !/République|Aïn Sebaâ/.test(acceptedMail ? acceptedMail.body_text : ""));
 
-  /* Cron : secret exigé */
-  const cronNoAuth = await call(flushCron, "POST", null);
+  /* Cron (health?flush=emails) : secret exigé */
+  const cronNoAuth = await call(flushCron, "GET", { flush: "emails" });
   check("cron sans secret → 401", cronNoAuth.status === 401, cronNoAuth.body);
-  const cronBad = await call(flushCron, "POST", null, { authorization: "Bearer mauvais" });
+  const cronBad = await call(flushCron, "GET", { flush: "emails" }, { authorization: "Bearer mauvais" });
   check("cron mauvais secret → 401", cronBad.status === 401, cronBad.body);
-  const cronOk = await call(flushCron, "POST", null, { authorization: "Bearer " + process.env.CRON_SECRET });
+  const cronOk = await call(flushCron, "GET", { flush: "emails" }, { authorization: "Bearer " + process.env.CRON_SECRET });
   check("cron valide → 200 + drained", cronOk.status === 200 && typeof cronOk.body.drained === "number", cronOk.body);
+  const healthOk = await call(flushCron, "GET");
+  check("health public inchangé (200 + db)", healthOk.status === 200 && healthOk.body.db && healthOk.body.db.ok === true, healthOk.body);
 
   const stuck = await query(`SELECT count(*)::int AS n FROM outbox_emails WHERE status IN ('SENDING') AND locked_at < now() - interval '1 minute'`);
   check("aucun verrou orphelin laissé", stuck.rows[0].n === 0, stuck.rows[0]);
