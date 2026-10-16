@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Connexion / Inscription — Transia</title>
+  <meta name="description" content="Connectez-vous à Transia ou créez votre compte donneur d'ordre ou transporteur." />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+  <header class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="logo"><span class="logo-mark">◆</span> Transia</a>
+      <nav class="nav-links" id="navLinks">
+        <a href="index.html">Accueil</a>
+        <a href="demande.html">Créer une demande</a>
+        <a href="espace-donneur.html">Espace donneur</a>
+        <a href="transporteur.html">Espace transporteur</a>
+        <a href="comparateur.html">Comparateur</a>
+        <a href="admin.html">Administration</a>
+      </nav>
+      <div class="nav-actions">
+        <a href="auth.html" class="btn btn-ghost">Connexion</a>
+        <button class="nav-toggle" id="navToggle" aria-label="Ouvrir le menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <section class="page-head">
+    <div class="container">
+      <div class="breadcrumb"><a href="index.html">Accueil</a> / Connexion</div>
+      <h1 id="authTitle">Connexion à Transia</h1>
+      <p id="authSubtitle">Accédez à votre espace : donneur d'ordre, transporteur ou administration.</p>
+    </div>
+  </section>
+
+  <section class="section" style="padding:36px 0;">
+    <div class="container" style="max-width:680px;">
+
+      <!-- Onglets -->
+      <div style="display:flex;gap:10px;margin-bottom:22px;flex-wrap:wrap;">
+        <button class="btn btn-primary" id="tabLogin">Se connecter</button>
+        <button class="btn btn-outline" id="tabRegisterShipper">Créer un compte donneur d'ordre</button>
+        <button class="btn btn-outline" id="tabRegisterCarrier">Créer un compte transporteur</button>
+      </div>
+
+      <!-- Session existante -->
+      <div class="panel hidden" id="alreadyBox">
+        <h3 class="mt-0">Vous êtes connecté</h3>
+        <p id="alreadyInfo" style="font-size:14.5px;color:#617795;"></p>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;">
+          <a href="espace-donneur.html" class="btn btn-primary" id="linkEspace">Mon espace</a>
+          <button class="btn btn-outline" id="btnLogout">Se déconnecter</button>
+        </div>
+      </div>
+
+      <!-- Formulaire de connexion -->
+      <div class="panel hidden" id="loginBox">
+        <h3 class="mt-0">Connexion</h3>
+        <form id="formLogin" novalidate>
+          <div class="field">
+            <label for="lEmail">E-mail professionnel</label>
+            <input type="email" id="lEmail" autocomplete="email" required />
+          </div>
+          <div class="field">
+            <label for="lPassword">Mot de passe</label>
+            <input type="password" id="lPassword" autocomplete="current-password" required />
+          </div>
+          <button type="submit" class="btn btn-primary btn-block btn-lg">Se connecter</button>
+        </form>
+      </div>
+
+      <!-- Inscription donneur d'ordre -->
+      <div class="panel hidden" id="registerShipperBox">
+        <h3 class="mt-0">Compte donneur d'ordre</h3>
+        <p class="muted" style="font-size:13.5px;">Vous publiez des demandes de cotation et recevez des offres à l'aveugle.</p>
+        <form id="formRegisterShipper" novalidate>
+          <div class="grid grid-2" style="gap:0 16px;">
+            <div class="field"><label for="sCompany">Raison sociale</label><input type="text" id="sCompany" required /></div>
+            <div class="field"><label for="sCountry">Pays (ISO2)</label><input type="text" id="sCountry" value="FR" maxlength="2" required /></div>
+            <div class="field"><label for="sFirst">Prénom</label><input type="text" id="sFirst" required /></div>
+            <div class="field"><label for="sLast">Nom</label><input type="text" id="sLast" required /></div>
+          </div>
+          <div class="field"><label for="sEmail">E-mail professionnel</label><input type="email" id="sEmail" autocomplete="email" required /></div>
+          <div class="field"><label for="sPassword">Mot de passe (10 caractères minimum)</label><input type="password" id="sPassword" autocomplete="new-password" required /></div>
+          <button type="submit" class="btn btn-primary btn-block btn-lg">Créer mon compte</button>
+        </form>
+      </div>
+
+      <!-- Inscription transporteur -->
+      <div class="panel hidden" id="registerCarrierBox">
+        <h3 class="mt-0">Compte transporteur</h3>
+        <p class="muted" style="font-size:13.5px;">Votre compte est créé avec le statut « à vérifier » : la plateforme contrôle vos justificatifs avant activation.</p>
+        <form id="formRegisterCarrier" novalidate>
+          <div class="grid grid-2" style="gap:0 16px;">
+            <div class="field"><label for="cCompany">Raison sociale</label><input type="text" id="cCompany" required /></div>
+            <div class="field"><label for="cCountry">Pays (ISO2)</label><input type="text" id="cCountry" value="FR" maxlength="2" required /></div>
+            <div class="field"><label for="cFirst">Prénom</label><input type="text" id="cFirst" required /></div>
+            <div class="field"><label for="cLast">Nom</label><input type="text" id="cLast" required /></div>
+            <div class="field"><label for="cTax">Immatriculation</label><input type="text" id="cTax" placeholder="FR-812 449 302" /></div>
+            <div class="field"><label for="cVat">N° TVA</label><input type="text" id="cVat" placeholder="FR42812449302" /></div>
+          </div>
+          <div class="field"><label for="cEmail">E-mail professionnel</label><input type="email" id="cEmail" autocomplete="email" required /></div>
+          <div class="field"><label for="cPassword">Mot de passe (10 caractères minimum)</label><input type="password" id="cPassword" autocomplete="new-password" required /></div>
+          <div class="field">
+            <label>Modes de transport exercés</label>
+            <div id="cModes" style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;"></div>
+          </div>
+          <button type="submit" class="btn btn-primary btn-block btn-lg">Créer mon compte transporteur</button>
+        </form>
+      </div>
+
+    </div>
+  </section>
+
+  <footer class="footer">
+    <div class="container footer-bottom" style="border:none;padding-top:0;">
+      <span>© <span id="year"></span> Transia</span>
+      <span><a href="index.html" style="color:#a6c8f3;">Retour à l'accueil</a></span>
+    </div>
+  </footer>
+
+  <div class="toast-zone"></div>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/reference.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/auth.js"></script>
+</body>
+</html>

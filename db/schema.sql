@@ -566,3 +566,57 @@ CREATE INDEX IF NOT EXISTS idx_rel_source_country ON international_relationships
 CREATE INDEX IF NOT EXISTS idx_rel_target_country ON international_relationships (target_country_id);
 
 COMMIT;
+
+/* ============================================================
+   Migrations (idempotentes) — incrément 2 : cycle métier complet
+   ============================================================ */
+BEGIN;
+
+-- Paramètres de la plateforme (le taux de commission n'est JAMAIS
+-- codé en dur : il est lu ici, figé sur chaque affaire à sa création)
+CREATE TABLE IF NOT EXISTS platform_settings (
+  setting_key   text PRIMARY KEY,
+  setting_value text NOT NULL,
+  updated_by    uuid REFERENCES users(user_id),
+  updated_at    timestamptz NOT NULL DEFAULT now()
+);
+INSERT INTO platform_settings (setting_key, setting_value)
+VALUES ('commission_rate', '0.08')
+ON CONFLICT (setting_key) DO NOTHING;
+
+-- Protection brute-force / credential stuffing sur les endpoints d'auth.
+-- Côté base : partagé entre toutes les instances serverless.
+CREATE TABLE IF NOT EXISTS login_attempts (
+  attempt_key  text NOT NULL,          -- hash de l'e-mail ou de l'IP
+  succeeded    boolean NOT NULL,
+  created_at   timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_login_attempts ON login_attempts (attempt_key, created_at);
+
+-- Motifs de refus d'offre (alimentent l'analyse commerciale, spec §14)
+CREATE TABLE IF NOT EXISTS rfq_refusals (
+  refusal_id   uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  rfq_id       uuid NOT NULL REFERENCES rfqs(rfq_id) ON DELETE CASCADE,
+  quote_id     uuid REFERENCES quotes(quote_id) ON DELETE SET NULL,
+  refused_by   uuid REFERENCES users(user_id),
+  motif        text NOT NULL,
+  comment      text,
+  rfq_closed   boolean NOT NULL DEFAULT false,
+  created_at   timestamptz NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_refusals_rfq ON rfq_refusals (rfq_id);
+
+-- Colonnes de cotation absentes du schéma initial (conformité périmètre)
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS fees_to_specify  boolean NOT NULL DEFAULT false;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS scope_comparable boolean NOT NULL DEFAULT true;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS non_compliance_reason text;
+ALTER TABLE quotes ADD COLUMN IF NOT EXISTS conditions text;
+
+-- Séquence du numéro d'affaire mondial : TR-2026-000001
+CREATE SEQUENCE IF NOT EXISTS deal_number_seq;
+
+-- Recherches (spec §66)
+CREATE INDEX IF NOT EXISTS idx_rfqs_origin_city ON rfqs (origin_city);
+CREATE INDEX IF NOT EXISTS idx_rfqs_dest_city   ON rfqs (destination_city);
+
+COMMIT;

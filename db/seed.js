@@ -27,6 +27,14 @@ const LANGUAGES = [
   ["de", "Deutsch"], ["ar", "العربية"], ["pt", "Português"]
 ];
 
+/* Taux de change (1 unité de la devise = X EUR) — aligné sur le moteur
+   de démonstration. En production : brancher un fournisseur de taux
+   et écrire un nouveau snapshot dans fx_rates (l'historique est conservé). */
+const FX_RATES = [
+  ["USD", 0.92], ["GBP", 1.17], ["CHF", 1.06], ["MAD", 0.092],
+  ["JPY", 0.0061], ["CAD", 0.68], ["AED", 0.25]
+];
+
 (async () => {
   const pool = getPool();
   const client = await pool.connect();
@@ -89,8 +97,20 @@ const LANGUAGES = [
       if (r.rowCount) langs++;
     }
 
+    /* Taux de change : snapshot du jour (idempotent via l'UNIQUE du schéma) */
+    let fx = 0;
+    for (const [code, rate] of FX_RATES) {
+      const r = await client.query(
+        `INSERT INTO fx_rates (base_currency, quote_currency, rate, rate_date, provider)
+         VALUES ('EUR', $1, $2, current_date, 'seed')
+         ON CONFLICT (base_currency, quote_currency, rate_date, provider) DO NOTHING`,
+        [code, rate]
+      );
+      if (r.rowCount) fx++;
+    }
+
     await client.query("COMMIT");
-    console.log(`Seed OK — pays:${countries} devises:${currencies} modes:${modes} incoterms:${incoterms} langues:${langs}`);
+    console.log(`Seed OK — pays:${countries} devises:${currencies} modes:${modes} incoterms:${incoterms} langues:${langs} taux:${fx}`);
     process.exit(0);
   } catch (err) {
     await client.query("ROLLBACK").catch(() => {});

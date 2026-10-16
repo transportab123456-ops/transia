@@ -10,6 +10,7 @@
 const { handler, json, readBody, fail } = require("../_lib/respond");
 const { getPool, query } = require("../_lib/db");
 const { hashPassword, sessionCookie, createSession } = require("../_lib/auth");
+const { rateLimit, recordAttempt, clientIp } = require("../_lib/security");
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
 
@@ -20,6 +21,13 @@ module.exports = handler(async (req, res) => {
   }
 
   const body = await readBody(req);
+  /* Limite aussi la création de comptes depuis une même IP */
+  const rl = await rateLimit(req, "register", clientIp(req), 10, 60);
+  if (!rl.allowed) {
+    res.setHeader("Retry-After", String(rl.retryAfterSec));
+    return fail(res, 429, "Trop de créations de compte. Réessayez plus tard.", "RATE_LIMITED");
+  }
+
   const email = String(body.email || "").trim().toLowerCase();
   const password = String(body.password || "");
   const firstName = String(body.firstName || "").trim();
@@ -82,6 +90,7 @@ module.exports = handler(async (req, res) => {
     );
 
     await client.query("COMMIT");
+    await recordAttempt("register", clientIp(req), true);
 
     /* Session */
     const { token, expires } = await createSession(user.rows[0], req);

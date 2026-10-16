@@ -4,7 +4,10 @@
    ============================================================ */
 "use strict";
 
+const { securityHeaders, sameOriginOk } = require("./security");
+
 function json(res, status, payload) {
+  securityHeaders(res);
   res.statusCode = status;
   res.setHeader("Content-Type", "application/json; charset=utf-8");
   res.setHeader("Cache-Control", "no-store");
@@ -50,6 +53,9 @@ function readBody(req) {
 function handler(fn) {
   return async (req, res) => {
     try {
+      if (!sameOriginOk(req)) {
+        return fail(res, 403, "Origine non autorisée.", "BAD_ORIGIN");
+      }
       await fn(req, res);
     } catch (err) {
       if (err.code === "NO_DATABASE_URL") {
