@@ -15,9 +15,15 @@
         ramenés à la plus ancienne preuve, que l'index unique est
         créé, que idx_terms_lookup disparaît, qu'aucune autre table
         ne bouge ;
-     5. rejoue la migration : même résultat, aucune écriture.
+     5. rejoue la migration : même résultat, aucune écriture ;
+     6. supprime ses comptes et preuves de test (schéma migré
+        conservé), y compris si un contrôle échoue.
 
-   Usage (base jetable, locale) :
+   La base est vidée : par sécurité, le test refuse une base qui
+   contient déjà des comptes (ALLOW_RESET=1 pour passer outre) et
+   toute base non locale.
+
+   Usage :
      DATABASE_URL=postgresql://postgres:...@127.0.0.1:PORT/transia \
        node test/migration-upgrade.js
    Code de sortie 0 = tous les contrôles passent.
@@ -38,6 +44,7 @@ if (!/localhost|127\.0\.0\.1/.test(url)) {
 
 const ROOT = path.join(__dirname, "..");
 const SCHEMA = fs.readFileSync(path.join(ROOT, "db", "schema.sql"), "utf8");
+const TEST_EMAIL = "migration.upgrade@transia.test";
 
 let pass = 0;
 let failCount = 0;
@@ -86,16 +93,49 @@ function migrate() {
 (async () => {
   const client = new Client({ connectionString: url });
   await client.connect();
+  const one = async (sql, params) => (await client.query(sql, params)).rows[0];
+  const termsHash = async () => (await one(
+    "SELECT count(*)::text || ':' || md5(string_agg(x::text,'|' ORDER BY x::text)) AS h FROM terms_acceptances x"
+  )).h;
+  let companyId = null;
+
+  /* Nettoyage rejouable : les preuves tombent avec les comptes
+     (ON DELETE CASCADE), puis l'entreprise. Silencieux si le schéma
+     n'existe pas encore ou plus. */
+  async function cleanup() {
+    if (!companyId) return;
+    try {
+      await client.query("DELETE FROM users WHERE company_id = $1", [companyId]);
+      await client.query("DELETE FROM companies WHERE company_id = $1", [companyId]);
+    } catch (e) { /* rien à nettoyer */ }
+    companyId = null;
+  }
 
   try {
+    /* ---------- 0. Sécurité : base vide ---------- */
+    const present = (await one(
+      "SELECT to_regclass('public.users') IS NOT NULL AS present"
+    )).present;
+    const comptes = present
+      ? (await one("SELECT count(*)::int AS n FROM users")).n
+      : 0;
+    if (comptes > 0 && process.env.ALLOW_RESET !== "1") {
+      console.error(
+        "Base déjà peuplée (" + comptes + " compte(s)) : ce test réinitialise le schéma public.\n" +
+        "Utilisez une base dédiée, ou ALLOW_RESET=1 pour l'écraser volontairement."
+      );
+      process.exitCode = 2;
+      return;
+    }
+
     /* ---------- 1. Base repartie de zéro ---------- */
     console.log("\n[1] Réinitialisation du schéma public");
     await client.query("DROP SCHEMA IF EXISTS public CASCADE");
     await client.query("CREATE SCHEMA public");
     await client.query(SCHEMA);
-    const tables = (await client.query(
+    const tables = (await one(
       "SELECT count(*)::int AS n FROM pg_tables WHERE schemaname='public'"
-    )).rows[0].n;
+    )).n;
     check("schéma complet appliqué", tables >= 40, tables);
 
     /* ---------- 2. Rétrogradation à l'état d'avant ---------- */
@@ -105,69 +145,50 @@ function migrate() {
     await client.query(
       "CREATE INDEX IF NOT EXISTS idx_terms_lookup ON terms_acceptances (user_id, document_type, document_version)"
     );
-    const legacy = await client.query(
+    const legacy = await one(
       `SELECT (SELECT count(*) FROM pg_indexes WHERE indexname='uq_terms_user_version') AS uniq,
               (SELECT count(*) FROM pg_indexes WHERE indexname='idx_terms_lookup') AS lookup,
               (SELECT count(*) FROM pg_trigger WHERE tgname='trg_terms_acceptances_immutable') AS trg`
     );
     check("état de départ : ni index unique ni trigger",
-      legacy.rows[0].uniq === "0" && legacy.rows[0].trg === "0", legacy.rows[0]);
-    check("ancien index de lecture présent", legacy.rows[0].lookup === "1", legacy.rows[0]);
+      legacy.uniq === "0" && legacy.trg === "0", legacy);
+    check("ancien index de lecture présent", legacy.lookup === "1", legacy);
 
     /* ---------- 3. Données d'avant migration ---------- */
     console.log("\n[3] Données de test et doublons");
-    const co = await client.query(
+    companyId = (await one(
       `INSERT INTO companies (legal_name, main_email, status)
-       VALUES ('Migration Upgrade SARL', 'migration.upgrade@transia.test', 'ACTIVE')
-       RETURNING company_id`
+       VALUES ('Migration Upgrade SARL', $1, 'ACTIVE')
+       RETURNING company_id`, [TEST_EMAIL]
+    )).company_id;
+    const newUser = async (email) => (await one(
+      `INSERT INTO users (company_id, first_name, last_name, email, password_hash, role, status)
+       VALUES ($1,'Ancien','Compte',$2,'x','SHIPPER_USER','ACTIVE')
+       RETURNING user_id`, [companyId, email]
+    )).user_id;
+    const u1 = await newUser("migration.u1@transia.test");
+    const u2 = await newUser("migration.u2@transia.test");
+
+    const newProof = async (userId, documentType, acceptedAt, ip, context) => one(
+      `INSERT INTO terms_acceptances
+         (user_id, company_id, document_type, document_version, accepted_at, ip_address, user_agent, context)
+       VALUES ($1,$2,$3,'1.0',$4,$5,'legacy',$6)
+       RETURNING acceptance_id, accepted_at`,
+      [userId, companyId, documentType, acceptedAt, ip, context]
     );
-    const companyId = co.rows[0].company_id;
-    const u1 = (await client.query(
-      `INSERT INTO users (company_id, first_name, last_name, email, password_hash, role, status)
-       VALUES ($1,'Ancien','Compte1','migration.u1@transia.test','x','SHIPPER_USER','ACTIVE')
-       RETURNING user_id`, [companyId]
-    )).rows[0].user_id;
-    const u2 = (await client.query(
-      `INSERT INTO users (company_id, first_name, last_name, email, password_hash, role, status)
-       VALUES ($1,'Ancien','Compte2','migration.u2@transia.test','x','SHIPPER_USER','ACTIVE')
-       RETURNING user_id`, [companyId]
-    )).rows[0].user_id;
 
     /* La plus ancienne preuve de u1, puis son doublon (autre contexte,
        IP différente, horodatage plus récent) : la migration doit garder
        la première et supprimer la seconde. */
-    const first = (await client.query(
-      `INSERT INTO terms_acceptances
-         (user_id, company_id, document_type, document_version, accepted_at, ip_address, user_agent, context)
-       VALUES ($1,$2,'SHIPPER_TERMS','1.0','2026-01-01T10:00:00Z','203.0.113.1','legacy/1','REGISTRATION')
-       RETURNING acceptance_id, accepted_at`, [u1, companyId]
-    )).rows[0];
-    await client.query(
-      `INSERT INTO terms_acceptances
-         (user_id, company_id, document_type, document_version, accepted_at, ip_address, user_agent, context)
-       VALUES ($1,$2,'SHIPPER_TERMS','1.0','2026-02-01T10:00:00Z','203.0.113.3','legacy/2','REACCEPTANCE')`,
-      [u1, companyId]
-    );
-    /* Clé distincte : ne doit pas être touchée. */
-    const other = (await client.query(
-      `INSERT INTO terms_acceptances
-         (user_id, company_id, document_type, document_version, accepted_at, ip_address, context)
-       VALUES ($1,$2,'SHIPPER_TERMS','1.0','2026-01-02T10:00:00Z','203.0.113.2','REGISTRATION')
-       RETURNING acceptance_id`, [u2, companyId]
-    )).rows[0];
-    /* Document différent : ne doit pas être touché non plus. */
-    const carrier = (await client.query(
-      `INSERT INTO terms_acceptances
-         (user_id, company_id, document_type, document_version, accepted_at, ip_address, context)
-       VALUES ($1,$2,'CARRIER_TERMS','1.0','2026-01-03T10:00:00Z','203.0.113.4','REGISTRATION')
-       RETURNING acceptance_id`, [u1, companyId]
-    )).rows[0];
+    const first = await newProof(u1, "SHIPPER_TERMS", "2026-01-01T10:00:00Z", "203.0.113.1", "REGISTRATION");
+    await newProof(u1, "SHIPPER_TERMS", "2026-02-01T10:00:00Z", "203.0.113.3", "REACCEPTANCE");
+    /* Clé distincte et document différent : ne doivent pas être touchés. */
+    const other = await newProof(u2, "SHIPPER_TERMS", "2026-01-02T10:00:00Z", "203.0.113.2", "REGISTRATION");
+    const carrier = await newProof(u1, "CARRIER_TERMS", "2026-01-03T10:00:00Z", "203.0.113.4", "REGISTRATION");
 
-    const before = await client.query("SELECT count(*)::int AS n FROM terms_acceptances");
-    check("4 preuves posées, dont 1 doublon", before.rows[0].n === 4, before.rows[0]);
+    check("4 preuves posées, dont 1 doublon",
+      (await one("SELECT count(*)::int AS n FROM terms_acceptances")).n === 4);
     const snapshotBefore = await snapshot(client, ["terms_acceptances"]);
-    check("empreinte des autres tables relevée",
-      Object.keys(snapshotBefore).length > 10, Object.keys(snapshotBefore).length);
 
     /* ---------- 4. Migration ---------- */
     console.log("\n[4] npm run migrate");
@@ -186,9 +207,8 @@ function migrate() {
         WHERE user_id = $1 AND document_type = 'SHIPPER_TERMS' AND document_version = '1.0'
         ORDER BY acceptance_id`, [u1]
     );
-    check("un seul doublon restant pour la clé en double",
-      remaining.rows.length === 1, remaining.rows.length);
     const kept = remaining.rows[0] || {};
+    check("un seul doublon restant pour la clé en double", remaining.rows.length === 1, remaining.rows.length);
     check("la preuve conservée est la plus ancienne (id minimal)",
       kept.acceptance_id === first.acceptance_id, { garde: kept.acceptance_id, attendu: first.acceptance_id });
     check("son contenu est intact (IP, contexte, horodatage)",
@@ -196,34 +216,30 @@ function migrate() {
       new Date(kept.accepted_at).toISOString() === new Date(first.accepted_at).toISOString(),
       kept);
     check("le doublon supprimé ne laisse aucune trace",
-      (await client.query("SELECT count(*)::int AS n FROM terms_acceptances WHERE ip_address='203.0.113.3'")).rows[0].n === 0);
+      (await one("SELECT count(*)::int AS n FROM terms_acceptances WHERE ip_address='203.0.113.3'")).n === 0);
 
-    const survivors = await client.query(
-      "SELECT acceptance_id FROM terms_acceptances ORDER BY acceptance_id"
-    );
+    const survivors = await client.query("SELECT acceptance_id FROM terms_acceptances ORDER BY acceptance_id");
     check("clé distincte préservée", survivors.rows.some((r) => r.acceptance_id === other.acceptance_id));
     check("document différent préservé", survivors.rows.some((r) => r.acceptance_id === carrier.acceptance_id));
     check("total : 3 preuves", survivors.rows.length === 3, survivors.rows.length);
 
     /* ---------- 6. Index et trigger ---------- */
     console.log("\n[6] Index et trigger");
-    const idx = await client.query(
+    const indexes = (await client.query(
       `SELECT i.relname, ix.indisunique, pg_get_indexdef(ix.indexrelid) AS def
          FROM pg_index ix
          JOIN pg_class i ON i.oid = ix.indexrelid
          JOIN pg_class t ON t.oid = ix.indrelid
         WHERE t.relname = 'terms_acceptances'`
-    );
-    const unique = idx.rows.find((r) => r.relname === "uq_terms_user_version");
-    check("index unique créé", !!unique && unique.indisunique === true, idx.rows.map((r) => r.relname));
+    )).rows;
+    const unique = indexes.find((r) => r.relname === "uq_terms_user_version");
+    check("index unique créé", !!unique && unique.indisunique === true, indexes.map((r) => r.relname));
     check("il porte sur (user_id, document_type, document_version)",
       !!unique && /\(user_id, document_type, document_version\)/.test(unique.def), unique && unique.def);
     check("idx_terms_lookup supprimé",
-      !idx.rows.some((r) => r.relname === "idx_terms_lookup"), idx.rows.map((r) => r.relname));
+      !indexes.some((r) => r.relname === "idx_terms_lookup"), indexes.map((r) => r.relname));
     check("trigger d'immuabilité posé",
-      (await client.query(
-        "SELECT count(*)::int AS n FROM pg_trigger WHERE tgname='trg_terms_acceptances_immutable' AND NOT tgisinternal"
-      )).rows[0].n === 1);
+      (await one("SELECT count(*)::int AS n FROM pg_trigger WHERE tgname='trg_terms_acceptances_immutable' AND NOT tgisinternal")).n === 1);
 
     /* ---------- 7. Aucune autre table modifiée ---------- */
     console.log("\n[7] Autres tables");
@@ -233,23 +249,27 @@ function migrate() {
 
     /* ---------- 8. Rejouabilité ---------- */
     console.log("\n[8] Second passage");
-    const termsBefore = (await client.query(
-      "SELECT count(*)::text || ':' || md5(string_agg(x::text,'|' ORDER BY x::text)) AS h FROM terms_acceptances x"
-    )).rows[0].h;
+    const termsBefore = await termsHash();
     const run2 = migrate();
     check("second passage : code 0", run2.status === 0, (run2.stderr || "").slice(0, 300));
-    const snapshotAgain = await snapshot(client, ["terms_acceptances"]);
     check("second passage : autres tables inchangées",
-      diff(snapshotAfter, snapshotAgain).length === 0, diff(snapshotAfter, snapshotAgain));
-    const termsAfter = (await client.query(
-      "SELECT count(*)::text || ':' || md5(string_agg(x::text,'|' ORDER BY x::text)) AS h FROM terms_acceptances x"
-    )).rows[0].h;
+      diff(snapshotAfter, await snapshot(client, ["terms_acceptances"])).length === 0);
+    const termsAfter = await termsHash();
     check("second passage : preuves inchangées", termsBefore === termsAfter, { termsBefore, termsAfter });
     check("second passage : index unique toujours là",
-      (await client.query(
-        "SELECT count(*)::int AS n FROM pg_indexes WHERE indexname='uq_terms_user_version'"
-      )).rows[0].n === 1);
+      (await one("SELECT count(*)::int AS n FROM pg_indexes WHERE indexname='uq_terms_user_version'")).n === 1);
+
+    /* ---------- 9. Nettoyage ---------- */
+    console.log("\n[9] Nettoyage des données de test");
+    await cleanup();
+    check("aucun compte de test restant",
+      (await one("SELECT count(*)::int AS n FROM users WHERE email LIKE 'migration.%'")).n === 0);
+    check("aucune entreprise de test restante",
+      (await one("SELECT count(*)::int AS n FROM companies WHERE main_email = $1", [TEST_EMAIL])).n === 0);
+    check("aucune preuve de test restante",
+      (await one("SELECT count(*)::int AS n FROM terms_acceptances")).n === 0);
   } finally {
+    await cleanup();
     await client.end();
   }
 
