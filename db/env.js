@@ -16,6 +16,9 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..");
 const DEFAULT_FILES = [".env.local", ".env"];
 
+/* Clé → fichier qui l'a définie (absent : vient de l'environnement). */
+const definedIn = {};
+
 /* Gère export, guillemets, BOM, CRLF et commentaire en fin de ligne. */
 function readEnvFile(name, root) {
   const file = path.join(root, name);
@@ -27,7 +30,10 @@ function readEnvFile(name, root) {
     let value = m[2].trim();
     if (/^(["']).*\1$/.test(value)) value = value.slice(1, -1);
     else value = value.replace(/\s+#.*$/, "");
-    if (!(m[1] in process.env)) process.env[m[1]] = value;
+    if (!(m[1] in process.env)) {
+      process.env[m[1]] = value;
+      definedIn[m[1]] = name;
+    }
   }
   return true;
 }
@@ -42,10 +48,13 @@ function loadEnv(files, root) {
   });
 }
 
-/* DATABASE_URL contrôlée ; sort en code 2 avec la marche à suivre. */
+/* DATABASE_URL contrôlée ; sort en code 2 avec la marche à suivre.
+   Renvoie { url, loaded, source } : `source` vaut le fichier qui a
+   fourni la variable, ou "environnement" si elle était déjà exportée. */
 function requireDatabaseUrl() {
   const loaded = loadEnv();
   const url = process.env.DATABASE_URL;
+  const source = definedIn.DATABASE_URL || "environnement";
   function fail(why) {
     console.error(why + "\nAjoutez dans .env.local à la racine :\n  DATABASE_URL=postgresql://user:pass@host/db");
     process.exit(2);
@@ -53,7 +62,7 @@ function requireDatabaseUrl() {
   if (!url) fail("DATABASE_URL introuvable (" + (loaded.join(", ") || "environnement") + ").");
   if (/^\[.*\]$/.test(url)) fail("DATABASE_URL vaut \"" + url + "\", une valeur masquée par `vercel env pull`.");
   if (!/^postgres(ql)?:\/\//.test(url)) fail("DATABASE_URL n'est pas une chaîne PostgreSQL.");
-  return { url, loaded };
+  return { url, loaded, source };
 }
 
 module.exports = { loadEnv, requireDatabaseUrl };

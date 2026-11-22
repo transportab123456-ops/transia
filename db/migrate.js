@@ -22,7 +22,7 @@ const path = require("path");
 const { Client } = require("pg");
 const { requireDatabaseUrl } = require("./env");
 
-const { url, loaded } = requireDatabaseUrl();
+const { url, source } = requireDatabaseUrl();
 const schemaPath = path.join(__dirname, "schema.sql");
 const sql = fs.readFileSync(schemaPath, "utf8");
 const local = /localhost|127\.0\.0\.1/.test(url);
@@ -37,7 +37,7 @@ const local = /localhost|127\.0\.0\.1/.test(url);
   await client.connect();
   try {
     console.log("Base : " + (local ? "locale" : "distante") +
-      " (" + (loaded.length ? loaded.join(", ") : "environnement") + ")");
+      " — DATABASE_URL depuis " + (source === "environnement" ? "l'environnement" : source));
     console.log("Application de db/schema.sql…");
     await client.query(sql);
 
