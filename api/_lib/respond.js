@@ -18,6 +18,14 @@ function fail(res, status, message, code) {
   json(res, status, { error: message, code: code || undefined });
 }
 
+/* Identifiants uuid fournis par le client : PostgreSQL rejette une
+   chaîne malformée (erreur 22P02), ce qui remonterait en 500. On les
+   valide en amont pour répondre 400. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+function isUuid(value) {
+  return UUID_RE.test(String(value));
+}
+
 /* Parse un corps JSON avec limite de taille. */
 function readBody(req) {
   return new Promise((resolve, reject) => {
@@ -70,4 +78,4 @@ function handler(fn) {
   };
 }
 
-module.exports = { json, fail, readBody, handler };
+module.exports = { json, fail, readBody, handler, isUuid };

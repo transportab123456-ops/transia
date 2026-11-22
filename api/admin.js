@@ -17,7 +17,7 @@
    ============================================================ */
 "use strict";
 
-const { handler, json, readBody, fail } = require("./_lib/respond");
+const { handler, json, readBody, fail, isUuid } = require("./_lib/respond");
 const { getPool, query } = require("./_lib/db");
 const { requireAuth } = require("./_lib/auth");
 const { enqueueEmail, flushOutbox, companyEmails } = require("./_lib/notify");
@@ -261,6 +261,7 @@ module.exports = handler(async (req, res) => {
   }
 
   if (!companyId) return fail(res, 400, "Identifiant d'entreprise requis.", "MISSING_COMPANY");
+  if (!isUuid(companyId)) return fail(res, 400, "Identifiant d'entreprise invalide.", "INVALID_COMPANY_ID");
 
   const pool = getPool();
   const client = await pool.connect();

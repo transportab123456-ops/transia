@@ -238,6 +238,24 @@ const { hashPassword } = require("../api/_lib/auth");
   const missingConfirm = await call(deals, "POST", { action: "confirm", rfqNumber: numA }, { cookie: carrierCookies[0] });
   check("acceptanceId absent → 400", missingConfirm.status === 400 && missingConfirm.body.code === "MISSING_ACCEPTANCE", missingConfirm.body);
 
+  const badCompany = await call(admin, "POST", {
+    action: "verify", companyId: "pas-un-uuid", decision: "VERIFIED"
+  }, { cookie: adminCookie });
+  check("companyId malformé → 400", badCompany.status === 400 && badCompany.body.code === "INVALID_COMPANY_ID", badCompany.body);
+
+  const unknownCompany = await call(admin, "POST", {
+    action: "verify", companyId: "00000000-0000-0000-0000-000000000000", decision: "VERIFIED"
+  }, { cookie: adminCookie });
+  check("companyId bien formé mais inconnu → 404", unknownCompany.status === 404, unknownCompany.body);
+
+  const noCompany = await call(admin, "POST", { action: "verify", decision: "VERIFIED" }, { cookie: adminCookie });
+  check("companyId absent → 400", noCompany.status === 400 && noCompany.body.code === "MISSING_COMPANY", noCompany.body);
+
+  const badOverride = await call(recommendations, "POST", {
+    rfqNumber: numA, overrideQuoteId: "pas-un-uuid"
+  }, { cookie: adminCookie });
+  check("overrideQuoteId malformé → 400, jamais 500", badOverride.status === 400 && badOverride.body.code === "INVALID_OVERRIDE", badOverride.body);
+
   /* ---------- Affaire : confidentialité financière ---------- */
   console.log("\n[5] Après confirmation : commission invisible aux tiers");
 

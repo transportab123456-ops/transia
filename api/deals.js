@@ -13,7 +13,7 @@
    ============================================================ */
 "use strict";
 
-const { handler, json, readBody, fail } = require("./_lib/respond");
+const { handler, json, readBody, fail, isUuid } = require("./_lib/respond");
 const { getPool, query } = require("./_lib/db");
 const { requireAuth } = require("./_lib/auth");
 const { enqueueEmail, flushOutbox, companyEmails } = require("./_lib/notify");
@@ -23,11 +23,6 @@ const PLATFORM_ROLES = ["PLATFORM_OPERATIONS", "PLATFORM_FINANCE", "PLATFORM_ADM
 const SHIPPER_ROLES = ["SHIPPER_USER", "SHIPPER_ADMIN"];
 const CARRIER_ROLES = ["CARRIER_USER", "CARRIER_ADMIN"];
 
-/* quote_id et acceptance_id sont des uuid : une chaîne malformée
-   ferait échouer la requête SQL (22P02) et remonterait en 500.
-   On la rejette en amont comme une entrée invalide. */
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const isUuid = (v) => UUID_RE.test(String(v));
 
 async function nextDealNumber(client) {
   const r = await client.query(
