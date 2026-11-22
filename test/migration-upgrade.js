@@ -19,9 +19,9 @@
      6. supprime ses comptes et preuves de test (schéma migré
         conservé), y compris si un contrôle échoue.
 
-   La base est vidée : par sécurité, le test refuse une base qui
-   contient déjà des comptes (ALLOW_RESET=1 pour passer outre) et
-   toute base non locale.
+   La base est vidée : par sécurité, le test refuse toute base qui
+   contient déjà des données, métier ou de référentiel (ALLOW_RESET=1
+   pour passer outre), ainsi que toute base non locale.
 
    Usage :
      DATABASE_URL=postgresql://postgres:...@127.0.0.1:PORT/transia \
@@ -112,16 +112,26 @@ function migrate() {
   }
 
   try {
-    /* ---------- 0. Sécurité : base vide ---------- */
-    const present = (await one(
-      "SELECT to_regclass('public.users') IS NOT NULL AS present"
-    )).present;
-    const comptes = present
-      ? (await one("SELECT count(*)::int AS n FROM users")).n
-      : 0;
-    if (comptes > 0 && process.env.ALLOW_RESET !== "1") {
+    /* ---------- 0. Sécurité : aucune donnée à perdre ----------
+       Toutes les tables publiques sont inspectées, pas seulement les
+       comptes : un référentiel (pays, devises…) ou des données métier
+       (RFQ, offres…) ont autant de valeur qu'un utilisateur. Une base
+       simplement migrée est vide, le schéma n'insère rien. */
+    const existing = await client.query(
+      `SELECT c.relname
+         FROM pg_class c JOIN pg_namespace n ON n.oid = c.relnamespace
+        WHERE n.nspname = 'public' AND c.relkind = 'r'
+        ORDER BY 1`
+    );
+    const nonEmpty = [];
+    for (const t of existing.rows) {
+      const n = (await one(`SELECT count(*)::int AS n FROM "${t.relname}"`)).n;
+      if (n > 0) nonEmpty.push(t.relname + " (" + n + ")");
+    }
+    if (nonEmpty.length && process.env.ALLOW_RESET !== "1") {
       console.error(
-        "Base déjà peuplée (" + comptes + " compte(s)) : ce test réinitialise le schéma public.\n" +
+        "Base non vide — ce test réinitialise le schéma public : " +
+        nonEmpty.slice(0, 6).join(", ") + (nonEmpty.length > 6 ? ", …" : "") + ".\n" +
         "Utilisez une base dédiée, ou ALLOW_RESET=1 pour l'écraser volontairement."
       );
       process.exitCode = 2;

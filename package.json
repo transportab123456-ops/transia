@@ -6,7 +6,8 @@
   "type": "commonjs",
   "scripts": {
     "migrate": "node db/migrate.js",
-    "test:env": "node test/env-check.js"
+    "test:env": "node test/env-check.js",
+    "test:upgrade": "node tools/temp-db-run.js test/migration-upgrade.js"
   },
   "dependencies": {
     "pg": "^8.13.1"
