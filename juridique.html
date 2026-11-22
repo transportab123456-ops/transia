@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Cadre juridique par pays et conventions internationales — Transia</title>
+  <meta name="description" content="Cadre juridique de la mise en relation transport par pays (France, Allemagne, Espagne, Pays-Bas, Belgique, Italie, Royaume-Uni, Maroc, États-Unis, Canada) et conventions internationales : CMR, CIM, Montréal, La Haye-Visby, CMNI, Incoterms 2020, DSA, P2B, RGPD, eIDAS, TVA." />
+  <link rel="stylesheet" href="assets/css/style.css" />
+</head>
+<body>
+
+  <!-- ============ NAV ============ -->
+  <header class="nav">
+    <div class="container nav-inner">
+      <a href="index.html" class="logo"><span class="logo-mark">◆</span> Transia</a>
+      <nav class="nav-links" id="navLinks">
+        <a href="index.html">Accueil</a>
+        <a href="demande.html">Créer une demande</a>
+        <a href="espace-donneur.html">Espace donneur</a>
+        <a href="transporteur.html">Espace transporteur</a>
+        <a href="comparateur.html">Comparateur</a>
+        <a href="juridique.html" class="active">Juridique</a>
+      </nav>
+      <div class="nav-actions">
+        <a href="demande.html" class="btn btn-primary">Déposer une demande</a>
+        <button class="nav-toggle" id="navToggle" aria-label="Ouvrir le menu">☰</button>
+      </div>
+    </div>
+  </header>
+
+  <!-- ============ EN-TÊTE ============ -->
+  <section class="page-head page-head--photo ph-juridique">
+    <div class="container">
+      <div class="breadcrumb"><a href="index.html">Accueil</a> / Cadre juridique</div>
+      <h1>Cadre juridique du courtage de fret</h1>
+      <p>Ce que la plateforme doit respecter pays par pays, et les conventions qui s'appliquent au transport lui-même.</p>
+    </div>
+  </section>
+
+  <section class="section" style="padding:40px 0 0;">
+    <div class="container">
+
+      <div class="legal-warning">
+        <b>⚠️ Information documentaire, pas un conseil juridique.</b>
+        <span>Les fiches ci-dessous rassemblent des sources officielles (Légifrance, EUR-Lex, autorités nationales) arrêtées à <b id="legalUpdated">novembre 2026</b>. Les points signalés « à valider » doivent être tranchés par un avocat du pays concerné avant toute commercialisation.</span>
+      </div>
+
+      <!-- ===== LA DÉCISION STRUCTURANTE ===== -->
+      <div class="section-head left" style="margin:44px 0 26px;" id="qualification">
+        <span class="eyebrow">La décision structurante</span>
+        <h2>Trois qualifications possibles, trois régimes</h2>
+        <p>La qualification ne dépend pas de ce que disent les CGU, mais de ce que fait réellement la plateforme : qui fixe le prix, qui choisit le transporteur, qui répond de la bonne fin du transport.</p>
+      </div>
+      <div class="grid grid-3" id="legalQualifications"></div>
+
+      <!-- ===== PAR PAYS ===== -->
+      <div class="section-head left" style="margin:56px 0 22px;" id="pays">
+        <span class="eyebrow">Cadre par pays</span>
+        <h2>Dix marchés, dix régimes d'accès</h2>
+        <p>D'un pays à l'autre, la même activité de mise en relation peut être libre, soumise à inscription ou passible de sanctions pénales.</p>
+      </div>
+      <div class="legal-filters" id="legalFilters"></div>
+      <div class="legal-grid" id="legalPays"></div>
+
+      <!-- ===== CONVENTIONS ===== -->
+      <div class="section-head left" style="margin:60px 0 22px;" id="conventions">
+        <span class="eyebrow">Transport international</span>
+        <h2>Les conventions qui s'appliquent à l'opération</h2>
+        <p>Le régime applicable dépend du mode, des pays de prise en charge et de livraison, et du document émis. Les Incoterms, eux, ne régissent que la vente.</p>
+      </div>
+      <div class="legal-table-wrap">
+        <table class="legal-table">
+          <thead>
+            <tr>
+              <th>Mode</th>
+              <th>Instrument</th>
+              <th>Plafond d'indemnisation</th>
+              <th>Prescription</th>
+            </tr>
+          </thead>
+          <tbody id="legalConvTable"></tbody>
+        </table>
+      </div>
+      <div class="grid grid-2" id="legalConventions" style="margin-top:22px;"></div>
+
+      <!-- ===== OBLIGATIONS PLATEFORME ===== -->
+      <div class="section-head left" style="margin:60px 0 22px;" id="obligations">
+        <span class="eyebrow">Obligations de la plateforme</span>
+        <h2>Ce qui pèse sur l'intermédiaire numérique</h2>
+        <p>Indépendamment du transport, l'activité de place de marché déclenche ses propres obligations : services numériques, données, preuve, fiscalité.</p>
+      </div>
+      <div class="grid grid-2" id="legalObligations"></div>
+
+      <!-- ===== CHECKLIST ===== -->
+      <div class="section-head left" style="margin:60px 0 22px;" id="checklist">
+        <span class="eyebrow">Avant lancement</span>
+        <h2>Les huit points à trancher</h2>
+      </div>
+      <div class="legal-checklist panel">
+        <ul id="legalChecklist"></ul>
+      </div>
+
+      <div class="legal-warning" style="margin-top:30px;">
+        <b>Sources.</b>
+        <span>Chaque fiche renvoie à ses textes : Légifrance, EUR-Lex, BOE, gesetze-im-internet.de, GOV.UK, FMCSA, CBP, CTQ, ADII, UNECE, OTIF, OACI, UNCITRAL, CCI. Une liste consolidée figure en bas de page.</span>
+      </div>
+
+      <noscript>
+        <div class="legal-warning" style="margin-top:20px;">
+          <b>JavaScript est désactivé.</b>
+          <span>Les fiches pays et les conventions sont générées à partir du fichier <code>assets/js/legal-data.js</code> ; activez JavaScript pour les consulter.</span>
+        </div>
+      </noscript>
+
+      <div id="legalSourceList" class="legal-sourcelist"></div>
+
+    </div>
+  </section>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="footer">
+    <div class="container footer-grid">
+      <div>
+        <div class="logo"><span class="logo-mark">◆</span> Transia</div>
+        <p>Plateforme de mise en relation entre donneurs d'ordre et transporteurs pour le transport international. Cotation à l'aveugle, comparaison des offres, commission de 8 % émise au transporteur.</p>
+      </div>
+      <div>
+        <h4>Plateforme</h4>
+        <ul>
+          <li><a href="demande.html">Créer une demande</a></li>
+          <li><a href="espace-donneur.html">Espace donneur</a></li>
+          <li><a href="transporteur.html">Espace transporteur</a></li>
+          <li><a href="comparateur.html">Comparateur d'offres</a></li>
+          <li><a href="admin.html">Administration</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Cadre juridique</h4>
+        <ul>
+          <li><a href="juridique.html#pays">Cadre par pays</a></li>
+          <li><a href="juridique.html#conventions">Conventions internationales</a></li>
+          <li><a href="juridique.html#obligations">Obligations plateforme</a></li>
+          <li><a href="juridique.html#checklist">Points à trancher</a></li>
+        </ul>
+      </div>
+      <div>
+        <h4>Confidentialité</h4>
+        <ul>
+          <li><a href="juridique.html#obligations">Protection des données</a></li>
+          <li><a href="juridique.html#obligations">Preuve des acceptations</a></li>
+          <li><a href="juridique.html#obligations">TVA et facturation</a></li>
+          <li><a href="juridique.html#checklist">Procédure de réclamation</a></li>
+        </ul>
+      </div>
+    </div>
+    <div class="container footer-bottom">
+      <span>© <span id="year"></span> Transia — Prototype v0.1 (document fondateur)</span>
+      <span>Incoterms® 2020 — marque de la CCI. Information documentaire, non constitutive d'un conseil juridique.</span>
+    </div>
+  </footer>
+
+  <div class="toast-zone"></div>
+  <script src="assets/js/data.js"></script>
+  <script src="assets/js/app.js"></script>
+  <script src="assets/js/api.js"></script>
+  <script src="assets/js/legal-data.js"></script>
+  <script src="assets/js/juridique.js"></script>
+</body>
+</html>
