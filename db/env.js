@@ -49,8 +49,8 @@ function loadEnv(files, root) {
 }
 
 /* DATABASE_URL contrôlée ; sort en code 2 avec la marche à suivre.
-   Renvoie { url, loaded, source } : `source` vaut le fichier qui a
-   fourni la variable, ou "environnement" si elle était déjà exportée. */
+   Renvoie { url, source } : `source` vaut le fichier qui a fourni
+   la variable, ou "environnement" si elle était déjà exportée. */
 function requireDatabaseUrl() {
   const loaded = loadEnv();
   const url = process.env.DATABASE_URL;
@@ -62,7 +62,7 @@ function requireDatabaseUrl() {
   if (!url) fail("DATABASE_URL introuvable (" + (loaded.join(", ") || "environnement") + ").");
   if (/^\[.*\]$/.test(url)) fail("DATABASE_URL vaut \"" + url + "\", une valeur masquée par `vercel env pull`.");
   if (!/^postgres(ql)?:\/\//.test(url)) fail("DATABASE_URL n'est pas une chaîne PostgreSQL.");
-  return { url, loaded, source };
+  return { url, source };
 }
 
 module.exports = { loadEnv, requireDatabaseUrl };
