@@ -130,6 +130,7 @@ a:hover { text-decoration: none; }
 }
 .nav-links a {
   padding: 9px 14px;
+  white-space: nowrap;
   border-radius: 999px;
   color: var(--muted);
   font-weight: 600;
@@ -778,7 +779,126 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
   gap: 8px;
 }
 
+/* ============================================================
+   Habillage photographique
+   Photos libres de droits (Pexels, licence gratuite) stockées
+   dans assets/img — aucune dépendance externe au chargement.
+   ============================================================ */
+
+/* --- Hero : photo de port en fond, fondue dans le dégradé --- */
+.hero--photo > .container { position: relative; z-index: 1; }
+.hero-photo {
+  position: absolute;
+  inset: 0 0 56px 38%;
+  background: url("../img/hero-night-port.jpg") center 10% / auto 135% no-repeat;
+  opacity: 0.5;
+  -webkit-mask-image: linear-gradient(100deg, transparent 0%, rgba(0, 0, 0, 0.15) 22%, rgba(0, 0, 0, 0.6) 45%, #000 75%);
+  mask-image: linear-gradient(100deg, transparent 0%, rgba(0, 0, 0, 0.15) 22%, rgba(0, 0, 0, 0.6) 45%, #000 75%);
+  pointer-events: none;
+}
+
+/* --- Cartes « modes de transport » avec photo --- */
+.modes-photo { display: grid; grid-template-columns: repeat(4, 1fr); gap: 22px; }
+.mode-card {
+  display: flex;
+  flex-direction: column;
+  background: #fff;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  overflow: hidden;
+  transition: all 0.2s ease;
+}
+.mode-card:hover { border-color: var(--blue-border); box-shadow: var(--shadow); transform: translateY(-3px); }
+.mode-figure { position: relative; aspect-ratio: 4 / 3; overflow: hidden; background: var(--blue-light); margin: 0; }
+.mode-figure img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.45s ease; }
+.mode-card:hover .mode-figure img { transform: scale(1.05); }
+.mode-figure figcaption {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  background: rgba(15, 44, 78, 0.86);
+  color: #fff;
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  padding: 5px 11px;
+  border-radius: 999px;
+}
+.mode-body { padding: 20px 22px 24px; }
+.mode-body h3 { font-size: 17px; color: var(--navy); margin-bottom: 6px; }
+.mode-body p { font-size: 14px; color: var(--muted); }
+.mode-body ul { list-style: none; margin-top: 12px; display: grid; gap: 5px; font-size: 13px; color: var(--muted); }
+.mode-body li::before { content: "✓ "; color: var(--green); font-weight: 700; }
+
+/* --- Carte avec visuel en tête --- */
+.card.with-media { padding-top: 0; overflow: hidden; }
+.card.with-media .card-media {
+  margin: 0 -26px 20px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  background: var(--blue-light);
+}
+.card-media img { width: 100%; height: 100%; object-fit: cover; display: block; transition: transform 0.45s ease; }
+.card:hover .card-media img { transform: scale(1.04); }
+
+/* --- Bandeau de page avec photo + voile de lisibilité --- */
+.page-head--photo {
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+}
+.page-head--photo::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(112deg, rgba(8, 26, 48, 0.95) 0%, rgba(15, 44, 78, 0.88) 45%, rgba(29, 82, 150, 0.6) 100%);
+}
+.page-head--photo > .container { position: relative; z-index: 1; }
+.ph-demande { background-image: url("../img/head-docks.jpg"); }
+.ph-transporteur { background-image: url("../img/screen-carrier.jpg"); }
+.ph-comparateur { background-image: url("../img/mode-sea.jpg"); }
+.ph-admin { background-image: url("../img/screen-admin.jpg"); }
+.ph-espace { background-image: url("../img/head-warehouse.jpg"); }
+.ph-auth { background-image: url("../img/hero-night-port.jpg"); }
+
+/* --- Bandeau d'appel à l'action avec photo --- */
+.cta-band--photo {
+  background-image:
+    linear-gradient(96deg, rgba(11, 34, 66, 0.95) 0%, rgba(26, 70, 142, 0.72) 46%, rgba(47, 111, 224, 0.45) 100%),
+    url("../img/cta-trucks.jpg");
+  background-size: cover;
+  background-position: center 60%;
+  background-repeat: no-repeat;
+}
+
 /* ---------- Responsive ---------- */
+@media (max-width: 1480px) {
+  .nav-links a { padding: 8px 11px; }
+  .nav-actions { gap: 6px; }
+  .nav-actions .btn { padding: 10px 14px; font-size: 13.5px; }
+  /* Connecté : l'identité et le rôle restent sur les grandes largeurs,
+     au-delà on garde le bouton de déconnexion pour ne pas saturer la barre */
+  #apiAuthBar > span:first-child { display: none; }
+}
+
+@media (max-width: 1180px) {
+  .nav-links a { padding: 8px 8px; font-size: 13.5px; }
+  .logo { font-size: 19px; }
+}
+
+/* Entre la barre compacte et le menu mobile : liens sur une 2e ligne */
+@media (min-width: 861px) and (max-width: 1080px) {
+  .nav-inner { flex-wrap: wrap; height: auto; padding: 10px 0; row-gap: 4px; }
+  .nav-links { order: 3; width: 100%; justify-content: flex-start; gap: 2px; }
+  .nav-links a { padding: 7px 9px; }
+}
+
+@media (max-width: 1080px) {
+  .modes-photo { grid-template-columns: repeat(2, 1fr); }
+}
+
 @media (max-width: 1020px) {
   .grid-4 { grid-template-columns: repeat(2, 1fr); }
   .steps { grid-template-columns: repeat(2, 1fr); }
@@ -789,6 +909,7 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
 
 @media (max-width: 860px) {
   .hero { padding: 56px 0 90px; }
+  .hero-photo { inset: 0 0 56px 0; opacity: 0.24; background-size: cover; background-position: center; -webkit-mask-image: none; mask-image: none; }
   .hero-grid { grid-template-columns: 1fr; gap: 36px; }
   .grid-3, .grid-2 { grid-template-columns: 1fr; }
   .layout-2, .layout-2-rev { grid-template-columns: 1fr; }
@@ -816,7 +937,13 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
 }
 
 @media (max-width: 560px) {
-  .grid-4, .steps, .stats { grid-template-columns: 1fr; }
+  .grid-4, .steps, .stats, .modes-photo { grid-template-columns: 1fr; }
+  .page-head--photo { background-position: center 35%; }
+  .nav-actions { gap: 8px; }
+  .nav-actions .btn-primary { padding: 9px 14px; font-size: 13.5px; }
+  .nav-inner { gap: 12px; }
+  .logo { gap: 6px; font-size: 18px; }
+  .logo-mark { width: 26px; height: 26px; font-size: 13px; }
   .filters-row { grid-template-columns: 1fr; }
   .footer-grid { grid-template-columns: 1fr; }
   .cta-band { padding: 38px 22px; }

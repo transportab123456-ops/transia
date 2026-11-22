@@ -22,7 +22,6 @@
         <a href="admin.html">Administration</a>
       </nav>
       <div class="nav-actions">
-        <a href="transporteur.html" class="btn btn-ghost">Je suis transporteur</a>
         <a href="demande.html" class="btn btn-primary">Déposer une demande</a>
         <button class="nav-toggle" id="navToggle" aria-label="Ouvrir le menu">☰</button>
       </div>
@@ -30,7 +29,8 @@
   </header>
 
   <!-- ============ HERO ============ -->
-  <section class="hero">
+  <section class="hero hero--photo">
+    <div class="hero-photo" aria-hidden="true"></div>
     <div class="container hero-grid">
       <div>
         <div class="eyebrow" style="background:rgba(166,200,243,.2);color:#cfe0f9;">Plateforme B2B · Prototype v0.1</div>
@@ -65,6 +65,79 @@
         </ol>
         <a href="demande.html" class="btn btn-primary btn-block">Commencer — déposer une RFQ</a>
         <p class="search-hint">Démonstration : aucune donnée n'est envoyée, tout reste dans votre navigateur.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ MODES DE TRANSPORT ============ -->
+  <section class="section section-white">
+    <div class="container">
+      <div class="section-head">
+        <span class="eyebrow">Modes couverts</span>
+        <h2>Routier, maritime, aérien, multimodal</h2>
+        <p>Chaque demande précise son mode, son incoterm et ses contraintes. Les transporteurs ne voient que les opérations qu'ils peuvent réellement traiter.</p>
+      </div>
+      <div class="modes-photo">
+        <article class="mode-card">
+          <figure class="mode-figure">
+            <img src="assets/img/mode-road.jpg" alt="Semi-remorques circulant sur une autoroute" width="1400" height="1050" loading="lazy" decoding="async" />
+            <figcaption>Routier</figcaption>
+          </figure>
+          <div class="mode-body">
+            <h3>Transport routier</h3>
+            <p>Lots complets et partiels, de l'enlèvement à la livraison.</p>
+            <ul>
+              <li>Enlèvement daté au domicile</li>
+              <li>Palettes, poids, volume</li>
+              <li>ADR signalé dès la demande</li>
+            </ul>
+          </div>
+        </article>
+        <article class="mode-card">
+          <figure class="mode-figure">
+            <img src="assets/img/mode-sea.jpg" alt="Port à conteneurs avec grues et navires de charge" width="1400" height="1050" loading="lazy" decoding="async" />
+            <figcaption>Maritime</figcaption>
+          </figure>
+          <div class="mode-body">
+            <h3>Maritime</h3>
+            <p>Groupage LCL ou conteneur complet FCL, au départ des grands hubs.</p>
+            <ul>
+              <li>Conteneurs 20', 40', 40' HC</li>
+              <li>Acheminement LCL / FCL</li>
+              <li>Délais de transit comparés</li>
+            </ul>
+          </div>
+        </article>
+        <article class="mode-card">
+          <figure class="mode-figure">
+            <img src="assets/img/mode-air.jpg" alt="Palette de fret chargée dans un avion-cargo sur le tarmac" width="1400" height="1050" loading="lazy" decoding="async" />
+            <figcaption>Aérien</figcaption>
+          </figure>
+          <div class="mode-body">
+            <h3>Aérien</h3>
+            <p>Pour les marchandises urgentes ou sensibles au délai.</p>
+            <ul>
+              <li>Transit exprimé</li>
+              <li>Contraintes IATA</li>
+              <li>Validité d'offre courte</li>
+            </ul>
+          </div>
+        </article>
+        <article class="mode-card">
+          <figure class="mode-figure">
+            <img src="assets/img/mode-rail.jpg" alt="Conteneurs sur un train de fret en pleine campagne" width="1400" height="1050" loading="lazy" decoding="async" />
+            <figcaption>Multimodal</figcaption>
+          </figure>
+          <div class="mode-body">
+            <h3>Multimodal</h3>
+            <p>Rail, route et mer combinés sous une seule cotation.</p>
+            <ul>
+              <li>Un seul interlocuteur</li>
+              <li>Rupture de charge maîtrisée</li>
+              <li>Empreinte carbone réduite</li>
+            </ul>
+          </div>
+        </article>
       </div>
     </div>
   </section>
@@ -222,23 +295,23 @@
         <p>Chaque écran est fonctionnel avec des données de démonstration, enregistrées dans votre navigateur.</p>
       </div>
       <div class="grid grid-4">
-        <a class="card" href="demande.html" style="color:inherit;">
-          <div class="icon-tile">📝</div>
+        <a class="card with-media" href="demande.html" style="color:inherit;">
+          <div class="card-media"><img src="assets/img/rfq-pallets.jpg" alt="Chariot élévateur chargeant des palettes dans un camion" width="1200" height="675" loading="lazy" decoding="async" /></div>
           <h3>Création de demande</h3>
           <p>Formulaire RFQ complet : origine, destination, mode, marchandise, incoterm, ADR.</p>
         </a>
-        <a class="card" href="transporteur.html" style="color:inherit;">
-          <div class="icon-tile">🚛</div>
+        <a class="card with-media" href="transporteur.html" style="color:inherit;">
+          <div class="card-media"><img src="assets/img/mode-road.jpg" alt="Camion de fret sur autoroute" width="1200" height="675" loading="lazy" decoding="async" /></div>
           <h3>Espace transporteur</h3>
           <p>Inscription en 5 minutes, tableau de bord des RFQ avec filtres, réponse en un formulaire.</p>
         </a>
-        <a class="card" href="comparateur.html" style="color:inherit;">
-          <div class="icon-tile">⚖️</div>
+        <a class="card with-media" href="comparateur.html" style="color:inherit;">
+          <div class="card-media"><img src="assets/img/screen-compare.jpg" alt="Conteneurs empilés sur un terminal portuaire, vue de nuit" width="1200" height="675" loading="lazy" decoding="async" /></div>
           <h3>Comparateur &amp; acceptation</h3>
           <p>Offres anonymes comparées, recommandation, acceptation ou refus avec motif.</p>
         </a>
-        <a class="card" href="admin.html" style="color:inherit;">
-          <div class="icon-tile">📊</div>
+        <a class="card with-media" href="admin.html" style="color:inherit;">
+          <div class="card-media"><img src="assets/img/screen-admin.jpg" alt="Vue aérienne d'un triage ferroviaire de fret" width="1200" height="675" loading="lazy" decoding="async" /></div>
           <h3>Administration</h3>
           <p>Tableau de bord stratégique par pays, vérification des transporteurs, contrôle de l'expansion.</p>
         </a>
@@ -305,7 +378,7 @@
   <!-- ============ CTA ============ -->
   <section class="section">
     <div class="container">
-      <div class="cta-band">
+      <div class="cta-band cta-band--photo">
         <h2>Prêt à mettre vos transports en concurrence ?</h2>
         <p>Déposez votre première demande de cotation en moins de 5 minutes.</p>
         <div style="display:flex;gap:14px;justify-content:center;flex-wrap:wrap;">
@@ -354,7 +427,7 @@
     </div>
     <div class="container footer-bottom">
       <span>© <span id="year"></span> Transia — Prototype v0.1 (document fondateur)</span>
-      <span>Incoterms® 2020 — marque de la CCI. Mentionnée à titre documentaire.</span>
+      <span>Incoterms® 2020 — marque de la CCI. Mentionnée à titre documentaire. Photos : Pexels.</span>
     </div>
   </footer>
 
