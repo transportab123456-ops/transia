@@ -49,12 +49,10 @@ function child(databaseUrl, root) {
   else env.DATABASE_URL = databaseUrl;
   const args = ["-e", CALL];
   if (root) args.push(root);
-  return spawnSync(process.execPath, args, { cwd: ROOT, env, encoding: "utf8" });
-}
-
-function parsed(result) {
-  try { return JSON.parse(result.stdout || "{}"); }
-  catch (e) { return {}; }
+  const result = spawnSync(process.execPath, args, { cwd: ROOT, env, encoding: "utf8" });
+  let body = {};
+  try { body = JSON.parse(result.stdout || "{}"); } catch (e) { /* refus : sortie vide */ }
+  return { status: result.status, stderr: result.stderr || "", url: body.url, source: body.source };
 }
 
 try {
@@ -90,12 +88,11 @@ try {
   console.log("\n[3] Provenance de DATABASE_URL");
   write(".env.local", 'DATABASE_URL="postgresql://fichier/db"\n');
   const fromFile = child(null, tmp);
-  check("fichier → code 0", fromFile.status === 0, fromFile.stderr);
-  check("fichier → source .env.local", parsed(fromFile).source === ".env.local", parsed(fromFile));
-  check("fichier → URL du fichier", parsed(fromFile).url === "postgresql://fichier/db", parsed(fromFile));
+  check("fichier → source .env.local", fromFile.source === ".env.local", fromFile);
+  check("fichier → URL du fichier", fromFile.url === "postgresql://fichier/db", fromFile);
   const fromEnv = child("postgresql://exporte/db", tmp);
-  check("environnement → source environnement", parsed(fromEnv).source === "environnement", parsed(fromEnv));
-  check("environnement → URL exportée", parsed(fromEnv).url === "postgresql://exporte/db", parsed(fromEnv));
+  check("environnement → source environnement", fromEnv.source === "environnement", fromEnv);
+  check("environnement → URL exportée", fromEnv.url === "postgresql://exporte/db", fromEnv);
 
   console.log("\n[4] Fichiers absents");
   const before = Object.keys(process.env).length;

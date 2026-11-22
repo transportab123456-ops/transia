@@ -53,14 +53,14 @@ function loadEnv(files, root) {
    la variable, ou "environnement" si elle était déjà exportée.
    `root` n'existe que pour les tests, comme pour loadEnv(). */
 function requireDatabaseUrl(root) {
-  const loaded = loadEnv(undefined, root);
+  loadEnv(DEFAULT_FILES, root);
   const url = process.env.DATABASE_URL;
   const source = definedIn.DATABASE_URL || "environnement";
   function fail(why) {
     console.error(why + "\nAjoutez dans .env.local à la racine :\n  DATABASE_URL=postgresql://user:pass@host/db");
     process.exit(2);
   }
-  if (!url) fail("DATABASE_URL introuvable (" + (loaded.join(", ") || "environnement") + ").");
+  if (!url) fail("DATABASE_URL introuvable dans l'environnement, .env.local ou .env.");
   if (/^\[.*\]$/.test(url)) fail("DATABASE_URL vaut \"" + url + "\", une valeur masquée par `vercel env pull`.");
   if (!/^postgres(ql)?:\/\//.test(url)) fail("DATABASE_URL n'est pas une chaîne PostgreSQL.");
   return { url, source };
