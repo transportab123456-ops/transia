@@ -123,11 +123,11 @@ function migrate() {
         WHERE n.nspname = 'public' AND c.relkind = 'r'
         ORDER BY 1`
     );
-    const nonEmpty = [];
-    for (const t of existing.rows) {
+    const counts = await Promise.all(existing.rows.map(async (t) => {
       const n = (await one(`SELECT count(*)::int AS n FROM "${t.relname}"`)).n;
-      if (n > 0) nonEmpty.push(t.relname + " (" + n + ")");
-    }
+      return n > 0 ? t.relname + " (" + n + ")" : null;
+    }));
+    const nonEmpty = counts.filter(Boolean);
     if (nonEmpty.length && process.env.ALLOW_RESET !== "1") {
       console.error(
         "Base non vide — ce test réinitialise le schéma public : " +
