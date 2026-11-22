@@ -6,6 +6,18 @@
   <title>Espace donneur d'ordre — mes demandes — Transia</title>
   <meta name="description" content="Tableau de bord donneur d'ordre : vos demandes de cotation, les offres reçues, les affaires confirmées et l'historique. Cotation à l'aveugle jusqu'à acceptation." />
   <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/img/favicon.svg" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Transia" />
+  <meta property="og:locale" content="fr_FR" />
+  <meta property="og:title" content="Espace donneur d'ordre — mes demandes — Transia" />
+  <meta property="og:description" content="Tableau de bord donneur d'ordre : vos demandes de cotation, les offres reçues, les affaires confirmées et l'historique. Cotation à l'aveugle jusqu'à acceptation." />
+  <meta property="og:url" content="https://transia-sooty.vercel.app/espace-donneur.html" />
+  <meta property="og:image" content="https://transia-sooty.vercel.app/assets/img/hero-night-port.jpg" />
+  <meta property="og:image:width" content="1600" />
+  <meta property="og:image:height" content="1067" />
+  <meta name="twitter:card" content="summary_large_image" />
 </head>
 <body>
 
@@ -22,7 +34,7 @@
       </nav>
       <div class="nav-actions">
         <a href="demande.html" class="btn btn-primary">Déposer une demande</a>
-        <button class="nav-toggle" id="navToggle" aria-label="Ouvrir le menu">☰</button>
+        <button class="nav-toggle" id="navToggle" aria-label="Ouvrir le menu"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
       </div>
     </div>
   </header>
@@ -53,8 +65,8 @@
       <!-- Mes demandes -->
       <div class="panel" style="margin-bottom:26px;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
-          <h3 class="mt-0 mb-0">📋 Mes demandes</h3>
-          <span class="badge badge-blue">🔒 Cotation à l'aveugle</span>
+          <h3 class="mt-0 mb-0"> Mes demandes</h3>
+          <span class="badge badge-blue"> Cotation à l'aveugle</span>
         </div>
         <p class="muted" style="font-size:14px;margin-bottom:16px;">Le nombre de réponses vous est indiqué, mais jamais le détail ni les prix avant que la plateforme ne vous recommande la meilleure offre.</p>
         <div class="table-wrap">
@@ -66,7 +78,7 @@
           </table>
         </div>
         <div class="empty hidden" id="donneurEmpty">
-          <div class="big">🗂️</div>
+          <div class="big"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 7h6l2 2h10v10H3Z"/></svg></div>
           <p>Aucune demande pour l'instant.</p>
           <a href="demande.html" class="btn btn-primary" style="margin-top:14px;">Déposer ma première demande</a>
         </div>
@@ -75,12 +87,12 @@
       <!-- Offres à valider / affaires -->
       <div class="layout-2">
         <div class="panel">
-          <h3 class="mt-0">🔔 Offres à valider</h3>
+          <h3 class="mt-0"> Offres à valider</h3>
           <p style="font-size:13.5px;color:#617795;margin-bottom:16px;">Dès qu'une recommandation vous est présentée, acceptez ou refusez — l'identité du transporteur reste masquée jusqu'à acceptation.</p>
           <div id="offresValider"></div>
         </div>
         <div class="panel">
-          <h3 class="mt-0">✅ Transports confirmés</h3>
+          <h3 class="mt-0"> Transports confirmés</h3>
           <p style="font-size:13.5px;color:#617795;margin-bottom:16px;">Après double confirmation, les identités sont dévoilées et l'affaire est enregistrée.</p>
           <div id="affairesConfirmees"></div>
         </div>
@@ -88,7 +100,7 @@
 
       <!-- Historique -->
       <div class="panel" style="margin-top:26px;">
-        <h3 class="mt-0">🗄️ Historique</h3>
+        <h3 class="mt-0"> Historique</h3>
         <p class="muted" style="font-size:14px;margin-bottom:16px;">Demandes passées, prix acceptés, dates, modes et statuts — y compris les refus (motifs utiles à l'analyse).</p>
         <div id="historiqueList"></div>
       </div>
@@ -98,7 +110,7 @@
 
   <footer class="footer">
     <div class="container footer-bottom" style="border:none;padding-top:0;">
-      <span>© <span id="year"></span> Transia — Prototype v0.1 · Démonstration, aucune donnée transmise</span>
+      <span>© <span id="year"></span> Transia — Mise en relation transport international</span>
       <span><a href="index.html" style="color:#a6c8f3;">Accueil</a> · <a href="juridique.html" style="color:#a6c8f3;">Cadre juridique</a></span>
     </div>
   </footer>

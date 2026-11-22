@@ -6,6 +6,18 @@
   <title>Administration — tableau de bord stratégique — Transia</title>
   <meta name="description" content="Back-office administrateur : vérification des transporteurs, journal des affaires et commissions, pilotage de l'expansion internationale pays par pays." />
   <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/img/favicon.svg" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Transia" />
+  <meta property="og:locale" content="fr_FR" />
+  <meta property="og:title" content="Administration — tableau de bord stratégique — Transia" />
+  <meta property="og:description" content="Back-office administrateur : vérification des transporteurs, journal des affaires et commissions, pilotage de l'expansion internationale pays par pays." />
+  <meta property="og:url" content="https://transia-sooty.vercel.app/admin.html" />
+  <meta property="og:image" content="https://transia-sooty.vercel.app/assets/img/hero-night-port.jpg" />
+  <meta property="og:image:width" content="1600" />
+  <meta property="og:image:height" content="1067" />
+  <meta name="twitter:card" content="summary_large_image" />
 </head>
 <body>
 
@@ -22,7 +34,7 @@
       </nav>
       <div class="nav-actions">
         <a href="demande.html" class="btn btn-primary">Déposer une demande</a>
-        <button class="nav-toggle" id="navToggle" aria-label="Ouvrir le menu">☰</button>
+        <button class="nav-toggle" id="navToggle" aria-label="Ouvrir le menu"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
       </div>
     </div>
   </header>
@@ -43,7 +55,7 @@
 
       <!-- ============ FILE DE TRAVAIL ============ -->
       <div class="panel" style="margin-bottom:26px;" id="aFaire">
-        <h3 class="mt-0">☑️ À faire aujourd'hui</h3>
+        <h3 class="mt-0"> À faire aujourd'hui</h3>
         <p class="muted" style="font-size:14px;margin-bottom:14px;">File de travail priorisée — l'administrateur n'a pas à parcourir toute la plateforme.</p>
         <div class="grid grid-4" id="todoGrid"></div>
       </div>
@@ -51,7 +63,7 @@
       <!-- ============ VALIDATION RECOMMANDATION (COMPARATEUR) ============ -->
       <div class="panel" style="margin-bottom:26px;" id="comparateur">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
-          <h3 class="mt-0 mb-0">🧮 Validation des recommandations</h3>
+          <h3 class="mt-0 mb-0"> Validation des recommandations</h3>
           <span class="badge badge-amber">L'algorithme propose · l'admin décide</span>
         </div>
         <p class="muted" style="font-size:14px;margin-bottom:16px;">Le moteur classe les offres normalisées. Aucune recommandation n'est envoyée au client sans validation humaine. Tout écart au n°1 exige un motif (journalisé).</p>
@@ -64,7 +76,7 @@
 
       <!-- ============ DONNEURS D'ORDRE ============ -->
       <div class="panel" style="margin-bottom:26px;">
-        <h3 class="mt-0">🏢 Donneurs d'ordre</h3>
+        <h3 class="mt-0"> Donneurs d'ordre</h3>
         <p class="muted" style="font-size:14px;margin-bottom:16px;">Vue client : fiche, RFQ, affaires, contacts import/export/logistique et motifs de refus.</p>
         <div class="table-wrap">
           <table class="table">
@@ -76,7 +88,7 @@
 
       <!-- ============ COTATIONS ============ -->
       <div class="panel" style="margin-bottom:26px;">
-        <h3 class="mt-0">📝 Toutes les cotations</h3>
+        <h3 class="mt-0"> Toutes les cotations</h3>
         <p class="muted" style="font-size:14px;margin-bottom:16px;">Vue normalisée du moteur : prix comparable converti, statut technique. Les données tarifaires d'un transporteur ne sont jamais communiquées à un concurrent.</p>
         <div class="table-wrap">
           <table class="table">
@@ -89,7 +101,7 @@
       <!-- ============ INCIDENTS ============ -->
       <div class="panel" style="margin-bottom:26px;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
-          <h3 class="mt-0 mb-0">⚠️ Incidents</h3>
+          <h3 class="mt-0 mb-0"> Incidents</h3>
           <span class="badge badge-red" id="incidentsCount">0 à traiter</span>
         </div>
         <p class="muted" style="font-size:14px;margin-bottom:16px;">Contournement, non-confirmation, annulation, document expiré, litige sur commission.</p>
@@ -98,7 +110,7 @@
 
       <!-- ============ CONTACTS INTERNATIONAUX ============ -->
       <div class="panel" style="margin-bottom:26px;">
-        <h3 class="mt-0">🌐 Contacts internationaux</h3>
+        <h3 class="mt-0"> Contacts internationaux</h3>
         <p class="muted" style="font-size:14px;margin-bottom:16px;">Base stratégique collectée au fil des opérations. Ils n'activent rien automatiquement — seul l'admin décide d'ouvrir un marché.</p>
         <div class="table-wrap">
           <table class="table">
@@ -111,11 +123,11 @@
       <!-- ============ PAYS ============ -->
       <div class="panel" style="margin-bottom:26px;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px;">
-          <h3 class="mt-0 mb-0">🌍 Expansion internationale</h3>
+          <h3 class="mt-0 mb-0"> Expansion internationale</h3>
           <span class="badge badge-amber">Ouverture : décision humaine</span>
         </div>
         <div class="info-banner" style="margin-bottom:16px;">
-          🧭 <span>La plateforme analyse, recommande et signale les opportunités — mais <b>aucun pays n'est activé automatiquement</b>. L'administrateur conserve le contrôle de chaque marché.</span>
+           <span>La plateforme analyse, recommande et signale les opportunités — mais <b>aucun pays n'est activé automatiquement</b>. L'administrateur conserve le contrôle de chaque marché.</span>
         </div>
         <div class="table-wrap">
           <table class="table">
@@ -133,7 +145,7 @@
       <!-- ============ VÉRIFICATION ============ -->
       <div class="panel" style="margin-bottom:26px;">
         <div style="display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:6px;">
-          <h3 class="mt-0 mb-0">🛡️ Vérification des transporteurs</h3>
+          <h3 class="mt-0 mb-0"> Vérification des transporteurs</h3>
           <span class="badge badge-blue">Inscrit → à vérifier → validé → actif</span>
         </div>
         <p class="muted" style="font-size:14px;margin-bottom:16px;">L'administrateur conserve la décision finale d'activation. Justificatifs : immatriculation, licences, assurances, documents spécifiques.</p>
@@ -142,7 +154,7 @@
 
       <!-- ============ JOURNAL DES AFFAIRES ============ -->
       <div class="panel" style="margin-bottom:26px;">
-        <h3 class="mt-0">📒 Journal des affaires &amp; commissions</h3>
+        <h3 class="mt-0"> Journal des affaires &amp; commissions</h3>
         <p class="muted" style="font-size:14px;margin-bottom:16px;">Chaque acceptation est enregistrée et horodatée (preuve électronique). Commission selon barème dégressif (8 % → 2,5 %, plafond 700 €) sur la partie transport, émise au transporteur.</p>
         <div class="table-wrap">
           <table class="table">
@@ -156,14 +168,14 @@
 
       <!-- ============ RAPPORTS ============ -->
       <div class="panel" style="margin-bottom:26px;">
-        <h3 class="mt-0">📊 Rapports</h3>
+        <h3 class="mt-0"> Rapports</h3>
         <p class="muted" style="font-size:14px;margin-bottom:16px;">Performance par ligne (origine → destination) : volume, offres par RFQ, prix médian et taux d'acceptation.</p>
         <div class="grid grid-3" id="rapportsGrid"></div>
       </div>
 
       <!-- ============ VALIDATION ÉCONOMIQUE ============ -->
       <div class="panel">
-        <h3 class="mt-0">📈 Validation économique (phase 6)</h3>
+        <h3 class="mt-0"> Validation économique (phase 6)</h3>
         <p class="muted" style="font-size:14px;margin-bottom:16px;">Indicateurs mesurés pour valider le modèle avant industrialisation.</p>
         <div class="grid grid-3" id="metriquesGrid"></div>
       </div>
@@ -176,7 +188,7 @@
     <div class="modal" style="width:min(480px,100%);">
       <div class="modal-head">
         <h3>Ouvrir le marché</h3>
-        <button class="modal-close" aria-label="Fermer">✕</button>
+        <button class="modal-close" aria-label="Fermer"><svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
       </div>
       <div id="marcheInfo" style="background:var(--blue-light);border-radius:10px;padding:14px 16px;font-size:14px;color:#0f2c4e;margin-bottom:18px;"></div>
       <p style="font-size:14px;color:#617795;margin-bottom:18px;">
@@ -188,7 +200,7 @@
 
   <footer class="footer">
     <div class="container footer-bottom" style="border:none;padding-top:0;">
-      <span>© <span id="year"></span> Transia — Prototype v0.1 · Démonstration, aucune donnée transmise</span>
+      <span>© <span id="year"></span> Transia — Mise en relation transport international</span>
       <span><a href="index.html" style="color:#a6c8f3;">Accueil</a> · <a href="juridique.html" style="color:#a6c8f3;">Cadre juridique</a></span>
     </div>
   </footer>

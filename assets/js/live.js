@@ -27,7 +27,6 @@
   }
   function euro(n) { return Number(n).toLocaleString("fr-FR", { maximumFractionDigits: 0 }) + " €"; }
   function modeFr(code) { return API.modeLabel(code); }
-  function modeIco(code) { return { ROAD: "🚚", SEA: "🚢", AIR: "✈️", MULTIMODAL: "🔗" }[code] || "📦"; }
   function badge(statut) {
     var map = { OPEN: "badge-blue", PUBLISHED: "badge-blue", RECOMMENDED: "badge-amber", ACCEPTED: "badge-amber", CONFIRMED: "badge-green", CLOSED: "badge-grey", REFUSED: "badge-grey", CANCELLED: "badge-grey", VERIFIED: "badge-green", PENDING: "badge-amber", SUSPENDED: "badge-red", REJECTED: "badge-red" };
     return "<span class='badge " + (map[statut] || "badge-grey") + "'>" + h(statut) + "</span>";
@@ -100,7 +99,7 @@
           "<b>" + h(payload.originCity) + " (" + h(payload.originCountry) + ")</b> → <b>" +
           h(payload.destinationCity) + " (" + h(payload.destinationCountry) + ")</b> · " +
           h(modeFr(payload.mode)) + (payload.incoterm ? " · Incoterm " + h(payload.incoterm) : "") +
-          (dangereux ? " · ⚠️ ADR" : "");
+          (dangereux ? " · ADR" : "");
         get("linkComparateur").href = "comparateur.html?ref=" + encodeURIComponent(ref);
         var match = get("matchList");
         if (match) match.innerHTML = "<p style='font-size:13.5px;color:#617795;'>Votre demande est publiée sur le marché : les transporteurs vérifiés la voient <b>à l'aveugle</b> (sans votre identité) et déposent leurs offres.</p>";
@@ -135,8 +134,8 @@
         "<p class='muted' style='font-size:13.5px;margin:0;'>Modes : " + h((r.body.modes || []).map(modeFr).join(" · ") || "—") +
         (r.body.company.status ? " · société : " + h(r.body.company.status) : "") + "</p></div></div></div>" +
         (v.status !== "VERIFIED"
-          ? "<div class='info-banner' style='margin-top:16px;'>🛡️ <span>Votre compte est <b>" + h(v.status === "PENDING" ? "à vérifier" : v.status.toLowerCase()) + "</b> : la plateforme contrôle vos justificatifs et garde la décision finale. Vous ne pouvez pas encore déposer d'offres.</span></div>"
-          : "<div class='info-banner' style='margin-top:16px;'>✅ <span>Compte vérifié — vous pouvez consulter le marché et déposer des offres à l'aveugle.</span></div>");
+          ? "<div class='info-banner' style='margin-top:16px;'> <span>Votre compte est <b>" + h(v.status === "PENDING" ? "à vérifier" : v.status.toLowerCase()) + "</b> : la plateforme contrôle vos justificatifs et garde la décision finale. Vous ne pouvez pas encore déposer d'offres.</span></div>"
+          : "<div class='info-banner' style='margin-top:16px;'> <span>Compte vérifié — vous pouvez consulter le marché et déposer des offres à l'aveugle.</span></div>");
     });
 
     /* Marché réel (remplace la table démo) */
@@ -172,8 +171,8 @@
           "<td><b>" + h(x.rfq_number) + "</b></td>" +
           "<td>" + h(x.origin_city) + "<br /><span class='muted' style='font-size:12px;'>" + h(API.countryName(x.origin_country)) + "</span></td>" +
           "<td>" + h(x.destination_city) + "<br /><span class='muted' style='font-size:12px;'>" + h(API.countryName(x.destination_country)) + "</span></td>" +
-          "<td><span class='mode-badge'>" + modeIco(x.mode) + " " + h(modeFr(x.mode)) + "</span></td>" +
-          "<td>" + (x.gross_weight ? h(String(x.gross_weight)) + " kg" : "—") + (x.dangerous_goods ? " ⚠️" : "") + "</td>" +
+          "<td><span class='mode-badge'>" + h(modeFr(x.mode)) + "</span></td>" +
+          "<td>" + (x.gross_weight ? h(String(x.gross_weight)) + " kg" : "—") + (x.dangerous_goods ? " " : "") + "</td>" +
           "<td>" + h(x.pickup_date || "—") + "</td>" +
           "<td>" + badge(x.status) + "</td>" +
           "<td>" + (x.already_quoted
@@ -229,7 +228,7 @@
           (detail.gross_weight ? h(String(detail.gross_weight)) + " kg · " : "") +
           (detail.volume ? h(String(detail.volume)) + " m³" : "") + "<br />" +
           "Incoterm " + h(detail.incoterm || "—") + " · enlèvement " + h(detail.pickup_date || "—") +
-          (detail.dangerous_goods ? "<br /><b style='color:#96650f;'>⚠️ Marchandise dangereuse</b>" : "")
+          (detail.dangerous_goods ? "<br /><b style='color:#96650f;'> Marchandise dangereuse</b>" : "")
         : "";
       openModal("modalReponse");
     }
@@ -401,8 +400,8 @@
         var msgs = [];
         var ecartees = list.filter(function (q) { return q.statutTechnique === "NON_CONFORME"; });
         var clarifier = list.filter(function (q) { return q.statutTechnique === "A_VERIFIER"; });
-        if (ecartees.length) msgs.push("⚖️ <span><b>Offres écartées :</b> " + ecartees.map(function (q) { return "Offre " + h(q.letter) + " — " + h(q.motifNonConformite || "périmètre différent"); }).join(" · ") + "</span>");
-        if (clarifier.length) msgs.push("🔎 <span><b>À clarifier :</b> " + clarifier.map(function (q) { return "Offre " + h(q.letter) + " — frais obligatoires à préciser"; }).join(" · ") + "</span>");
+        if (ecartees.length) msgs.push(" <span><b>Offres écartées :</b> " + ecartees.map(function (q) { return "Offre " + h(q.letter) + " — " + h(q.motifNonConformite || "périmètre différent"); }).join(" · ") + "</span>");
+        if (clarifier.length) msgs.push(" <span><b>À clarifier :</b> " + clarifier.map(function (q) { return "Offre " + h(q.letter) + " — frais obligatoires à préciser"; }).join(" · ") + "</span>");
         if (msgs.length) { note.classList.remove("hidden"); note.innerHTML = msgs.join("<br />"); }
         else note.classList.add("hidden");
 
@@ -417,7 +416,7 @@
       if (deal) {
         var carrier = (list.filter(function (q) { return q.carrier; })[0] || {}).carrier;
         box.innerHTML =
-          "<h3 class='mt-0'>✅ Affaire confirmée</h3>" +
+          "<h3 class='mt-0'> Affaire confirmée</h3>" +
           "<p style='font-size:13.5px;color:#617795;'>Horodatée le " + h(new Date(deal.confirmed_at).toLocaleString("fr-FR")) + " · réf. <b>" + h(deal.deal_number) + "</b></p>" +
           "<div class='divider'></div>" +
           "<div class='track-summary' style='grid-template-columns:1fr 1;'>" +
@@ -426,7 +425,7 @@
           "</div>" +
           "<p style='font-size:12.5px;color:#617795;'>Assiette : la partie transport de l'opération. Facturée au transporteur.</p>" +
           "<div class='divider'></div>" +
-          "<h4 style='color:#0f2c4e;margin-bottom:12px;'>🔓 Identités dévoilées</h4>" +
+          "<h4 style='color:#0f2c4e;margin-bottom:12px;'> Identités dévoilées</h4>" +
           (carrier
             ? "<div style='border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:10px;'><b style='color:#0f2c4e;'>" + h(carrier.legal_name) + "</b> <span class='badge badge-green'>Transporteur</span>" +
               "<p style='font-size:13px;color:#617795;margin-top:6px;'>" + h(carrier.main_phone || "") + " · " + h(carrier.main_email || "") + "</p></div>"
@@ -439,21 +438,21 @@
 
       if (rec.status === "PENDING_ADMIN") {
         box.innerHTML =
-          "<h3 class='mt-0'>⏳ Analyse en cours</h3>" +
+          "<h3 class='mt-0'> Analyse en cours</h3>" +
           "<p style='font-size:14px;color:#617795;'>" + h(rec.message || "La plateforme classe les offres : l'administration valide la recommandation avant qu'elle ne vous soit présentée.") + "</p>";
         return;
       }
 
       if (rec.status === "NO_CONFORME_QUOTE") {
         box.innerHTML =
-          "<h3 class='mt-0'>🔎 Aucune offre conforme</h3>" +
+          "<h3 class='mt-0'> Aucune offre conforme</h3>" +
           "<p style='font-size:14px;color:#617795;'>" + h(rec.message || "Clarification requise avant recommandation.") + "</p>";
         return;
       }
 
       if (!rec.recommended) {
         box.innerHTML =
-          "<h3 class='mt-0'>⏳ En attente d'offres</h3>" +
+          "<h3 class='mt-0'> En attente d'offres</h3>" +
           "<p style='font-size:14px;color:#617795;'>Dès qu'au moins une offre conforme sera reçue et validée, la plateforme vous recommandera la meilleure.</p>" +
           "<div class='divider'></div>" +
           "<p style='font-size:13px;color:#617795;'>Rappel : les transporteurs cotent à l'aveugle — le nombre d'offres n'est jamais communiqué aux transporteurs.</p>";
@@ -465,13 +464,13 @@
       var assiette = parseFloat(reco.commissionable_amount);
       var lettre = reco.letter;
       box.innerHTML =
-        "<h3 class='mt-0'>🏆 Offre recommandée</h3>" +
+        "<h3 class='mt-0'> Offre recommandée</h3>" +
         "<p style='font-size:13px;color:#617795;'>Validée par l'administration" + (reco.validatedAt ? " le " + h(new Date(reco.validatedAt).toLocaleDateString("fr-FR")) : "") + ".</p>" +
         "<div style='background:var(--blue-light);border-radius:12px;padding:18px;margin:14px 0;'>" +
         "<div class='price-tag' style='text-align:left;'><b style='font-size:32px;'>" + euro(reco.comparable_total) + "</b>" +
         "<span>prix comparable (transport + frais obligatoires) en EUR</span></div>" +
         "<div style='display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:13.5px;color:#617795;'><span>Offre <b style='color:#1b2d49;'>" + h(lettre || "?") + "</b></span></div></div>" +
-        "<div class='info-banner' style='margin:14px 0;'>🧮 <span><b>Normalisation appliquée :</b> prix comparable = transport + frais obligatoires (options exclues), converti en EUR. L'assiette de commission reste la seule partie transport (" + euro(assiette) + ").</span></div>" +
+        "<div class='info-banner' style='margin:14px 0;'> <span><b>Normalisation appliquée :</b> prix comparable = transport + frais obligatoires (options exclues), converti en EUR. L'assiette de commission reste la seule partie transport (" + euro(assiette) + ").</span></div>" +
         "<button class='btn btn-primary btn-block btn-lg' id='btnAccepterLive'>Accepter l'offre</button>" +
         "<button class='btn btn-outline btn-block' id='btnRefuserLive' style='margin-top:10px;'>Refuser l'offre</button>";
 
@@ -517,14 +516,14 @@
 
       /* KPI */
       var kpis = [
-        { icone: "📋", valeur: rfqs.length, label: "Mes demandes" },
-        { icone: "✅", valeur: rfqs.filter(function (r) { return r.status === "CONFIRMED"; }).length, label: "Transports confirmés" },
-        { icone: "⏳", valeur: rfqs.filter(function (r) { return r.status === "RECOMMENDED"; }).length, label: "Offres à valider" },
-        { icone: "💶", valeur: euro(parseFloat(dealsRes.stats.commission) || 0), label: "Commissions (barème)" }
+        { icone: "", valeur: rfqs.length, label: "Mes demandes" },
+        { icone: "", valeur: rfqs.filter(function (r) { return r.status === "CONFIRMED"; }).length, label: "Transports confirmés" },
+        { icone: "", valeur: rfqs.filter(function (r) { return r.status === "RECOMMENDED"; }).length, label: "Offres à valider" },
+        { icone: "", valeur: euro(parseFloat(dealsRes.stats.commission) || 0), label: "Commissions (barème)" }
       ];
       get("donneurKpis").innerHTML = kpis.map(function (k) {
         return "<div class='card' style='text-align:center;'>" +
-          "<div class='icon-tile' style='margin:0 auto 12px;'>" + k.icone + "</div>" +
+          (k.icone ? "<div class='icon-tile' style='margin:0 auto 12px;'>" + k.icone + "</div>" : "") +
           "<b style='display:block;font-size:26px;color:#0f2c4e;letter-spacing:-1px;'>" + k.valeur + "</b>" +
           "<span style='font-size:13px;color:#617795;'>" + k.label + "</span></div>";
       }).join("");
@@ -546,7 +545,7 @@
           "<td><b>" + h(x.rfq_number) + "</b></td>" +
           "<td>" + h(x.origin_city) + " → " + h(x.destination_city) +
           "<br /><span class='muted' style='font-size:12px;'>" + h(API.countryName(x.origin_country) + " → " + API.countryName(x.destination_country)) + "</span></td>" +
-          "<td><span class='mode-badge'>" + modeIco(x.mode) + " " + h(modeFr(x.mode)) + "</span></td>" +
+          "<td><span class='mode-badge'>" + h(modeFr(x.mode)) + "</span></td>" +
           "<td style='font-size:13px;'>" + h(x.pickup_date || "—") + "</td>" +
           "<td>" + (dealByRfq[x.rfq_number] ? "<span class='badge badge-green'>affaire</span>" : "—") + "</td>" +
           "<td>" + badge(st) + "</td>" +
@@ -604,14 +603,14 @@
       if (!r.ok) return;
       var b = r.body;
       var kpis = [
-        { icone: "📋", valeur: b.rfqs.total, label: "RFQ enregistrées", note: b.rfqs.ouvertes + " ouvertes · " + b.rfqs.confirmees + " confirmées" },
-        { icone: "📝", valeur: b.quotes.total, label: "Offres déposées", note: b.metrics.taux_reponse + " % de taux de réponse" },
+        { icone: "", valeur: b.rfqs.total, label: "RFQ enregistrées", note: b.rfqs.ouvertes + " ouvertes · " + b.rfqs.confirmees + " confirmées" },
+        { icone: "", valeur: b.quotes.total, label: "Offres déposées", note: b.metrics.taux_reponse + " % de taux de réponse" },
         { icone: "🚛", valeur: b.carriers.total, label: "Transporteurs", note: b.carriers.en_attente + " à vérifier" },
-        { icone: "💶", valeur: euro(parseFloat(b.commissions.total) || 0), label: "Commissions calculées", note: b.deals.total + " affaire(s)" }
+        { icone: "", valeur: euro(parseFloat(b.commissions.total) || 0), label: "Commissions calculées", note: b.deals.total + " affaire(s)" }
       ];
       get("kpiGrid").innerHTML = kpis.map(function (k) {
         return "<div class='card' style='text-align:center;'>" +
-          "<div class='icon-tile' style='margin:0 auto 12px;'>" + k.icone + "</div>" +
+          (k.icone ? "<div class='icon-tile' style='margin:0 auto 12px;'>" + k.icone + "</div>" : "") +
           "<b style='display:block;font-size:26px;color:#0f2c4e;letter-spacing:-1px;'>" + k.valeur + "</b>" +
           "<span style='font-size:13px;color:#617795;'>" + k.label + "</span>" +
           "<br /><span style='font-size:12px;color:#9fb2cc;'>" + h(k.note) + "</span></div>";
@@ -619,9 +618,9 @@
 
       /* File de travail */
       var todo = [
-        { icone: "🛡️", n: b.carriers.en_attente, label: "transporteurs à vérifier", urgent: b.carriers.en_attente > 0 },
-        { icone: "📋", n: b.rfqs.ouvertes, label: "RFQ ouvertes", urgent: false },
-        { icone: "💶", n: b.commissions.en_attente, label: "commissions à facturer", urgent: false }
+        { icone: "", n: b.carriers.en_attente, label: "transporteurs à vérifier", urgent: b.carriers.en_attente > 0 },
+        { icone: "", n: b.rfqs.ouvertes, label: "RFQ ouvertes", urgent: false },
+        { icone: "", n: b.commissions.en_attente, label: "commissions à facturer", urgent: false }
       ];
       get("todoGrid").innerHTML = todo.map(function (i) {
         return "<div class='card' style='padding:16px;" + (i.urgent ? "border-color:var(--amber);" : "") + "'>" +
@@ -700,7 +699,7 @@
         tr.innerHTML =
           "<td><b>" + h(d.deal_number) + "</b></td>" +
           "<td>" + h(d.origin_city + " → " + d.destination_city) + "</td>" +
-          "<td><span class='mode-badge'>" + modeIco(d.mode) + " " + h(modeFr(d.mode)) + "</span></td>" +
+          "<td><span class='mode-badge'>" + h(modeFr(d.mode)) + "</span></td>" +
           "<td><b>" + euro(d.transport_amount) + " " + h(d.currency) + "</b></td>" +
           "<td style='color:var(--green);font-weight:700;'>" + euro(d.commission_amount) + "</td>" +
           "<td style='font-size:13px;'>" + h(new Date(d.confirmed_at).toLocaleDateString("fr-FR")) + "</td>" +

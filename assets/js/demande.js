@@ -193,7 +193,7 @@
       "<b>" + escapeHtml(rfq.origine.ville) + " (" + escapeHtml(rfq.origine.pays) + ")</b> → <b>" +
       escapeHtml(rfq.dest.ville) + " (" + escapeHtml(rfq.dest.pays) + ")</b> · " +
       escapeHtml(rfq.mode) + " · Incoterm " + escapeHtml(rfq.incoterm) +
-      (rfq.dangereuse ? " · ⚠️ ADR" : "");
+      (rfq.dangereuse ? " · ADR" : "");
 
     document.getElementById("linkComparateur").href = "comparateur.html?ref=" + encodeURIComponent(ref);
 

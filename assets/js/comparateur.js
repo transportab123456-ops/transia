@@ -203,11 +203,11 @@
     var note = get("nonConformNote");
     var messages = [];
     if (classement.ecartees.length) {
-      messages.push("⚖️ <span><b>Offres écartées :</b> " +
+      messages.push(" <span><b>Offres écartées :</b> " +
         classement.ecartees.map(function (o) { return "Offre " + escapeHtml(o.lettre) + " — " + escapeHtml(o.motifNonConformite || "périmètre différent"); }).join(" · ") + "</span>");
     }
     if (classement.aVerifier.length) {
-      messages.push("🔎 <span><b>À clarifier :</b> " +
+      messages.push(" <span><b>À clarifier :</b> " +
         classement.aVerifier.map(function (o) { return "Offre " + escapeHtml(o.lettre) + " — frais obligatoires à préciser"; }).join(" · ") + "</span>");
     }
     if (messages.length) {
@@ -228,7 +228,7 @@
     if (affaire) {
       var t = affaire.transporteur;
       box.innerHTML =
-        "<h3 class='mt-0'>✅ Affaire confirmée</h3>" +
+        "<h3 class='mt-0'> Affaire confirmée</h3>" +
         "<p style='font-size:13.5px;color:#617795;'>Horodatée le " + escapeHtml(affaire.date) + " · réf. " + escapeHtml(affaire.ref) + "</p>" +
         "<div class='divider'></div>" +
         "<div class='track-summary' style='grid-template-columns:1fr 1fr;'>" +
@@ -237,7 +237,7 @@
         "</div>" +
         "<p style='font-size:12.5px;color:#617795;'>Assiette : la partie transport de l'opération. Facturée au transporteur. Les prestations annexes hors transport sont exclues de l'assiette.</p>" +
         "<div class='divider'></div>" +
-        "<h4 style='color:#0f2c4e;margin-bottom:12px;'>🔓 Identités dévoilées</h4>" +
+        "<h4 style='color:#0f2c4e;margin-bottom:12px;'> Identités dévoilées</h4>" +
         "<div style='border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:10px;'>" +
         "<b style='color:#0f2c4e;'>" + escapeHtml(t.nom) + "</b> <span class='badge badge-green'>Transporteur</span>" +
         "<p style='font-size:13px;color:#617795;margin-top:6px;'>" + escapeHtml(t.contact) + " — " + escapeHtml(t.fonction) + "<br />" +
@@ -255,7 +255,7 @@
     /* Refus enregistré */
     if (refusee) {
       box.innerHTML =
-        "<h3 class='mt-0'>❌ Offre refusée</h3>" +
+        "<h3 class='mt-0'> Offre refusée</h3>" +
         "<p style='font-size:14px;color:#617795;'>Motif : <b>" + escapeHtml(refusee.motif) + "</b></p>" +
         "<p style='font-size:13px;color:#617795;'>Enregistré le " + escapeHtml(refusee.date) + " — utilisé pour l'analyse commerciale.</p>" +
         "<div class='divider'></div>" +
@@ -267,7 +267,7 @@
     /* Pas encore d'offres */
     if (!reco) {
       box.innerHTML =
-        "<h3 class='mt-0'>⏳ En attente d'offres</h3>" +
+        "<h3 class='mt-0'> En attente d'offres</h3>" +
         "<p style='font-size:14px;color:#617795;'>Dès qu'au moins une offre conforme sera reçue, la plateforme recommandera la meilleure : prix + conformité + délai.</p>" +
         "<div class='divider'></div>" +
         "<p style='font-size:13px;color:#617795;'>Rappel : les transporteurs cotent à l'aveugle — le nombre d'offres n'est jamais communiqué.</p>";
@@ -277,7 +277,7 @@
     /* Offre recommandée */
     var secoursHtml = "";
     if (classement && classement.secours.length) {
-      secoursHtml = "<div class='divider'></div><h4 style='color:#0f2c4e;font-size:14px;margin-bottom:8px;'>🛟 Offres de secours (internes)</h4>" +
+      secoursHtml = "<div class='divider'></div><h4 style='color:#0f2c4e;font-size:14px;margin-bottom:8px;'> Offres de secours (internes)</h4>" +
         "<p style='font-size:12.5px;color:#9fb2cc;margin-bottom:8px;'>Si le transporteur n°1 ne confirme pas, la suivante est proposée sans relancer l'appel d'offres.</p>" +
         classement.secours.map(function (s, idx) {
           return "<div style='display:flex;justify-content:space-between;font-size:13px;color:#617795;padding:6px 0;border-bottom:1px dashed var(--line);'>" +
@@ -292,19 +292,19 @@
     /* Gate : l'algorithme propose, l'administrateur valide avant envoi au client */
     if (!validee) {
       box.innerHTML =
-        "<h3 class='mt-0'>🏆 Offre recommandée par le moteur</h3>" +
+        "<h3 class='mt-0'> Offre recommandée par le moteur</h3>" +
         "<p style='font-size:13px;color:#617795;'>Meilleur prix comparable parmi les offres conformes et de même périmètre.</p>" +
         "<div style='background:var(--blue-light);border-radius:12px;padding:18px;margin:14px 0;'>" +
         "<div class='price-tag' style='text-align:left;'><b style='font-size:32px;'>" + formatEuro(reco.prixComparable) + "</b>" +
         "<span>prix comparable (transport + frais obligatoires) en " + escapeHtml(DEVISE_RFQ) + "</span></div>" +
         "<div style='display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:13.5px;color:#617795;'>" +
-        "<span>⏱️ <b style='color:#1b2d49;'>" + escapeHtml(reco.delai) + "</b></span>" +
-        "<span>📅 Validité <b style='color:#1b2d49;'>" + escapeHtml(reco.validite) + "</b></span>" +
+        "<span> <b style='color:#1b2d49;'>" + escapeHtml(reco.delai) + "</b></span>" +
+        "<span> Validité <b style='color:#1b2d49;'>" + escapeHtml(reco.validite) + "</b></span>" +
         "<span>Offre <b style='color:#1b2d49;'>" + escapeHtml(reco.lettre) + "</b></span></div></div>" +
-        "<div class='info-banner' style='margin:14px 0;'>🧮 <span><b>Normalisation appliquée :</b> prix comparable = transport + frais obligatoires (options exclues), converti en " + escapeHtml(DEVISE_RFQ) + ". L'assiette de commission reste la seule partie transport.</span></div>" +
+        "<div class='info-banner' style='margin:14px 0;'> <span><b>Normalisation appliquée :</b> prix comparable = transport + frais obligatoires (options exclues), converti en " + escapeHtml(DEVISE_RFQ) + ". L'assiette de commission reste la seule partie transport.</span></div>" +
         secoursHtml +
         "<div class='divider'></div>" +
-        "<div class='info-banner' style='margin:14px 0;'>🛡️ <span><b>Validation administrateur requise.</b> L'algorithme propose — l'administrateur contrôle avant que l'offre ne vous soit présentée pour acceptation.</span></div>" +
+        "<div class='info-banner' style='margin:14px 0;'> <span><b>Validation administrateur requise.</b> L'algorithme propose — l'administrateur contrôle avant que l'offre ne vous soit présentée pour acceptation.</span></div>" +
         "<a href='admin.html#comparateur' class='btn btn-primary btn-block btn-lg'>Valider côté administration</a>" +
         "<p class='form-note text-center'>Aucune offre n'est envoyée automatiquement au client au lancement.</p>";
       return;
@@ -312,15 +312,15 @@
 
     var valInfo = Moteur.getValidations()[rfq.ref];
     box.innerHTML =
-      "<h3 class='mt-0'>🏆 Offre recommandée</h3>" +
+      "<h3 class='mt-0'> Offre recommandée</h3>" +
       "<p style='font-size:13px;color:#617795;'>Validée par l'administrateur le " + escapeHtml(valInfo ? valInfo.date : "—") +
       (valInfo && valInfo.motif ? " · écart n°1 motivé : " + escapeHtml(valInfo.motif) : " · conforme à la proposition du moteur") + ".</p>" +
       "<div style='background:var(--blue-light);border-radius:12px;padding:18px;margin:14px 0;'>" +
       "<div class='price-tag' style='text-align:left;'><b style='font-size:32px;'>" + formatEuro(reco.prixComparable) + "</b>" +
       "<span>prix comparable en " + escapeHtml(DEVISE_RFQ) + "</span></div>" +
       "<div style='display:flex;gap:16px;flex-wrap:wrap;margin-top:12px;font-size:13.5px;color:#617795;'>" +
-      "<span>⏱️ Délai : <b style='color:#1b2d49;'>" + escapeHtml(reco.delai) + "</b></span>" +
-      "<span>📅 Validité : <b style='color:#1b2d49;'>" + escapeHtml(reco.validite) + "</b></span>" +
+      "<span> Délai : <b style='color:#1b2d49;'>" + escapeHtml(reco.delai) + "</b></span>" +
+      "<span> Validité : <b style='color:#1b2d49;'>" + escapeHtml(reco.validite) + "</b></span>" +
       "<span>Offre <b style='color:#1b2d49;'>" + escapeHtml(reco.lettre) + "</b></span>" +
       "</div></div>" +
       "<div class='divider'></div>" +
@@ -335,13 +335,13 @@
       "<div class='divider'></div>" +
       "<h4 style='color:#0f2c4e;font-size:14.5px;margin-bottom:10px;'>Qualification du transporteur</h4>" +
       "<ul style='list-style:none;font-size:13px;color:#617795;line-height:1.9;'>" +
-      "<li>🛡️ " + escapeHtml(reco.qualite.statut) + "</li>" +
+      "<li> " + escapeHtml(reco.qualite.statut) + "</li>" +
       "<li>⭐ Note " + escapeHtml(reco.qualite.note) + "</li>" +
       "<li>📄 " + escapeHtml(reco.qualite.licence) + "</li>" +
       "<li>🗓️ " + escapeHtml(reco.qualite.experience) + "</li>" +
-      "<li>📈 " + escapeHtml(reco.qualite.affaires) + "</li>" +
+      "<li> " + escapeHtml(reco.qualite.affaires) + "</li>" +
       "</ul>" +
-      "<div class='info-banner' style='margin:14px 0;'>🔒 <span>L'identité et les coordonnées du transporteur seront révélées <b>uniquement après votre acceptation</b>.</span></div>" +
+      "<div class='info-banner' style='margin:14px 0;'> <span>L'identité et les coordonnées du transporteur seront révélées <b>uniquement après votre acceptation</b>.</span></div>" +
       "<button class='btn btn-primary btn-block btn-lg' id='btnAccepter'>Accepter l'offre</button>" +
       "<button class='btn btn-outline btn-block' id='btnRefuser' style='margin-top:10px;'>Refuser l'offre</button>";
 

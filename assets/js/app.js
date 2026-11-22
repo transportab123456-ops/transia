@@ -164,10 +164,6 @@ function badgeStatut(statut) {
   return '<span class="badge ' + (map[statut] || "badge-grey") + '">' + escapeHtml(statut) + "</span>";
 }
 
-function modeIcon(mode) {
-  return { "Routier": "🚚", "Maritime": "🚢", "Aérien": "✈️", "Multimodal": "🔗" }[mode] || "📦";
-}
-
 /* ---------- Validation simple de formulaire ---------- */
 function markInvalid(el, invalid) {
   var field = el.closest(".field");

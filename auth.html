@@ -6,6 +6,18 @@
   <title>Connexion / Inscription — Transia</title>
   <meta name="description" content="Connectez-vous à Transia ou créez votre compte donneur d'ordre ou transporteur." />
   <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/img/favicon.svg" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Transia" />
+  <meta property="og:locale" content="fr_FR" />
+  <meta property="og:title" content="Connexion / Inscription — Transia" />
+  <meta property="og:description" content="Connectez-vous à Transia ou créez votre compte donneur d'ordre ou transporteur." />
+  <meta property="og:url" content="https://transia-sooty.vercel.app/auth.html" />
+  <meta property="og:image" content="https://transia-sooty.vercel.app/assets/img/hero-night-port.jpg" />
+  <meta property="og:image:width" content="1600" />
+  <meta property="og:image:height" content="1067" />
+  <meta name="twitter:card" content="summary_large_image" />
 </head>
 <body>
 
@@ -22,7 +34,7 @@
       </nav>
       <div class="nav-actions">
         <a href="auth.html" class="btn btn-ghost">Connexion</a>
-        <button class="nav-toggle" id="navToggle" aria-label="Ouvrir le menu">☰</button>
+        <button class="nav-toggle" id="navToggle" aria-label="Ouvrir le menu"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
       </div>
     </div>
   </header>
@@ -47,7 +59,7 @@
 
       <!-- Attente de vérification e-mail -->
       <div class="panel hidden" id="verifyPendingBox">
-        <h3 class="mt-0">📩 Vérifiez votre boîte mail</h3>
+        <h3 class="mt-0"> Vérifiez votre boîte mail</h3>
         <p style="font-size:14.5px;color:#617795;line-height:1.6;">
           Un lien de vérification vient d'être envoyé à <b id="vpEmail"></b>.
           Cliquez dessus pour activer votre compte (le lien expire dans 24 heures).

@@ -45,14 +45,14 @@
     var commissions = affaires.reduce(function (s, a) { return s + (a.commission || 0); }, 0);
 
     var kpis = [
-      { icone: "📋", valeur: rfqs.length, label: "RFQ enregistrées (démo)" },
-      { icone: "📝", valeur: offresTotal, label: "Offres déposées" },
-      { icone: "✅", valeur: Math.round((affaires.length / Math.max(rfqs.length, 1)) * 100) + " %", label: "Taux d'acceptation (démo)" },
-      { icone: "💶", valeur: formatEuro(commissions), label: "Commissions générées (barème)" }
+      { icone: "", valeur: rfqs.length, label: "RFQ enregistrées (démo)" },
+      { icone: "", valeur: offresTotal, label: "Offres déposées" },
+      { icone: "", valeur: Math.round((affaires.length / Math.max(rfqs.length, 1)) * 100) + " %", label: "Taux d'acceptation (démo)" },
+      { icone: "", valeur: formatEuro(commissions), label: "Commissions générées (barème)" }
     ];
     get("kpiGrid").innerHTML = kpis.map(function (k) {
       return "<div class='card' style='text-align:center;'>" +
-        "<div class='icon-tile' style='margin:0 auto 12px;'>" + k.icone + "</div>" +
+        (k.icone ? "<div class='icon-tile' style='margin:0 auto 12px;'>" + k.icone + "</div>" : "") +
         "<b style='display:block;font-size:26px;color:#0f2c4e;letter-spacing:-1px;'>" + k.valeur + "</b>" +
         "<span style='font-size:13px;color:#617795;'>" + k.label + "</span></div>";
     }).join("");
@@ -184,7 +184,7 @@
       tr.innerHTML =
         "<td><b>" + escapeHtml(a.ref) + "</b></td>" +
         "<td>" + escapeHtml(a.ligne) + "</td>" +
-        "<td><span class='mode-badge'>" + modeIcon(a.mode) + " " + escapeHtml(a.mode) + "</span></td>" +
+        "<td><span class='mode-badge'>" + escapeHtml(a.mode) + "</span></td>" +
         "<td>Offre " + escapeHtml(a.offre) + "</td>" +
         "<td><b>" + formatEuro(a.prix) + " " + escapeHtml(a.devise || "EUR") + "</b></td>" +
         "<td style='color:var(--green);font-weight:700;'>" + formatEuro(a.commission) + "</td>" +
@@ -246,12 +246,12 @@
     var sansOffre = rfqs.filter(function (r) { return getOffres(r.ref).length === 0; }).length;
 
     var items = [
-      { icone: "🧮", n: aValider, label: "recommandations à valider", urgent: aValider > 0 },
-      { icone: "🔎", n: aClarifier, label: "offres à clarifier", urgent: false },
-      { icone: "🛡️", n: aVerif, label: "transporteurs à vérifier", urgent: false },
-      { icone: "⚠️", n: incOuverts, label: "incidents à traiter", urgent: incOuverts > 0 },
-      { icone: "📋", n: sansOffre, label: "RFQ sans offre", urgent: false },
-      { icone: "⏳", n: 0, label: "factures en retard", urgent: false }
+      { icone: "", n: aValider, label: "recommandations à valider", urgent: aValider > 0 },
+      { icone: "", n: aClarifier, label: "offres à clarifier", urgent: false },
+      { icone: "", n: aVerif, label: "transporteurs à vérifier", urgent: false },
+      { icone: "", n: incOuverts, label: "incidents à traiter", urgent: incOuverts > 0 },
+      { icone: "", n: sansOffre, label: "RFQ sans offre", urgent: false },
+      { icone: "", n: 0, label: "factures en retard", urgent: false }
     ];
     get("todoGrid").innerHTML = items.map(function (i) {
       return "<div class='card' style='padding:16px;" + (i.urgent ? "border-color:var(--amber);" : "") + "'>" +
@@ -329,12 +329,12 @@
 
     var explication = "";
     if (cl.recommandee) {
-      explication = "<div class='info-banner' style='margin-top:16px;'>🤖 <span><b>Pourquoi l'offre " + escapeHtml(cl.recommandee.lettre) + " est n°1 :</b> conforme — prix comparable le plus bas (" + formatEuro(cl.recommandee.prixComparable) + ") — délai compatible — transporteur validé.</span></div>";
+      explication = "<div class='info-banner' style='margin-top:16px;'> <span><b>Pourquoi l'offre " + escapeHtml(cl.recommandee.lettre) + " est n°1 :</b> conforme — prix comparable le plus bas (" + formatEuro(cl.recommandee.prixComparable) + ") — délai compatible — transporteur validé.</span></div>";
     }
 
     var actions;
     if (dejaAffaire) {
-      actions = "<div class='info-banner' style='margin-top:14px;'>✅ <span>Affaire confirmée — recommandation déjà acceptée et dévoilée.</span></div>";
+      actions = "<div class='info-banner' style='margin-top:14px;'> <span>Affaire confirmée — recommandation déjà acceptée et dévoilée.</span></div>";
     } else if (validee) {
       actions = "<div class='info-banner' style='margin-top:14px;'>✓ <span><b>Recommandation validée</b> le " + escapeHtml(validee.date) + " par " + escapeHtml(validee.par) +
         (validee.motif ? " · écart au n°1 motivé : " + escapeHtml(validee.motif) : "") +
@@ -527,9 +527,9 @@
       return "<div class='card' style='padding:18px;'>" +
         "<b style='color:#0f2c4e;font-size:15px;'>" + escapeHtml(x.ligne) + "</b>" +
         "<div style='margin-top:10px;font-size:13px;color:#617795;line-height:1.9;'>" +
-        "📋 " + x.rfq + " RFQ · 📝 " + x.offres + " offres (" + x.moy + "/RFQ)<br />" +
-        "💶 Prix médian : <b style='color:#1b2d49;'>" + (x.mediane ? formatEuro(x.mediane) : "—") + "</b><br />" +
-        "✅ Taux d'acceptation : <b style='color:#1b2d49;'>" + x.taux + " %</b>" +
+        " " + x.rfq + " RFQ · " + x.offres + " offres (" + x.moy + "/RFQ)<br />" +
+        " Prix médian : <b style='color:#1b2d49;'>" + (x.mediane ? formatEuro(x.mediane) : "—") + "</b><br />" +
+        " Taux d'acceptation : <b style='color:#1b2d49;'>" + x.taux + " %</b>" +
         "</div></div>";
     }).join("");
   }

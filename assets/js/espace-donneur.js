@@ -34,14 +34,14 @@
       if (st === "RECOMMANDÉE" && n > 0) nbOffresValider++;
     });
     var kpis = [
-      { icone: "📋", valeur: rfqs.length, label: "Mes demandes" },
-      { icone: "📝", valeur: nbOffres, label: "Offres reçues" },
-      { icone: "🔔", valeur: nbOffresValider, label: "Offres à valider" },
-      { icone: "✅", valeur: nbConfirmees, label: "Transports confirmés" }
+      { icone: "", valeur: rfqs.length, label: "Mes demandes" },
+      { icone: "", valeur: nbOffres, label: "Offres reçues" },
+      { icone: "", valeur: nbOffresValider, label: "Offres à valider" },
+      { icone: "", valeur: nbConfirmees, label: "Transports confirmés" }
     ];
     get("donneurKpis").innerHTML = kpis.map(function (k) {
       return "<div class='card' style='text-align:center;'>" +
-        "<div class='icon-tile' style='margin:0 auto 12px;'>" + k.icone + "</div>" +
+        (k.icone ? "<div class='icon-tile' style='margin:0 auto 12px;'>" + k.icone + "</div>" : "") +
         "<b style='display:block;font-size:26px;color:#0f2c4e;letter-spacing:-1px;'>" + k.valeur + "</b>" +
         "<span style='font-size:13px;color:#617795;'>" + k.label + "</span></div>";
     }).join("");
@@ -69,7 +69,7 @@
         "<td><b>" + escapeHtml(r.ref) + "</b></td>" +
         "<td>" + escapeHtml(r.origine.ville) + " → " + escapeHtml(r.dest.ville) +
         "<br /><span class='muted' style='font-size:12px;'>" + escapeHtml(r.origine.pays + " → " + r.dest.pays) + "</span></td>" +
-        "<td><span class='mode-badge'>" + modeIcon(r.mode) + " " + escapeHtml(r.mode) + "</span></td>" +
+        "<td><span class='mode-badge'>" + escapeHtml(r.mode) + "</span></td>" +
         "<td style='font-size:13px;'>" + escapeHtml(r.origine.date) + "</td>" +
         "<td>" + (n > 0
           ? "<span class='badge badge-blue'>" + n + " reçue" + (n > 1 ? "s" : "") + "</span>"

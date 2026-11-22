@@ -1,5 +1,5 @@
 /* ============================================================
-   Transia — Données de démonstration (prototype statique)
+   Transia — Données d'exemple (mode hors session)
    Issues du cahier des charges v0.1
    ============================================================ */
 

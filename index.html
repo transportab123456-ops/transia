@@ -7,6 +7,18 @@
   <meta name="description" content="Transia est la plateforme B2B de mise en relation entre donneurs d'ordre et transporteurs pour le transport international. Cotation à l'aveugle, comparaison des offres, commission dégressive plafonnée émise au transporteur." />
   <link rel="preload" as="image" href="assets/img/hero-night-port.jpg" fetchpriority="high" />
   <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/img/favicon.svg" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Transia" />
+  <meta property="og:locale" content="fr_FR" />
+  <meta property="og:title" content="Transia — Mise en relation transport international, cotations à l'aveugle" />
+  <meta property="og:description" content="Transia est la plateforme B2B de mise en relation entre donneurs d'ordre et transporteurs pour le transport international. Cotation à l'aveugle, comparaison des offres, commission dégressive plafonnée émise au transporteur." />
+  <meta property="og:url" content="https://transia-sooty.vercel.app/" />
+  <meta property="og:image" content="https://transia-sooty.vercel.app/assets/img/hero-night-port.jpg" />
+  <meta property="og:image:width" content="1600" />
+  <meta property="og:image:height" content="1067" />
+  <meta name="twitter:card" content="summary_large_image" />
 </head>
 <body>
 
@@ -24,7 +36,7 @@
       </nav>
       <div class="nav-actions">
         <a href="demande.html" class="btn btn-primary">Déposer une demande</a>
-        <button class="nav-toggle" id="navToggle" aria-label="Ouvrir le menu">☰</button>
+        <button class="nav-toggle" id="navToggle" aria-label="Ouvrir le menu"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
       </div>
     </div>
   </header>
@@ -34,7 +46,7 @@
     <div class="hero-photo" aria-hidden="true"></div>
     <div class="container hero-grid">
       <div>
-        <div class="eyebrow" style="background:rgba(166,200,243,.2);color:#cfe0f9;">Plateforme B2B · Prototype v0.1</div>
+        <div class="eyebrow" style="background:rgba(166,200,243,.2);color:#cfe0f9;">Plateforme B2B · Transport international</div>
         <h1>Le transport international,<br />mis en concurrence <span class="hl">à l'aveugle</span>.</h1>
         <p class="lead">
           Transia met en relation les entreprises importatrices et exportatrices avec des transporteurs vérifiés.
@@ -53,19 +65,19 @@
       </div>
 
       <div class="search-card">
-        <h3>🔗 La boucle Transia</h3>
-        <ol style="list-style:none;font-size:14.5px;line-height:2.1;color:#1b2d49;">
-          <li>1️⃣ Une entreprise a besoin d'un transport</li>
-          <li>2️⃣ Elle dépose sa demande de cotation</li>
-          <li>3️⃣ Des transporteurs qualifiés la consultent</li>
-          <li>4️⃣ Les transporteurs intéressés <b>cotent à l'aveugle</b></li>
-          <li>5️⃣ La plateforme <b>compare et recommande</b></li>
-          <li>6️⃣ Le donneur d'ordre accepte ou refuse</li>
-          <li>7️⃣ Acceptation → <b>mise en relation</b> des parties</li>
-          <li>8️⃣ Transport réalisé → commission plateforme</li>
+        <h3> La boucle Transia</h3>
+        <ol class="steps">
+          <li> Une entreprise a besoin d'un transport</li>
+          <li> Elle dépose sa demande de cotation</li>
+          <li> Des transporteurs qualifiés la consultent</li>
+          <li> Les transporteurs intéressés <b>cotent à l'aveugle</b></li>
+          <li> La plateforme <b>compare et recommande</b></li>
+          <li> Le donneur d'ordre accepte ou refuse</li>
+          <li> Acceptation → <b>mise en relation</b> des parties</li>
+          <li> Transport réalisé → commission plateforme</li>
         </ol>
         <a href="demande.html" class="btn btn-primary btn-block">Commencer — déposer une RFQ</a>
-        <p class="search-hint">Démonstration : aucune donnée n'est envoyée, tout reste dans votre navigateur.</p>
+        <p class="search-hint">Les transporteurs répondent à l'aveugle ; les identités sont dévoilées après acceptation.</p>
       </div>
     </div>
   </section>
@@ -210,7 +222,7 @@
       </div>
       <div class="grid grid-2">
         <div class="card">
-          <div class="icon-tile">🔒</div>
+          <div class="icon-tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></svg></div>
           <h3>Avant confirmation</h3>
           <p style="margin-bottom:12px;">Le donneur d'ordre ne connaît <b>pas</b> :</p>
           <ul style="list-style:none;font-size:14.5px;color:#617795;line-height:2;">
@@ -221,7 +233,7 @@
           <p style="margin-top:12px;">Réciproquement, le transporteur ne dispose pas des coordonnées permettant de contourner la plateforme. Les transporteurs <b>cotent à l'aveugle</b> : ni le nombre d'offres, ni les noms, ni les prix des concurrents.</p>
         </div>
         <div class="card">
-          <div class="icon-tile" style="background:var(--green-light);color:var(--green);">🔓</div>
+          <div class="icon-tile" style="background:var(--green-light);color:var(--green);"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 7-2.6"/></svg></div>
           <h3>Après confirmation</h3>
           <p style="margin-bottom:12px;">Offre → acceptation → enregistrement de l'affaire → dévoilement des identités.</p>
           <ul style="list-style:none;font-size:14.5px;color:#617795;line-height:2;">
@@ -245,21 +257,21 @@
       </div>
       <div class="grid grid-3">
         <div class="card">
-          <div class="icon-tile">🎯</div>
+          <div class="icon-tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/><circle cx="12" cy="12" r="1"/></svg></div>
           <h3>Commission dégressive</h3>
           <p>Calculée sur la partie transport de l'opération confirmée, selon un barème dégressif plafonné à 700 €. La facture de commission est émise au transporteur.</p>
           <div class="divider"></div>
           <p style="font-size:13px;"><b>Exemples :</b> transport à 2 000 € → 160 € ; transport à 20 000 € → 700 € (plafond).</p>
         </div>
         <div class="card">
-          <div class="icon-tile">⚖️</div>
+          <div class="icon-tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3v18"/><path d="M6 7h12"/><path d="M4 15l3-7 3 7a3 3 0 0 1-6 0Z"/><path d="M14 15l3-7 3 7a3 3 0 0 1-6 0Z"/></svg></div>
           <h3>Assiette maîtrisée</h3>
           <p>Les prestations annexes qui ne font pas partie du transport ne doivent pas automatiquement entrer dans l'assiette de commission.</p>
           <div class="divider"></div>
           <p style="font-size:13px;">Point à définir très précisément dans les CGU/CGV et le contrat transporteur.</p>
         </div>
         <div class="card">
-          <div class="icon-tile">📜</div>
+          <div class="icon-tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 3h8l5 5v13H6Z"/><path d="M14 3v5h5"/><path d="M9 13h7M9 17h5"/></svg></div>
           <h3>Positionnement juridique</h3>
           <p>Prestation numérique de mise en relation et d'intermédiation. La qualification exacte sera validée par un juriste spécialisé.</p>
           <div class="divider"></div>
@@ -277,23 +289,23 @@
         <h2>Conçu pour le transport international réel</h2>
       </div>
       <div class="grid grid-3">
-        <div class="card"><div class="icon-tile">📋</div><h3>RFQ professionnel</h3><p>Origine (pays, ville, code postal, lieu d'enlèvement, date) et destination complètes, modes routier, maritime, aérien et multimodal.</p></div>
-        <div class="card"><div class="icon-tile">📦</div><h3>Conteneurs &amp; groupage</h3><p>Pour le maritime : LCL ou FCL, avec choix du type de conteneur 20', 40' ou 40' HC. Colis, palettes, poids et volume saisis.</p></div>
-        <div class="card"><div class="icon-tile">🧭</div><h3>Incoterms® 2020</h3><p>Les 11 incoterms sont intégrés aux demandes pour déterminer exactement le périmètre de la prestation de transport demandée.</p></div>
-        <div class="card"><div class="icon-tile">⚠️</div><h3>Marchandises dangereuses</h3><p>Question obligatoire. Si oui : numéro ONU, désignation, classe de danger, groupe d'emballage, quantité, documentation et FDS.</p></div>
-        <div class="card"><div class="icon-tile">🛡️</div><h3>Vérification transporteurs</h3><p>Inscrit → à vérifier → validé → actif. Immatriculation, licences, assurances : l'administrateur garde la décision finale.</p></div>
-        <div class="card"><div class="icon-tile">🌍</div><h3>Multi-pays dès l'origine</h3><p>L'architecture est internationale immédiatement. Chaque opération nourrit la base relationnelle du futur marché.</p></div>
+        <div class="card"><div class="icon-tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="4" width="14" height="17" rx="2"/><path d="M9 4V3h6v1"/><path d="M9 10h6M9 14h4"/></svg></div><h3>RFQ professionnel</h3><p>Origine (pays, ville, code postal, lieu d'enlèvement, date) et destination complètes, modes routier, maritime, aérien et multimodal.</p></div>
+        <div class="card"><div class="icon-tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 4.5v9L12 21l-8-4.5v-9Z"/><path d="M4 7.5l8 4.5 8-4.5"/><path d="M12 12v9"/></svg></div><h3>Conteneurs &amp; groupage</h3><p>Pour le maritime : LCL ou FCL, avec choix du type de conteneur 20', 40' ou 40' HC. Colis, palettes, poids et volume saisis.</p></div>
+        <div class="card"><div class="icon-tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M15.5 8.5l-2 5-5 2 2-5Z"/></svg></div><h3>Incoterms® 2020</h3><p>Les 11 incoterms sont intégrés aux demandes pour déterminer exactement le périmètre de la prestation de transport demandée.</p></div>
+        <div class="card"><div class="icon-tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 4l9 16H3Z"/><path d="M12 10v4M12 17h.01"/></svg></div><h3>Marchandises dangereuses</h3><p>Question obligatoire. Si oui : numéro ONU, désignation, classe de danger, groupe d'emballage, quantité, documentation et FDS.</p></div>
+        <div class="card"><div class="icon-tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l8 3v6c0 5-3.6 8-8 9-4.4-1-8-4-8-9V6Z"/><path d="M9 12l2 2 4-4"/></svg></div><h3>Vérification transporteurs</h3><p>Inscrit → à vérifier → validé → actif. Immatriculation, licences, assurances : l'administrateur garde la décision finale.</p></div>
+        <div class="card"><div class="icon-tile"><svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="8.5"/><path d="M3.5 12h17"/><path d="M12 3.5c2.8 3.4 2.8 13.6 0 17-2.8-3.4-2.8-13.6 0-17Z"/></svg></div><h3>Multi-pays dès l'origine</h3><p>L'architecture est internationale immédiatement. Chaque opération nourrit la base relationnelle du futur marché.</p></div>
       </div>
     </div>
   </section>
 
-  <!-- ============ ÉCRANS DU PROTOTYPE ============ -->
+  <!-- ============ ÉCRANS DE LA PLATEFORME ============ -->
   <section class="section section-white">
     <div class="container">
       <div class="section-head">
-        <span class="eyebrow">Prototype interactif</span>
+        <span class="eyebrow">Les écrans</span>
         <h2>Parcourez les écrans du MVP</h2>
-        <p>Chaque écran est fonctionnel avec des données de démonstration, enregistrées dans votre navigateur.</p>
+        <p>Chaque écran est fonctionnel et relié à votre compte.</p>
       </div>
       <div class="grid grid-4">
         <a class="card with-media" href="demande.html" style="color:inherit;">
@@ -395,7 +407,7 @@
     <div class="container footer-grid">
       <div>
         <div class="logo"><span class="logo-mark">◆</span> Transia</div>
-        <p>Plateforme de mise en relation entre donneurs d'ordre et transporteurs pour le transport international. Prototype de démonstration — aucune donnée n'est transmise à un serveur.</p>
+        <p>Plateforme de mise en relation entre donneurs d'ordre et transporteurs pour le transport international.</p>
       </div>
       <div>
         <h4>Plateforme</h4>
@@ -427,7 +439,7 @@
       </div>
     </div>
     <div class="container footer-bottom">
-      <span>© <span id="year"></span> Transia — Prototype v0.1 (document fondateur)</span>
+      <span>© <span id="year"></span> Transia — Mise en relation transport international</span>
       <span>Incoterms® 2020 — marque de la CCI. Mentionnée à titre documentaire. Photos : Pexels.</span>
     </div>
   </footer>

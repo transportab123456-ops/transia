@@ -84,7 +84,7 @@ var API = (function () {
       } else {
         var role = isPlatform(user) ? "Plateforme" : isCarrier(user) ? "Transporteur" : "Donneur d'ordre";
         div.innerHTML =
-          "<span style='font-size:13px;color:#617795;'>👤 " +
+          "<span style='font-size:13px;color:#617795;'> " +
           escapeHtmlHtml(user.first_name || user.email) +
           " <span class='badge badge-blue'>" + role + "</span></span>" +
           "<button class='btn btn-ghost' id='apiLogout'>Déconnexion</button>";
@@ -108,14 +108,14 @@ var API = (function () {
     });
   }
 
-  /* Bannière mode démonstration */
+  /* Bannière hors session (données d'exemple) */
   function demoBanner() {
     if (document.getElementById("apiDemoBanner")) return;
     var b = document.createElement("div");
     b.id = "apiDemoBanner";
     b.style.cssText = "background:#fff7e6;border-bottom:1px solid #f5d78e;color:#96650f;font-size:13px;padding:8px 16px;text-align:center;";
-    b.innerHTML = "🧪 Mode démonstration — vous naviguez sur des données d'exemple. " +
-      "<a href='auth.html' style='color:#96650f;font-weight:700;'>Connectez-vous</a> pour utiliser la plateforme réelle.";
+    b.innerHTML = "Vous consultez des données d'exemple. " +
+      "<a href='auth.html' style='color:#96650f;font-weight:700;'>Connectez-vous</a> pour utiliser la plateforme.";
     var nav = document.querySelector(".nav");
     if (nav && nav.parentNode) nav.parentNode.insertBefore(b, nav.nextSibling);
   }

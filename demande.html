@@ -6,6 +6,18 @@
   <title>Créer une demande de cotation — Transia</title>
   <meta name="description" content="Déposez votre demande de cotation de transport international : origine, destination, mode, marchandise, incoterm et marchandises dangereuses." />
   <link rel="stylesheet" href="assets/css/style.css" />
+  <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+  <link rel="apple-touch-icon" href="assets/img/favicon.svg" />
+  <meta property="og:type" content="website" />
+  <meta property="og:site_name" content="Transia" />
+  <meta property="og:locale" content="fr_FR" />
+  <meta property="og:title" content="Créer une demande de cotation — Transia" />
+  <meta property="og:description" content="Déposez votre demande de cotation de transport international : origine, destination, mode, marchandise, incoterm et marchandises dangereuses." />
+  <meta property="og:url" content="https://transia-sooty.vercel.app/demande.html" />
+  <meta property="og:image" content="https://transia-sooty.vercel.app/assets/img/hero-night-port.jpg" />
+  <meta property="og:image:width" content="1600" />
+  <meta property="og:image:height" content="1067" />
+  <meta name="twitter:card" content="summary_large_image" />
 </head>
 <body>
 
@@ -22,7 +34,7 @@
       </nav>
       <div class="nav-actions">
         <a href="demande.html" class="btn btn-primary">Déposer une demande</a>
-        <button class="nav-toggle" id="navToggle" aria-label="Ouvrir le menu">☰</button>
+        <button class="nav-toggle" id="navToggle" aria-label="Ouvrir le menu"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h16M4 12h16M4 17h16"/></svg></button>
       </div>
     </div>
   </header>
@@ -75,7 +87,7 @@
 
             <!-- C — MODE -->
             <div class="panel" style="margin-bottom:22px;">
-              <h2>🚚 Mode de transport</h2>
+              <h2> Mode de transport</h2>
               <div class="field">
                 <label>Mode demandé *</label>
                 <select id="mode"></select>
@@ -104,7 +116,7 @@
 
             <!-- D — MARCHANDISE -->
             <div class="panel" style="margin-bottom:22px;">
-              <h2>📦 Marchandise</h2>
+              <h2> Marchandise</h2>
               <div class="field"><label>Description de la marchandise *</label><textarea id="mDesc" placeholder="Nature, contenu, contraintes particulières…"></textarea></div>
               <div class="form-row-3">
                 <div class="field"><label>Nombre de colis</label><input id="mColis" type="number" min="0" placeholder="18" /></div>
@@ -131,7 +143,7 @@
               </div>
               <div id="dangerBlock" class="hidden">
                 <div class="info-banner" style="margin-bottom:16px;">
-                  ⚠️ <span>Les marchandises dangereuses font l'objet d'un traitement spécifique : référentiels selon le mode de transport (ADR routier, IMDG maritime, RIAD aérien).</span>
+                   <span>Les marchandises dangereuses font l'objet d'un traitement spécifique : référentiels selon le mode de transport (ADR routier, IMDG maritime, RIAD aérien).</span>
                 </div>
                 <div class="form-row-3">
                   <div class="field"><label>Numéro ONU / UN *</label><input id="dOnu" type="text" placeholder="UN 1950" /></div>
@@ -156,7 +168,7 @@
 
             <!-- INCOTERM -->
             <div class="panel" style="margin-bottom:22px;">
-              <h2>🧭 Incoterm® 2020</h2>
+              <h2> Incoterm® 2020</h2>
               <div class="field">
                 <label>Incoterm applicable *</label>
                 <select id="incoterm"></select>
@@ -166,7 +178,7 @@
 
             <!-- CONTACT -->
             <div class="panel" style="margin-bottom:22px;">
-              <h2>👤 Contact opérationnel</h2>
+              <h2> Contact opérationnel</h2>
               <div class="form-row">
                 <div class="field"><label>Nom et prénom *</label><input id="cNom" type="text" placeholder="Marie Dupont" /></div>
                 <div class="field"><label>Fonction</label><input id="cFonction" type="text" placeholder="Responsable logistique" /></div>
@@ -203,7 +215,7 @@
 
       <!-- ============ PANNEAU LATÉRAL ============ -->
       <aside class="panel panel-sticky">
-        <h3>🔒 Confidentialité garantie</h3>
+        <h3> Confidentialité garantie</h3>
         <p style="font-size:14px;color:#617795;margin-bottom:14px;">Tant que vous n'avez pas accepté une offre, les transporteurs ne voient <b>jamais</b> :</p>
         <ul style="list-style:none;font-size:13.5px;color:#617795;line-height:2;margin-bottom:18px;">
           <li>✕ Votre raison sociale</li>
@@ -220,7 +232,7 @@
         </ul>
         <div class="divider"></div>
         <div class="info-banner">
-          📊 <span>Après comparaison, la plateforme vous présente la meilleure offre — prix, délai, validité, conditions — sans révéler l'identité du transporteur.</span>
+           <span>Après comparaison, la plateforme vous présente la meilleure offre — prix, délai, validité, conditions — sans révéler l'identité du transporteur.</span>
         </div>
       </aside>
 
@@ -229,7 +241,7 @@
 
   <footer class="footer">
     <div class="container footer-bottom" style="border:none;padding-top:0;">
-      <span>© <span id="year"></span> Transia — Prototype v0.1 · Démonstration, aucune donnée transmise</span>
+      <span>© <span id="year"></span> Transia — Mise en relation transport international</span>
       <span><a href="index.html" style="color:#a6c8f3;">Accueil</a> · <a href="juridique.html" style="color:#a6c8f3;">Cadre juridique</a></span>
     </div>
   </footer>

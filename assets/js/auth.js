@@ -23,7 +23,7 @@
     API.post("/api/auth/tokens", { token: verifyToken }).then(function (r) {
       if (!r.ok) {
         get("verifyBox").innerHTML =
-          "<h3 class='mt-0'>❌ Lien invalide ou expiré</h3>" +
+          "<h3 class='mt-0'> Lien invalide ou expiré</h3>" +
           "<p style='font-size:14px;color:#617795;'>" + escapeHtml(r.body.error || "Demandez un nouveau lien de vérification.") + "</p>" +
           "<button class='btn btn-outline' id='btnNewLink' style='margin-top:10px;'>Renvoyer le lien</button>";
         var b = get("btnNewLink");
@@ -31,7 +31,7 @@
         return;
       }
       get("verifyBox").innerHTML =
-        "<h3 class='mt-0'>✅ Adresse e-mail confirmée</h3>" +
+        "<h3 class='mt-0'> Adresse e-mail confirmée</h3>" +
         "<p style='font-size:14px;color:#617795;'>" + escapeHtml(r.body.next || "Votre compte est actif.") + " Redirection…</p>";
       toast("E-mail vérifié — bienvenue sur Transia !", "ok");
       API.me(true);
@@ -66,7 +66,7 @@
         btn.disabled = false; btn.textContent = "Enregistrer le mot de passe";
         if (!r.ok) { toast(r.body.error || "Lien invalide ou expiré.", "err"); return; }
         get("resetConfirmBox").innerHTML =
-          "<h3 class='mt-0'>✅ Mot de passe modifié</h3>" +
+          "<h3 class='mt-0'> Mot de passe modifié</h3>" +
           "<p style='font-size:14px;color:#617795;line-height:1.6;'>Vos sessions ouvertes ont été fermées. Vous pouvez vous connecter avec votre nouveau mot de passe.</p>" +
           "<a href='auth.html' class='btn btn-primary btn-block btn-lg' style='margin-top:14px;'>Se connecter</a>";
       }).catch(function () {
@@ -144,7 +144,7 @@
       btn.disabled = false; btn.textContent = "Recevoir le lien";
       if (!r.ok) { toast(r.body.error || "Demande impossible.", "err"); return; }
       get("resetRequestBox").innerHTML =
-        "<h3 class='mt-0'>📩 Demande enregistrée</h3>" +
+        "<h3 class='mt-0'> Demande enregistrée</h3>" +
         "<p style='font-size:14px;color:#617795;line-height:1.6;'>Si un compte correspond à <b>" + escapeHtml(email) + "</b>, un lien de réinitialisation vient d'être envoyé (valable 1 heure).</p>" +
         "<a href='auth.html' class='btn btn-outline' style='margin-top:14px;'>Revenir à la connexion</a>";
     }).catch(function () {
@@ -229,7 +229,7 @@
 
   /* ---------- Inscription transporteur ---------- */
   var modesBox = get("cModes");
-  [["ROAD", "Routier 🚚"], ["SEA", "Maritime 🚢"], ["AIR", "Aérien ✈️"], ["MULTIMODAL", "Multimodal 🔗"]].forEach(function (m) {
+  [["ROAD", "Routier "], ["SEA", "Maritime "], ["AIR", "Aérien "], ["MULTIMODAL", "Multimodal "]].forEach(function (m) {
     var label = document.createElement("label");
     label.style.cssText = "display:flex;gap:7px;align-items:center;font-size:14px;font-weight:500;";
     label.innerHTML = "<input type='checkbox' name='cMode' value='" + m[0] + "' style='width:auto;' /> " + m[1];

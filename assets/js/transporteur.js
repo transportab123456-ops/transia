@@ -27,7 +27,7 @@
         " · Immat. " + escapeHtml(compte.immat) + "</p></div></div>" +
         '<a href="admin.html" class="btn btn-outline btn-sm">Suivre ma vérification →</a></div>' +
         (compte.statut === "À VÉRIFIER"
-          ? '<div class="info-banner" style="margin-top:16px;">🛡️ <span>Votre compte est <b>à vérifier</b> : l\'administrateur contrôle vos justificatifs (immatriculation, licences, assurances) et garde la décision finale d\'activation.</span></div>'
+          ? '<div class="info-banner" style="margin-top:16px;"> <span>Votre compte est <b>à vérifier</b> : l\'administrateur contrôle vos justificatifs (immatriculation, licences, assurances) et garde la décision finale d\'activation.</span></div>'
           : "");
     }
     var btn = get("btnOuvrirInscription");
@@ -136,8 +136,8 @@
         "<td><b>" + escapeHtml(r.ref) + "</b></td>" +
         "<td>" + escapeHtml(r.origine.ville) + "<br /><span class='muted' style='font-size:12px;'>" + escapeHtml(r.origine.pays) + "</span></td>" +
         "<td>" + escapeHtml(r.dest.ville) + "<br /><span class='muted' style='font-size:12px;'>" + escapeHtml(r.dest.pays) + "</span></td>" +
-        "<td><span class='mode-badge'>" + modeIcon(r.mode) + " " + escapeHtml(r.mode) + "</span></td>" +
-        "<td>" + escapeHtml(r.marchandise.type) + (r.dangereuse ? " ⚠️" : "") +
+        "<td><span class='mode-badge'>" + escapeHtml(r.mode) + "</span></td>" +
+        "<td>" + escapeHtml(r.marchandise.type) + (r.dangereuse ? " " : "") +
         "<br /><span class='muted' style='font-size:12px;'>" + escapeHtml(String(r.marchandise.poids)) + "</span></td>" +
         "<td>" + escapeHtml(r.origine.date) + "</td>" +
         "<td>" + badgeStatut(r.statut) + "</td>" +
@@ -177,7 +177,7 @@
       escapeHtml(String(r.marchandise.desc)) + " · " + escapeHtml(String(r.marchandise.poids)) +
       " · " + escapeHtml(String(r.marchandise.volume)) + "<br />" +
       "Incoterm " + escapeHtml(r.incoterm) + " · enlèvement le " + escapeHtml(r.origine.date) +
-      (r.dangereuse ? "<br /><b style='color:#96650f;'>⚠️ Marchandise dangereuse : " + escapeHtml(r.dangerInfo.onu + " — " + r.dangerInfo.classe) + "</b>" : "");
+      (r.dangereuse ? "<br /><b style='color:#96650f;'> Marchandise dangereuse : " + escapeHtml(r.dangerInfo.onu + " — " + r.dangerInfo.classe) + "</b>" : "");
     openModal("modalReponse");
   }
 
