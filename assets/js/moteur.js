@@ -11,7 +11,6 @@
 var Moteur = (function () {
   var TAUX = { EUR: 1, USD: 0.92, GBP: 1.17, CHF: 1.06, MAD: 0.092, JPY: 0.0061, CAD: 0.68, AED: 0.25 };
   var DEVISE_RFQ = "EUR"; /* devise de comparaison choisie par le donneur d'ordre */
-  var COMMISSION = 0.08;
 
   function convertir(prix, devise, cible) {
     var from = TAUX[devise], to = TAUX[cible];
@@ -76,7 +75,6 @@ var Moteur = (function () {
   return {
     TAUX: TAUX,
     DEVISE_RFQ: DEVISE_RFQ,
-    COMMISSION: COMMISSION,
     convertir: convertir,
     normaliser: normaliser,
     classer: classer,

@@ -438,7 +438,7 @@ CREATE TABLE IF NOT EXISTS deals (
   deal_currency_id     uuid NOT NULL REFERENCES currencies(currency_id),
   transport_amount     numeric(14,2) NOT NULL,
   commissionable_amount numeric(14,2) NOT NULL,
-  commission_rate      numeric(6,4) NOT NULL DEFAULT 0.08, -- taux figé par affaire
+  commission_rate      numeric(6,4) NOT NULL DEFAULT 0.08, -- taux EFFECTIF figé par affaire (commission / assiette)
   commission_amount    numeric(14,2) NOT NULL,
   status               text NOT NULL DEFAULT 'CONFIRMED'
                        CHECK (status IN
@@ -572,17 +572,23 @@ COMMIT;
    ============================================================ */
 BEGIN;
 
--- Paramètres de la plateforme (le taux de commission n'est JAMAIS
--- codé en dur : il est lu ici, figé sur chaque affaire à sa création)
+-- Paramètres de la plateforme (clé/valeur, réservé aux réglages
+-- d'exploitation : seuils, drapeaux, libellés).
+--
+-- Le taux de commission n'y figure plus. Depuis le passage au barème
+-- dégressif, la commission est une grille publiée dans la clause CGU
+-- transporteur, implémentée une seule fois dans assets/js/commission.js.
+-- La rendre modifiable en base ferait diverger la facturation du contrat
+-- signé par le transporteur : un changement de barème passe par une
+-- révision des CGU et du code, pas par un réglage d'exploitation.
 CREATE TABLE IF NOT EXISTS platform_settings (
   setting_key   text PRIMARY KEY,
   setting_value text NOT NULL,
   updated_by    uuid REFERENCES users(user_id),
   updated_at    timestamptz NOT NULL DEFAULT now()
 );
-INSERT INTO platform_settings (setting_key, setting_value)
-VALUES ('commission_rate', '0.08')
-ON CONFLICT (setting_key) DO NOTHING;
+-- Nettoyage des bases existantes : l'ancien taux forfaitaire n'est plus lu.
+DELETE FROM platform_settings WHERE setting_key = 'commission_rate';
 
 -- Protection brute-force / credential stuffing sur les endpoints d'auth.
 -- Côté base : partagé entre toutes les instances serverless.

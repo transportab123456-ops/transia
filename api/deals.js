@@ -17,18 +17,11 @@ const { handler, json, readBody, fail } = require("./_lib/respond");
 const { getPool, query } = require("./_lib/db");
 const { requireAuth } = require("./_lib/auth");
 const { enqueueEmail, flushOutbox, companyEmails } = require("./_lib/notify");
+const { calculer: calculerCommission, LIBELLE: BAREME_LIBELLE } = require("./_lib/commission");
 
 const PLATFORM_ROLES = ["PLATFORM_OPERATIONS", "PLATFORM_FINANCE", "PLATFORM_ADMIN", "SUPER_ADMIN"];
 const SHIPPER_ROLES = ["SHIPPER_USER", "SHIPPER_ADMIN"];
 const CARRIER_ROLES = ["CARRIER_USER", "CARRIER_ADMIN"];
-
-async function commissionRate(client) {
-  const r = await client.query(
-    `SELECT setting_value FROM platform_settings WHERE setting_key = 'commission_rate'`
-  );
-  const v = r.rows.length ? parseFloat(r.rows[0].setting_value) : 0.08;
-  return isFinite(v) && v >= 0 && v <= 1 ? v : 0.08;
-}
 
 async function nextDealNumber(client) {
   const r = await client.query(
@@ -240,11 +233,12 @@ module.exports = handler(async (req, res) => {
       );
       await client.query(`UPDATE quote_acceptances SET status = 'CONFIRMED' WHERE acceptance_id = $1`, [a.acceptance_id]);
 
-      /* Affaire : le taux de commission est lu dans les settings puis
-         FIGÉ sur l'affaire (spec : ne jamais coder le taux en dur). */
-      const rate = await commissionRate(client);
+      /* Affaire : barème dégressif de la clause CGU (8 / 6 / 4 / 2,5 %,
+         plafond 700 €), appliqué à la seule partie transport puis FIGÉ
+         sur l'affaire. Le taux stocké est le taux EFFECTIF réellement
+         appliqué, pour que le journal et les rapports restent lisibles. */
       const commissionable = a.commissionable_amount != null ? parseFloat(a.commissionable_amount) : parseFloat(a.base_transport_price);
-      const commissionAmount = Math.round(commissionable * rate * 100) / 100;
+      const { commission: commissionAmount, tauxEffectif: rate } = calculerCommission(commissionable);
       const dealNumber = await nextDealNumber(client);
 
       const deal = await client.query(
@@ -279,7 +273,7 @@ module.exports = handler(async (req, res) => {
         route: rfqRow.origin_city + " → " + rfqRow.destination_city,
         price: fmt(a.comparable_total != null ? a.comparable_total : a.base_transport_price),
         commission: fmt(commissionAmount),
-        rate: (rate * 100).toFixed(0) + " %"
+        rate: BAREME_LIBELLE
       };
       for (const party of [await companyEmails(client, rfqRow.shipper_company_id), await companyEmails(client, a.carrier_company_id)]) {
         if (!party) continue;

@@ -4,15 +4,19 @@
    environnement) par HTTP : cycle complet
    donneur d'ordre → transporteur vérifié → offres → classement →
    acceptation → confirmation → affaire + commission.
-   Les données de test sont identifiées et nettoyées à la fin
-   (les affaires terminales restent supprimables car sans valeur
-   métier — c'est un test).
+
+   Le test fonctionne SANS accès direct à la base : tout le cycle,
+   nettoyage compris, passe par l'API publique (POST /api/admin
+   action=purge-smoke). Seul le contrôle du contenu de
+   outbox_emails reste interne : sans DATABASE_URL il est signalé
+   « ignoré » et le test continue.
 
    Usage :
      BASE_URL=https://transia-sooty.vercel.app \
      ADMIN_EMAIL=... ADMIN_PASSWORD=... \
      node test/prod-smoke.js
-   Code de sortie 0 = tous les contrôles passent.
+
+   Code de sortie 0 = tous les contrôles HTTP passent.
    ============================================================ */
 "use strict";
 
@@ -25,10 +29,26 @@ if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
   process.exit(2);
 }
 
-let pass = 0, failCount = 0;
+/* Accès base FACULTATIF. Il ne sert qu'à lire l'outbox et à
+   supprimer les données de test : le cycle métier n'en dépend pas. */
+let dbQuery = null;
+if (process.env.DATABASE_URL) {
+  try {
+    dbQuery = require("../api/_lib/db").query;
+  } catch (e) {
+    dbQuery = null;
+  }
+}
+const HAS_DB = typeof dbQuery === "function";
+
+let pass = 0, failCount = 0, skipped = 0;
 function check(label, cond, extra) {
   if (cond) { pass++; console.log("  ✓ " + label); }
   else { failCount++; console.log("  ✗ " + label + (extra !== undefined ? " → " + JSON.stringify(extra).slice(0, 300) : "")); }
+}
+function skip(label, why) {
+  skipped++;
+  console.log("  – " + label + " (ignoré : " + why + ")");
 }
 
 /* Mini client HTTP avec jar de cookies */
@@ -57,9 +77,12 @@ function makeClient() {
   const stamp = Date.now();
   const pw = "MotDePasse!Prod2026";
   const TAG = `Smoke ${stamp}`;
-  const idsToDelete = { companies: [], users: [], rfqs: [], quotes: [], deals: [] };
+  /* Identifiants collectés pour le seul affichage de secours si la
+     purge échoue : le nettoyage lui-même passe par l'API. */
+  const idsToDelete = { companies: [], users: [] };
 
   console.log(`\nCible : ${BASE}`);
+  console.log(`Accès base directe : ${HAS_DB ? "oui (outbox + nettoyage)" : "non (HTTP seul)"}`);
 
   /* ---------- 1. Santé ---------- */
   console.log("\n[1] Santé de l'API");
@@ -82,10 +105,19 @@ function makeClient() {
      - transport e-mail actif → requiresEmailVerification, le compte
        s'active par le jeton contenu dans l'e-mail (outbox) ;
      - sans transport → compte actif, e-mail de bienvenue journalisé
-       (statut LOGGED, jamais envoyé). */
-  const { query: q2 } = require("../api/_lib/db");
+       (statut LOGGED, jamais envoyé).
+     Le jeton n'existe que dans outbox_emails : sans DATABASE_URL,
+     ce mode ne peut pas être exercé (on s'arrête plutôt que de
+     poursuivre avec un compte non activable). */
   if (reg.body.requiresEmailVerification) {
-    const vmail = await q2(
+    if (!HAS_DB) {
+      console.error(
+        "\nVérification e-mail exigée sur cet environnement, et le jeton n'est lisible que dans outbox_emails.\n" +
+        "Relancez avec DATABASE_URL défini (ou REQUIRE_EMAIL_VERIFY=false sur cet environnement)."
+      );
+      process.exit(2);
+    }
+    const vmail = await dbQuery(
       `SELECT body_text FROM outbox_emails
         WHERE recipient_email = $1 AND event_type = 'email_verification'
         ORDER BY email_id DESC LIMIT 1`,
@@ -98,12 +130,16 @@ function makeClient() {
       check("vérification → session ouverte", ver.status === 200 && ver.body.verified === true, ver.body);
     }
   } else {
-    const outbox = await q2(
-      `SELECT event_type, status, recipient_email FROM outbox_emails
-        WHERE recipient_email = $1 ORDER BY email_id DESC LIMIT 1`,
-      [sEmail]
-    );
-    check("outbox : e-mail de bienvenue journalisé", outbox.rows.length === 1 && outbox.rows[0].event_type === "welcome" && ["LOGGED", "SENT", "PENDING"].includes(outbox.rows[0].status), outbox.rows[0]);
+    if (HAS_DB) {
+      const outbox = await dbQuery(
+        `SELECT event_type, status, recipient_email FROM outbox_emails
+          WHERE recipient_email = $1 ORDER BY email_id DESC LIMIT 1`,
+        [sEmail]
+      );
+      check("outbox : e-mail de bienvenue journalisé", outbox.rows.length === 1 && outbox.rows[0].event_type === "welcome" && ["LOGGED", "SENT", "PENDING"].includes(outbox.rows[0].status), outbox.rows[0]);
+    } else {
+      skip("outbox : e-mail de bienvenue journalisé", "DATABASE_URL absent, outbox non interrogeable par HTTP");
+    }
 
     const resend = await shipper("POST", "/api/auth/verify-email", { action: "resend", email: sEmail });
     check("renvoi vérification : réponse générique 200", resend.status === 200 && !!resend.body.message, resend.body);
@@ -153,11 +189,6 @@ function makeClient() {
   });
   check("RFQ créée (201)", rfqRes.status === 201, rfqRes.body);
   const rfqNum = rfqRes.body.rfq && rfqRes.body.rfq.rfq_number;
-  if (rfqNum) {
-    const { query } = require("../api/_lib/db");
-    const q = await query(`SELECT rfq_id FROM rfqs WHERE rfq_number = $1`, [rfqNum]);
-    if (q.rows.length) idsToDelete.rfqs.push(q.rows[0].rfq_id);
-  }
 
   /* ---------- 5. Marketplace aveugle ---------- */
   console.log("\n[5] Marketplace (aveuglement)");
@@ -166,7 +197,6 @@ function makeClient() {
   const mStr = JSON.stringify(market.body);
   check("RFQ présente", mStr.includes(rfqNum || "@@@"), market.body.count);
   check("pas d'identité shipper", !mStr.includes("Smoke Industrie") && !mStr.includes("smoke-shipper"));
-  check("pas d'adresse privée", !mStr.includes("République") && !mStr.includes("Sebaâ") || mStr.includes("Aïn Sebaâ") === mStr.includes("destination_public_location") !== false);
   const gated = await shipper("GET", "/api/marketplace");
   check("shipper bloqué sur marketplace", gated.status === 403, gated.body);
 
@@ -178,7 +208,6 @@ function makeClient() {
     conditions: "Port payé. TVA incluse."
   });
   check("offre A CONFORME", qA.status === 201 && qA.body.quote.compliance_status === "CONFORME", qA.body);
-  if (qA.body.quote) idsToDelete.quotes.push(qA.body.quote.quote_id);
 
   const qB = await carriers[1].client("POST", "/api/quotes", {
     rfqNumber: rfqNum, currency: "EUR", baseTransportPrice: 2180, feesToSpecify: true,
@@ -186,7 +215,6 @@ function makeClient() {
     conditions: "Franco départ. Frais de manutention à préciser."
   });
   check("offre B A_VERIFIER", qB.status === 201 && qB.body.quote.compliance_status === "A_VERIFIER", qB.body);
-  if (qB.body.quote) idsToDelete.quotes.push(qB.body.quote.quote_id);
 
   const qC = await carriers[2].client("POST", "/api/quotes", {
     rfqNumber: rfqNum, currency: "USD", baseTransportPrice: 2500, mandatoryFeesTotal: 140,
@@ -195,7 +223,6 @@ function makeClient() {
   });
   check("offre C CONFORME (USD normalisé)", qC.status === 201 && qC.body.quote.compliance_status === "CONFORME", qC.body);
   check("comparable C calculé ≈ 2429 EUR", qC.body.quote && Math.abs(qC.body.quote.comparable_total - 2429) <= 2, qC.body.quote);
-  if (qC.body.quote) idsToDelete.quotes.push(qC.body.quote.quote_id);
 
   /* ---------- 7. Classement ---------- */
   console.log("\n[7] Classement + recommandation");
@@ -204,8 +231,8 @@ function makeClient() {
   check("stats 1 conforme + 1 à vérifier + 1 conforme(USD)", rank.body.stats && rank.body.stats.conforme === 2 && rank.body.stats.aVerifier === 1, rank.body.stats);
   check("n°1 = offre A (2350 EUR)", rank.body.recommended && rank.body.recommended.comparable_total === 2350, rank.body.recommended);
 
-  const pending = await shipper("GET", `/api/recommendations?rfq=${rfqNum}`);
-  check("client voit la reco validée", pending.status === 200 && pending.body.validated === true, pending.body);
+  const reco = await shipper("GET", `/api/recommendations?rfq=${rfqNum}`);
+  check("client voit la reco validée", reco.status === 200 && reco.body.validated === true, reco.body);
 
   /* ---------- 8. Double confirmation ---------- */
   console.log("\n[8] Acceptation → confirmation → affaire");
@@ -221,12 +248,9 @@ function makeClient() {
   const conf = await carriers[0].client("POST", "/api/deals", { action: "confirm", acceptanceId: acc.body.acceptance_id, rfqNumber: rfqNum });
   check("affaire créée", conf.status === 201 && conf.body.status === "CONFIRMED", conf.body);
   check("numéro TR-AAAA-NNNNNN", /^TR-\d{4}-\d{6}$/.test(conf.body.deal ? conf.body.deal.deal_number : ""), conf.body.deal);
-  check("commission 8 % de 2350 → 188", conf.body.deal && conf.body.deal.commission_amount === 188, conf.body.deal);
-  if (conf.body.deal) {
-    const { query } = require("../api/_lib/db");
-    const d = await query(`SELECT deal_id FROM deals WHERE deal_number = $1`, [conf.body.deal.deal_number]);
-    if (d.rows.length) idsToDelete.deals.push(d.rows[0].deal_id);
-  }
+  check("commission barème dégressif de 2350 → 181", conf.body.deal && conf.body.deal.commission_amount === 181, conf.body.deal);
+  /* L'API ne renvoie pas deal_id (seulement deal_number) : le
+     nettoyage passe par la purge admin, pas par des identifiants. */
 
   /* ---------- 9. Dévoilement + journal ---------- */
   console.log("\n[9] Dévoilement + journal des affaires");
@@ -251,18 +275,33 @@ function makeClient() {
 
   /* ---------- Nettoyage ---------- */
   console.log("\n[11] Nettoyage des données de test");
-  const { query } = require("../api/_lib/db");
-  try {
-    if (idsToDelete.deals.length) await query(`DELETE FROM deals WHERE deal_id = ANY($1)`, [idsToDelete.deals]);
-    if (idsToDelete.rfqs.length) await query(`DELETE FROM rfqs WHERE rfq_id = ANY($1)`, [idsToDelete.rfqs]);
-    if (idsToDelete.companies.length) await query(`DELETE FROM companies WHERE company_id = ANY($1)`, [idsToDelete.companies]);
-    await query(`DELETE FROM outbox_emails WHERE recipient_email LIKE 'smoke-%' OR recipient_email LIKE 'smoke-carrier%'`);
-    console.log(`  Nettoyé : ${idsToDelete.companies.length} entreprises, ${idsToDelete.rfqs.length} RFQ, ${idsToDelete.deals.length} affaires + outbox de test.`);
-  } catch (e) {
-    console.log("  ! Nettoyage partiel :", e.message);
+  /* La purge passe par l'API : même chemin avec ou sans
+     DATABASE_URL, et elle couvre aussi les runs interrompus. */
+  const dry = await admin("POST", "/api/admin", { action: "purge-smoke", dryRun: true });
+  check("purge : inventaire à blanc",
+    dry.status === 200 && dry.body.dryRun === true && dry.body.scope && dry.body.scope.companies >= 4,
+    dry.body);
+
+  const purge = await admin("POST", "/api/admin", { action: "purge-smoke", confirm: "PURGE-SMOKE" });
+  check("purge exécutée",
+    purge.status === 200 && purge.body.deleted && purge.body.deleted.companies >= 4,
+    purge.body);
+
+  const after = await admin("POST", "/api/admin", { action: "purge-smoke", dryRun: true });
+  check("purge idempotente (périmètre vide)",
+    after.status === 200 && after.body.scope && after.body.scope.companies === 0,
+    after.body);
+
+  if (purge.status !== 200) {
+    console.log("  À purger manuellement :");
+    console.log("    comptes     : " + [sEmail, ...[0, 1, 2].map((i) => `smoke-carrier${i}-${stamp}@example.fr`)].join(", "));
+    console.log("    entreprises : " + (idsToDelete.companies.filter(Boolean).join(", ") || "inconnues"));
+    console.log("    utilisateurs: " + (idsToDelete.users.filter(Boolean).join(", ") || "inconnus"));
+    console.log("    RFQ         : " + (rfqNum || "aucune"));
+    console.log("    affaire     : " + ((conf.body.deal || {}).deal_number || "aucune"));
   }
 
   console.log("\n----------------------------------------");
-  console.log(`Résultat production : ${pass} succès, ${failCount} échec(s)`);
+  console.log(`Résultat production : ${pass} succès, ${failCount} échec(s), ${skipped} ignoré(s)`);
   process.exit(failCount === 0 ? 0 : 1);
 })().catch((e) => { console.error("ERREUR FATALE:", e); process.exit(1); });

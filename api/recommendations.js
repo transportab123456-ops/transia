@@ -7,6 +7,9 @@
    POST : recalcule et persiste le classement (plateforme), puis
           valide la recommandation — soit la proposition n°1 du
           moteur, soit un écart motivé (override journalisé).
+          La décision de valider d'office ou de router vers une
+          relecture humaine s'appuie sur les probabilités calibrées
+          renvoyées par Nace Drex (api/_lib/drex.js).
    ============================================================ */
 "use strict";
 
@@ -14,10 +17,42 @@ const { handler, json, readBody, fail } = require("./_lib/respond");
 const { getPool, query } = require("./_lib/db");
 const { requireAuth } = require("./_lib/auth");
 const { loadFx, normalizeQuote, classify } = require("./_lib/ranking");
+const { decide } = require("./_lib/drex");
 const { enqueueEmail, flushOutbox, companyEmails } = require("./_lib/notify");
+const { calculer: calculerCommission } = require("./_lib/commission");
 
 const PLATFORM_ROLES = ["PLATFORM_OPERATIONS", "PLATFORM_ADMIN", "SUPER_ADMIN"];
 const SHIPPER_ROLES = ["SHIPPER_USER", "SHIPPER_ADMIN"];
+
+/* Seuil de validation automatique : au-delà, la proposition part
+   directement ; en dessous, elle passe en relecture humaine. */
+const DREX_VALIDATION_THRESHOLD = 0.7;
+
+/* État transmis à Drex : uniquement les faits utiles à la décision
+   (prix comparables, délais, complétude), jamais d'identité. */
+function drexCaseState(rfqNumber, rfqRow, classement) {
+  const offer = (o) => ({
+    rang: o.rank,
+    prix_comparable_eur: o.prixComparable,
+    delai: o.transit_time_value == null ? null : o.transit_time_value + " " + o.transit_time_unit,
+    validite: o.valid_until,
+    conditions_renseignees: !!o.conditions
+  });
+  const first = classement.conforme[0];
+  const second = classement.conforme[1];
+
+  return {
+    demande: {
+      reference: rfqNumber,
+      origine: rfqRow.origin_city,
+      destination: rfqRow.destination_city
+    },
+    offres_conformes: classement.conforme.slice(0, 5).map(offer),
+    ecart_prix_eur_entre_1_et_2: second ? first.prixComparable - second.prixComparable : null,
+    offres_a_verifier: classement.aVerifier.length,
+    offres_non_conformes: classement.ecartees.length
+  };
+}
 
 module.exports = handler(async (req, res) => {
   /* ---------- GET : classement d'une RFQ ---------- */
@@ -55,10 +90,11 @@ module.exports = handler(async (req, res) => {
       [rfqRow.rfq_id]
     );
 
-    const rateRow = await query(
-      `SELECT setting_value FROM platform_settings WHERE setting_key = 'commission_rate'`
-    );
-    const commissionRate = rateRow.rows.length ? parseFloat(rateRow.rows[0].setting_value) : 0.08;
+    /* Commission : barème dégressif de la clause CGU, calculé sur la
+       seule partie transport de l'offre recommandée. */
+    const bareme = rec.rows.length
+      ? calculerCommission(rec.rows[0].commissionable_amount)
+      : { commission: 0, tauxEffectif: 0 };
 
     const rankings = await query(
       `SELECT rk.rank_position, rk.comparable_price, rk.system_recommended,
@@ -104,7 +140,8 @@ module.exports = handler(async (req, res) => {
         quote_id: rec.rows[0].quote_id,
         comparable_total: rec.rows[0].comparable_total,
         commissionable_amount: rec.rows[0].commissionable_amount,
-        commission_rate: commissionRate,
+        commission_rate: bareme.tauxEffectif,
+        commission_amount: bareme.commission,
         currency: rec.rows[0].currency,
         validatedAt: rec.rows[0].admin_validated_at,
         sentAt: rec.rows[0].sent_to_client_at
@@ -139,7 +176,10 @@ module.exports = handler(async (req, res) => {
     try {
       await client.query("BEGIN");
 
-      const rfq = await client.query(`SELECT rfq_id, status FROM rfqs WHERE rfq_number = $1`, [rfqNumber]);
+      const rfq = await client.query(
+        `SELECT rfq_id, status, origin_city, destination_city FROM rfqs WHERE rfq_number = $1`,
+        [rfqNumber]
+      );
       if (!rfq.rows.length) { await client.query("ROLLBACK"); return fail(res, 404, "Demande introuvable.", "NOT_FOUND"); }
       const rfqId = rfq.rows[0].rfq_id;
 
@@ -229,12 +269,65 @@ module.exports = handler(async (req, res) => {
         overrideReason = motif;
       }
 
+      /* ---------- Décision assistée (Nace Drex) ----------
+         L'algorithme propose ; Drex renvoie la probabilité calibrée
+         de chaque issue (validation d'office / relecture humaine) et
+         on route sur ces probabilités. Un écart motivé est déjà une
+         décision humaine : on ne la double pas d'un appel Drex. Sans
+         NACE_API_KEY, la plateforme garde son comportement actuel. */
+      let drex = null;
+      if (!overrideReason) {
+        try {
+          drex = await decide({
+            questionId: "validation_route",
+            threshold: DREX_VALIDATION_THRESHOLD,
+            instructions: "Le classement de ces offres peut-il être validé d'office et présenté au donneur d'ordre, ou doit-il être relu par un opérateur de la plateforme avant envoi ?",
+            options: {
+              auto_validate: "Une offre conforme domine clairement les autres, l'écart de prix est net et les offres sont complètes : la proposition n°1 peut être validée d'office.",
+              human_review: "Les offres sont trop proches, incomplètes ou ambiguës : un opérateur doit relire le classement avant qu'il soit présenté au donneur d'ordre."
+            },
+            state: drexCaseState(rfqNumber, rfq.rows[0], classement)
+          });
+        } catch (err) {
+          console.warn("[drex] décision indisponible :", err.code || err.message);
+        }
+      }
+      const autoValidate = !drex || drex.routed === "auto";
+
       const rec = await client.query(
         `INSERT INTO rfq_recommendations (rfq_id, quote_id, status)
          VALUES ($1,$2,'PENDING_ADMIN')
          RETURNING recommendation_id, system_recommended_at`,
         [rfqId, chosen.quote_id]
       );
+
+      if (!autoValidate) {
+        /* Routée vers la relecture : la recommandation reste en attente
+           d'un opérateur, rien n'est envoyé au donneur d'ordre. */
+        await client.query(
+          `INSERT INTO audit_log (user_id, action_type, entity_type, entity_id, old_value, new_value, reason)
+           VALUES ($1,'RECOMMENDATION_PENDING_REVIEW','rfqs',$2,$3,$4,$5)`,
+          [user.user_id, rfqId,
+           JSON.stringify({ motorPick: motorPick.quote_id }),
+           JSON.stringify({ chosen: chosen.quote_id, comparable: chosen.prixComparable, drex }),
+           "Décision automatique sous le seuil : relecture opérateur requise."]
+        );
+        await client.query("COMMIT");
+        return json(res, 200, {
+          rfqNumber,
+          status: "PENDING_ADMIN",
+          message: "Recommandation en attente de relecture : la décision automatique n'atteint pas le seuil de confiance.",
+          recommended: {
+            quote_id: chosen.quote_id,
+            comparable_total: chosen.prixComparable,
+            commissionable_amount: chosen.assietteCommission,
+            rank: chosen.rank
+          },
+          drex,
+          secours: classement.secours.map((s) => s.quote_id),
+          stats: { conforme: classement.conforme.length, aVerifier: classement.aVerifier.length, ecartees: classement.ecartees.length }
+        });
+      }
 
       /* Validation immédiate de la recommandation par l'admin qui exécute */
       await client.query(
@@ -254,7 +347,7 @@ module.exports = handler(async (req, res) => {
          VALUES ($1,'RECOMMENDATION_VALIDATED','rfqs',$2,$3,$4,$5)`,
         [user.user_id, rfqId,
          JSON.stringify({ motorPick: motorPick.quote_id }),
-         JSON.stringify({ chosen: chosen.quote_id, comparable: chosen.prixComparable }),
+         JSON.stringify({ chosen: chosen.quote_id, comparable: chosen.prixComparable, drex }),
          overrideReason]
       );
 
@@ -290,6 +383,8 @@ module.exports = handler(async (req, res) => {
           commissionable_amount: chosen.assietteCommission,
           rank: chosen.rank
         },
+        // Probabilités Drex ayant servi au routage (null : Drex non configuré/injoignable).
+        drex,
         override: overrideReason ? { from: motorPick.quote_id, reason: overrideReason } : null,
         secours: classement.secours.map((s) => s.quote_id),
         stats: { conforme: classement.conforme.length, aVerifier: classement.aVerifier.length, ecartees: classement.ecartees.length }

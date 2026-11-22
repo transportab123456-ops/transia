@@ -4,7 +4,7 @@
 (function () {
   var DB = window.DB;
   function get(id) { return document.getElementById(id); }
-  var COMMISSION = 0.08;
+  var Commission = window.Commission;
 
   /* ---------- Statuts modifiables localement ---------- */
   function getStatuts() { return Store.get("statuts", {}); }
@@ -24,7 +24,7 @@
       offre: "A",
       prix: 1450,
       devise: "EUR",
-      commission: Math.round(1450 * COMMISSION),
+      commission: Commission.calculer(1450).commission,
       date: "14/07/2026 à 11:42",
       transporteur: { nom: "TransAtlas Logistics" }
     }];
@@ -48,7 +48,7 @@
       { icone: "📋", valeur: rfqs.length, label: "RFQ enregistrées (démo)" },
       { icone: "📝", valeur: offresTotal, label: "Offres déposées" },
       { icone: "✅", valeur: Math.round((affaires.length / Math.max(rfqs.length, 1)) * 100) + " %", label: "Taux d'acceptation (démo)" },
-      { icone: "💶", valeur: formatEuro(commissions), label: "Commissions générées (8 %)" }
+      { icone: "💶", valeur: formatEuro(commissions), label: "Commissions générées (barème)" }
     ];
     get("kpiGrid").innerHTML = kpis.map(function (k) {
       return "<div class='card' style='text-align:center;'>" +
@@ -217,7 +217,7 @@
       { label: "Offres moyennes par RFQ", valeur: (offresTotal / Math.max(rfqs.length, 1)).toFixed(1), note: "objectif pilote : ≥ 3" },
       { label: "Écart moyen entre offres", valeur: ecartMoyen + " %", note: "mesure de la concurrence générée" },
       { label: "Taux d'acceptation", valeur: Math.round((affaires.length / Math.max(rfqs.length, 1)) * 100) + " %", note: "affaires confirmées / RFQ" },
-      { label: "Commissions générées", valeur: formatEuro(affaires.reduce(function (s, a) { return s + (a.commission || 0); }, 0)), note: "8 % sur la partie transport" }
+      { label: "Commissions générées", valeur: formatEuro(affaires.reduce(function (s, a) { return s + (a.commission || 0); }, 0)), note: "Barème dégressif sur la partie transport" }
     ];
     get("metriquesGrid").innerHTML = m.map(function (x) {
       return "<div class='card' style='padding:20px;'>" +

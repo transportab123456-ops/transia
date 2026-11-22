@@ -115,7 +115,7 @@
       if (confirmees[r.ref] || r.statut === "CONFIRMÉE") {
         liste.push(confirmees[r.ref] || {
           ref: r.ref, ligne: r.origine.ville + " → " + r.dest.ville, prix: r.prixRetenu || 0,
-          commission: Math.round((r.prixRetenu || 0) * 0.08), devise: "EUR",
+          devise: "EUR",
           transporteur: { nom: "Transporteur confirmé" }, date: r.origine.date
         });
       }

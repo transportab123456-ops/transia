@@ -422,7 +422,7 @@
           "<div class='divider'></div>" +
           "<div class='track-summary' style='grid-template-columns:1fr 1;'>" +
           "<div class='box'><span>Prix accepté</span><b>" + euro(deal.transport_amount) + " " + h(deal.currency || "EUR") + "</b></div>" +
-          "<div class='box'><span>Commission " + (parseFloat(deal.commission_rate) * 100).toFixed(0) + " %</span><b>" + euro(deal.commission_amount) + "</b></div>" +
+          "<div class='box'><span>Commission — taux effectif " + (parseFloat(deal.commission_rate) * 100).toFixed(2).replace(".", ",") + " %</span><b>" + euro(deal.commission_amount) + "</b></div>" +
           "</div>" +
           "<p style='font-size:12.5px;color:#617795;'>Assiette : la partie transport de l'opération. Facturée au transporteur.</p>" +
           "<div class='divider'></div>" +
@@ -463,7 +463,6 @@
       /* Recommandation validée */
       var reco = rec.recommended;
       var assiette = parseFloat(reco.commissionable_amount);
-      var commission = Math.round(assiette * parseFloat(reco.commission_rate || 0.08) * 100) / 100;
       var lettre = reco.letter;
       box.innerHTML =
         "<h3 class='mt-0'>🏆 Offre recommandée</h3>" +
@@ -521,7 +520,7 @@
         { icone: "📋", valeur: rfqs.length, label: "Mes demandes" },
         { icone: "✅", valeur: rfqs.filter(function (r) { return r.status === "CONFIRMED"; }).length, label: "Transports confirmés" },
         { icone: "⏳", valeur: rfqs.filter(function (r) { return r.status === "RECOMMENDED"; }).length, label: "Offres à valider" },
-        { icone: "💶", valeur: euro(parseFloat(dealsRes.stats.commission) || 0), label: "Commissions (8 %)" }
+        { icone: "💶", valeur: euro(parseFloat(dealsRes.stats.commission) || 0), label: "Commissions (barème)" }
       ];
       get("donneurKpis").innerHTML = kpis.map(function (k) {
         return "<div class='card' style='text-align:center;'>" +

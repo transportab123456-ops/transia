@@ -297,8 +297,8 @@ const admin = require("../api/admin");
   const confirm = await call(deals, "POST", { action: "confirm", acceptanceId: accId, rfqNumber: rfqNum }, { cookie: carrierCookies[0] });
   check("confirmation → affaire créée", confirm.status === 201 && confirm.body.status === "CONFIRMED", confirm.body);
   check("numéro d'affaire TR-AAAA-NNNNNN", /^TR-\d{4}-\d{6}$/.test(confirm.body.deal.deal_number || ""), confirm.body.deal);
-  check("taux de commission figé à 8 %", confirm.body.deal.commission_rate === 0.08, confirm.body.deal);
-  check("commission = 8 % du transport (2290 → 183)", confirm.body.deal.commission_amount === 183.2, confirm.body.deal);
+  check("taux effectif figé (2290 → 7,75 %)", confirm.body.deal.commission_rate === 0.0775, confirm.body.deal);
+  check("commission = barème dégressif (2290 → 177,40)", confirm.body.deal.commission_amount === 177.4, confirm.body.deal);
 
   const confirmAgain = await call(deals, "POST", { action: "confirm", acceptanceId: accId, rfqNumber: rfqNum }, { cookie: carrierCookies[0] });
   check("double confirmation → 409", confirmAgain.status === 409 && confirmAgain.body.code === "INVALID_STATE", confirmAgain.body);

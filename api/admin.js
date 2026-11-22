@@ -6,6 +6,9 @@
    GET  ?view=companies  : annuaire des entreprises
    POST action=verify    : valide/suspend/réactive un transporteur
                            (décision + motif journalisés)
+   POST action=purge-smoke : supprime les données de test « smoke »
+                           (PLATFORM_ADMIN / SUPER_ADMIN, dryRun
+                           possible) — sert au test de production
    ============================================================ */
 "use strict";
 
@@ -113,6 +116,99 @@ module.exports = handler(async (req, res) => {
   const body = await readBody(req);
   const action = String(body.action || "");
   const companyId = String(body.companyId || "").trim();
+
+  /* ---------- Purge des données de test (smoke) ----------
+     Permet au test de production de nettoyer sans accès direct à
+     la base. Le périmètre vient d'un motif d'e-mail, jamais d'un
+     identifiant fourni par l'appelant : une entreprise n'est
+     purgée que si TOUS ses utilisateurs sont des comptes de test. */
+  if (action === "purge-smoke") {
+    /* Le rôle est déjà chargé par requireAuth ci-dessus : inutile de
+       refaire un aller-retour en base pour restreindre l'action. */
+    if (!["PLATFORM_ADMIN", "SUPER_ADMIN"].includes(user.role)) {
+      return fail(res, 403, "Purge réservée aux administrateurs plateforme.", "FORBIDDEN");
+    }
+
+    const dryRun = body.dryRun === true;
+    if (!dryRun && String(body.confirm || "") !== "PURGE-SMOKE") {
+      return fail(res, 400, 'Confirmation requise : { "confirm": "PURGE-SMOKE" }.', "CONFIRM_REQUIRED");
+    }
+
+    const MOTIF = "^smoke-[^@]*@(example\\.fr|transia\\.test)$";
+    const MAX_COMPANIES = 25;
+
+    const purgePool = getPool();
+    const purgeClient = await purgePool.connect();
+    try {
+      await purgeClient.query("BEGIN");
+
+      const scope = await purgeClient.query(
+        `SELECT DISTINCT c.company_id
+           FROM companies c
+           JOIN users u ON u.company_id = c.company_id
+          WHERE u.email ~ $1
+            AND NOT EXISTS (SELECT 1 FROM users o
+                             WHERE o.company_id = c.company_id
+                               AND o.email !~ $1)`,
+        [MOTIF]
+      );
+      const companyIds = scope.rows.map((r) => r.company_id);
+      const usersCount = await purgeClient.query(
+        `SELECT count(*)::int AS n FROM users WHERE company_id = ANY($1)`,
+        [companyIds]
+      );
+      const summary = { companies: companyIds.length, users: usersCount.rows[0].n };
+
+      /* Un smoke crée 4 entreprises : au-delà, le motif a attrapé
+         autre chose et on refuse plutôt que de deviner. */
+      if (companyIds.length > MAX_COMPANIES) {
+        await purgeClient.query("ROLLBACK");
+        return fail(res, 409,
+          `Périmètre trop large (${companyIds.length} entreprises, plafond ${MAX_COMPANIES}) : purge refusée.`,
+          "SCOPE_TOO_LARGE");
+      }
+
+      if (dryRun) {
+        await purgeClient.query("ROLLBACK");
+        return json(res, 200, { dryRun: true, scope: summary, deleted: {} });
+      }
+
+      /* Ordre imposé par les clés étrangères du schéma :
+         deals.rfq_id et deals.quote_id sont sans cascade → les
+         affaires partent avant les RFQ ; rfqs.shipper_company_id et
+         quotes.carrier_company_id sont sans cascade → les
+         entreprises partent en dernier (leurs enfants, users en
+         tête, sont en cascade). */
+      const del = async (sql, params) => (await purgeClient.query(sql, params)).rowCount;
+      const deleted = {};
+      deleted.commissions = await del(
+        `DELETE FROM commissions WHERE carrier_company_id = ANY($1)`, [companyIds]);
+      deleted.deals = await del(
+        `DELETE FROM deals WHERE shipper_company_id = ANY($1) OR carrier_company_id = ANY($1)`, [companyIds]);
+      deleted.rfqs = await del(
+        `DELETE FROM rfqs WHERE shipper_company_id = ANY($1)`, [companyIds]);
+      deleted.audit_log = await del(
+        `DELETE FROM audit_log WHERE user_id IN (SELECT user_id FROM users WHERE company_id = ANY($1))`, [companyIds]);
+      deleted.outbox_emails = await del(
+        `DELETE FROM outbox_emails WHERE recipient_email ~ $1`, [MOTIF]);
+      deleted.companies = await del(
+        `DELETE FROM companies WHERE company_id = ANY($1)`, [companyIds]);
+
+      await purgeClient.query(
+        `INSERT INTO audit_log (user_id, action_type, entity_type, new_value)
+         VALUES ($1,'SMOKE_DATA_PURGED','companies',$2)`,
+        [user.user_id, JSON.stringify({ scope: summary, deleted })]
+      );
+
+      await purgeClient.query("COMMIT");
+      return json(res, 200, { dryRun: false, scope: summary, deleted });
+    } catch (err) {
+      await purgeClient.query("ROLLBACK").catch(() => {});
+      throw err;
+    } finally {
+      purgeClient.release();
+    }
+  }
 
   if (!companyId) return fail(res, 400, "Identifiant d'entreprise requis.", "MISSING_COMPANY");
 

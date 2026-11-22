@@ -1,0 +1,14 @@
+# Transia — fichiers à ne JAMAIS publier sur un déploiement statique.
+# Sans ce fichier, .env.local, db/schema.sql et .specs/ seraient servis
+# publiquement à la racine du site.
+
+.env
+.env.*
+db/
+.specs/
+test/
+tools/
+node_modules/
+.git/
+.vercel/
+*.md

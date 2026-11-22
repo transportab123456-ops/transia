@@ -1,12 +1,12 @@
 /* ============================================================
    Transia — comparateur.html : comparaison, recommandation,
-   acceptation / refus, confirmation + commission 8 %
+   acceptation / refus, confirmation + commission (barème dégressif)
    ============================================================ */
 (function () {
   var DB = window.DB;
   function get(id) { return document.getElementById(id); }
 
-  var COMMISSION = Moteur.COMMISSION;
+  var Commission = window.Commission;
   var DEVISE_RFQ = Moteur.DEVISE_RFQ;
 
   /* Les fonctions du moteur (conversion, normalisation, classement, validation)
@@ -128,7 +128,7 @@
         offre: "A",
         prix: rfq.prixRetenu,
         devise: "EUR",
-        commission: Math.round(rfq.prixRetenu * COMMISSION),
+        commission: Commission.calculer(rfq.prixRetenu).commission,
         date: "14/07/2026 à 11:42",
         transporteur: {
           id: "T-001",
@@ -233,7 +233,7 @@
         "<div class='divider'></div>" +
         "<div class='track-summary' style='grid-template-columns:1fr 1fr;'>" +
         "<div class='box'><span>Prix accepté</span><b>" + formatEuro(affaire.prix) + " " + escapeHtml(affaire.devise) + "</b></div>" +
-        "<div class='box'><span>Commission 8 %</span><b>" + formatEuro(affaire.commission) + "</b></div>" +
+        "<div class='box'><span>Commission (barème)</span><b>" + formatEuro(affaire.commission) + "</b></div>" +
         "</div>" +
         "<p style='font-size:12.5px;color:#617795;'>Assiette : la partie transport de l'opération. Facturée au transporteur. Les prestations annexes hors transport sont exclues de l'assiette.</p>" +
         "<div class='divider'></div>" +
@@ -287,7 +287,7 @@
     }
 
     var assiette = reco.assietteCommission;
-    var commission = Math.round(assiette * COMMISSION);
+    var commission = Commission.calculer(assiette).commission;
 
     /* Gate : l'algorithme propose, l'administrateur valide avant envoi au client */
     if (!validee) {
@@ -326,7 +326,7 @@
       "<div class='divider'></div>" +
       "<div style='display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px;'>" +
       "<div class='box'><span>Prix comparable</span><b>" + formatEuro(reco.prixComparable) + "</b></div>" +
-      "<div class='box'><span>Commission 8 % sur " + formatEuro(assiette) + "</span><b>" + formatEuro(commission) + "</b></div>" +
+      "<div class='box'><span>Commission (barème) sur " + formatEuro(assiette) + "</span><b>" + formatEuro(commission) + "</b></div>" +
       "</div>" +
       "<h4 style='color:#0f2c4e;font-size:14.5px;margin-bottom:8px;'>Conditions importantes</h4>" +
       "<p style='font-size:13.5px;color:#617795;margin-bottom:6px;'>" + escapeHtml(reco.conditions) + "</p>" +
@@ -353,7 +353,7 @@
   function accepter(rfq, reco) {
     var t = choisirTransporteur(rfq);
     var assiette = reco.assietteCommission != null ? reco.assietteCommission : reco.prix;
-    var commission = Math.round(assiette * COMMISSION);
+    var commission = Commission.calculer(assiette).commission;
     var affaire = {
       ref: rfq.ref,
       ligne: rfq.origine.ville + " → " + rfq.dest.ville,
