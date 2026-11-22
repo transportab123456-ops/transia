@@ -2,17 +2,19 @@
    Transia — db/bootstrap-admin.js
    Crée (ou met à jour) le premier compte plateforme.
    Usage :
-     ADMIN_EMAIL=... ADMIN_PASSWORD=... node db/bootstrap-admin.js
-   DATABASE_URL est lu dans .env.local / .env via db/env.js.
+     node db/bootstrap-admin.js
+   Lit .env.admin (ADMIN_EMAIL, ADMIN_PASSWORD) et .env.local / .env
+   (DATABASE_URL) via db/env.js.
    Idempotent : réexécution sans effacer les autres comptes.
    ============================================================ */
 "use strict";
 
 const { loadEnv, requireDatabaseUrl } = require("./env");
-loadEnv();
+loadEnv();                  // .env.local puis .env : DATABASE_URL
+loadEnv([".env.admin"]);    // ADMIN_EMAIL / ADMIN_PASSWORD
 
 if (!process.env.ADMIN_EMAIL || !process.env.ADMIN_PASSWORD) {
-  console.error("ADMIN_EMAIL et ADMIN_PASSWORD sont requis.");
+  console.error("ADMIN_EMAIL et ADMIN_PASSWORD sont requis (.env.admin ou environnement).");
   process.exit(2);
 }
 requireDatabaseUrl();
