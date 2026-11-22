@@ -346,10 +346,20 @@ module.exports = handler(async (req, res) => {
       }
     }
 
+    /* Affaire : visible du donneur d'ordre et de la plateforme, et du
+       transporteur seulement s'il en est partie prenante. Sans ce
+       filtre, n'importe quel transporteur du marché lisait le montant
+       de la commission et le prix de l'affaire d'un concurrent. */
+    const dealParams = [rfqId];
+    let dealScope = "";
+    if (!isPlatform && !isShipper) {
+      dealParams.push(user.company_id);
+      dealScope = " AND d.carrier_company_id = $2";
+    }
     const affairee = await query(
       `SELECT d.deal_number, d.status, d.commission_rate, d.commission_amount, d.transport_amount
-         FROM deals d WHERE d.rfq_id = $1`,
-      [rfqId]
+         FROM deals d WHERE d.rfq_id = $1${dealScope}`,
+      dealParams
     );
 
     return json(res, 200, {

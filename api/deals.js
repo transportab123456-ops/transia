@@ -314,7 +314,20 @@ module.exports = handler(async (req, res) => {
       const motif = String(body.motif || "").trim();
       if (motif.length < 3) { await client.query("ROLLBACK"); return fail(res, 400, "Motif de refus obligatoire.", "MISSING_MOTIF"); }
 
-      const quoteId = body.quoteId ? String(body.quoteId) : null;
+      /* L'offre citée doit appartenir à CETTE demande : sinon un
+         donneur d'ordre référençait l'offre d'une autre entreprise. */
+      let quoteId = null;
+      if (body.quoteId) {
+        quoteId = String(body.quoteId);
+        const own = await client.query(
+          `SELECT 1 FROM quotes WHERE quote_id = $1 AND rfq_id = $2`,
+          [quoteId, rfqRow.rfq_id]
+        );
+        if (!own.rows.length) {
+          await client.query("ROLLBACK");
+          return fail(res, 404, "Offre introuvable sur cette demande.", "NOT_FOUND");
+        }
+      }
       const close = body.closeRfq === true;
 
       await client.query(
