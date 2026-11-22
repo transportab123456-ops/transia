@@ -181,14 +181,34 @@
   }
 
   /* ---------- Connexion ---------- */
+  var pendingTerms = null;
+
   get("formLogin").addEventListener("submit", function (e) {
     e.preventDefault();
     var email = get("lEmail").value.trim().toLowerCase();
     var password = get("lPassword").value;
     if (!email || !password) { toast("E-mail et mot de passe requis.", "err"); return; }
+    if (pendingTerms && !get("lTerms").checked) {
+      toast("Merci d'accepter les conditions générales pour continuer.", "err"); return;
+    }
 
-    API.post("/api/auth/login", { email: email, password: password }).then(function (r) {
+    var payload = { email: email, password: password };
+    if (pendingTerms) {
+      payload.termsAccepted = true;
+      payload.termsVersion = pendingTerms.version;
+    }
+
+    API.post("/api/auth/login", payload).then(function (r) {
       if (!r.ok) {
+        if (r.body.code === "TERMS_REACCEPTANCE_REQUIRED") {
+          pendingTerms = r.body.terms;
+          get("loginTerms").classList.remove("hidden");
+          get("loginTermsText").innerHTML =
+            "J'accepte les <a href='" + escapeHtml(pendingTerms.url) + "' target='_blank' rel='noopener'>" +
+            escapeHtml(pendingTerms.label) + "</a> (version " + escapeHtml(pendingTerms.version) + ").";
+          toast(r.body.error || "Conditions à accepter.", "err");
+          return;
+        }
         if (r.body.code === "EMAIL_NOT_VERIFIED") {
           toast(r.body.error || "E-mail non vérifié.", "err");
           showVerifyPending(email);

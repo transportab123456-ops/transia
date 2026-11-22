@@ -9,6 +9,7 @@ const { handler, json, readBody, fail } = require("../_lib/respond");
 const { query } = require("../_lib/db");
 const { verifyPassword, createSession, sessionCookie } = require("../_lib/auth");
 const { rateLimit, recordAttempt, pruneAttempts, clientIp } = require("../_lib/security");
+const { termsForRole, hasAccepted, recordAcceptance } = require("../_lib/terms");
 
 const GENERIC = "E-mail ou mot de passe incorrect.";
 
@@ -60,6 +61,34 @@ module.exports = handler(async (req, res) => {
     return fail(res, 403, "E-mail non vérifié : cliquez sur le lien reçu à l'inscription (un renvoi est possible depuis la page de connexion).", "EMAIL_NOT_VERIFIED");
   }
   if (user.status !== "ACTIVE") return fail(res, 403, "Compte inactif ou suspendu.", "ACCOUNT_DISABLED");
+
+  /* Ré-acceptation : un compte créé avant la preuve versionnée n'a
+     aucune acceptation enregistrée. La session n'est ouverte qu'une
+     fois la version en vigueur acceptée ; la preuve est alors écrite
+     avec le contexte REACCEPTANCE. */
+  const terms = termsForRole(user.role);
+  if (terms && !(await hasAccepted(user.user_id, terms))) {
+    const acceptedNow = body.termsAccepted === true &&
+      String(body.termsVersion == null ? "" : body.termsVersion).trim() === terms.version;
+
+    if (!acceptedNow) {
+      return json(res, 403, {
+        error: "Les conditions générales ont évolué : acceptez-les pour ouvrir une session.",
+        code: "TERMS_REACCEPTANCE_REQUIRED",
+        terms: {
+          documentType: terms.documentType,
+          version: terms.version,
+          label: terms.label,
+          url: terms.url
+        }
+      });
+    }
+
+    await recordAcceptance({ query }, {
+      userId: user.user_id, companyId: user.company_id,
+      terms, req, context: "REACCEPTANCE"
+    });
+  }
 
   await recordAttempt("login", email, true);
   await recordAttempt("login", ip, true);

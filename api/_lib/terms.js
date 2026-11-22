@@ -15,6 +15,7 @@
 "use strict";
 
 const { clientIp } = require("./security");
+const { query } = require("./db");
 
 /* Changer une version ici publie de nouvelles conditions : les
    pages d'inscription doivent être mises à jour en conséquence
@@ -33,6 +34,28 @@ const DOCUMENTS = {
     url: "juridique.html"
   }
 };
+
+/* Document applicable au rôle. Les comptes plateforme (exploitation,
+   finance, administration) ne sont pas soumis aux conditions des
+   utilisateurs : ils n'ont pas de relation commerciale avec la
+   plateforme. */
+function termsForRole(role) {
+  const r = String(role || "");
+  if (r.indexOf("SHIPPER_") === 0) return DOCUMENTS.SHIPPER;
+  if (r.indexOf("CARRIER_") === 0) return DOCUMENTS.CARRIER;
+  return null;
+}
+
+/* Une acceptation de cette version existe-t-elle déjà ? */
+async function hasAccepted(userId, terms) {
+  const r = await query(
+    `SELECT 1 FROM terms_acceptances
+      WHERE user_id = $1 AND document_type = $2 AND document_version = $3
+      LIMIT 1`,
+    [userId, terms.documentType, terms.version]
+  );
+  return r.rows.length > 0;
+}
 
 function currentTerms(kind) {
   const doc = DOCUMENTS[kind];
@@ -87,4 +110,6 @@ async function recordAcceptance(client, { userId, companyId, terms, req, context
   return { documentType: terms.documentType, version: terms.version };
 }
 
-module.exports = { DOCUMENTS, currentTerms, checkAcceptance, recordAcceptance };
+module.exports = {
+  DOCUMENTS, currentTerms, termsForRole, hasAccepted, checkAcceptance, recordAcceptance
+};

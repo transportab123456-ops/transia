@@ -1,10 +1,12 @@
 /* ============================================================
    Transia — test/terms-check.js
-   Vérifie l'acceptation versionnée des CGU à l'inscription :
+   Vérifie l'acceptation versionnée des CGU :
    - refus sans case cochée (400 TERMS_NOT_ACCEPTED) ;
    - refus d'une version obsolète (409 TERMS_VERSION_OUTDATED) ;
    - preuve enregistrée : version, IP, agent, horodatage ;
-   - preuve non modifiable.
+   - preuve non modifiable ;
+   - ré-acceptation à la connexion pour un compte sans preuve ;
+   - comptes plateforme non soumis.
 
    Usage : DATABASE_URL=postgresql://... node test/terms-check.js
    Code de sortie 0 = tous les contrôles passent.
@@ -19,7 +21,9 @@ if (!process.env.DATABASE_URL) {
 }
 
 const register = require("../api/auth/register");
+const login = require("../api/auth/login");
 const { query, getPool } = require("../api/_lib/db");
+const { hashPassword } = require("../api/_lib/auth");
 
 function makeReq(method, body, headers = {}) {
   const req = new PassThrough();
@@ -66,15 +70,27 @@ function check(label, cond, extra) {
 const IP = "203.0.113.7";
 const stamp = Date.now();
 const email = `terms-${stamp}@example.fr`;
+const platformEmail = `terms-platform-${stamp}@example.fr`;
 const pw = "motdepasse-test-2026";
+
+let platformUserId = null;
+let platformCompanyId = null;
 
 async function cleanup() {
   const u = await query("SELECT user_id, company_id FROM users WHERE email = $1", [email]);
-  if (!u.rows.length) return;
-  const { user_id, company_id } = u.rows[0];
-  await query("DELETE FROM audit_log WHERE entity_id = $1 OR user_id = $1", [user_id]);
-  await query("DELETE FROM users WHERE user_id = $1", [user_id]);   /* cascade preuve + sessions */
-  if (company_id) await query("DELETE FROM companies WHERE company_id = $1", [company_id]);
+  if (u.rows.length) {
+    const { user_id, company_id } = u.rows[0];
+    await query("DELETE FROM audit_log WHERE entity_id = $1 OR user_id = $1", [user_id]);
+    await query("DELETE FROM users WHERE user_id = $1", [user_id]);   /* cascade preuve + sessions */
+    if (company_id) await query("DELETE FROM companies WHERE company_id = $1", [company_id]);
+  }
+  if (platformUserId) {
+    await query("DELETE FROM users WHERE user_id = $1", [platformUserId]);
+  }
+  if (platformCompanyId) {
+    await query("DELETE FROM companies WHERE company_id = $1", [platformCompanyId]);
+  }
+  await query("DELETE FROM outbox_emails WHERE recipient_email = ANY($1::text[])", [[email, platformEmail]]);
 }
 
 (async () => {
@@ -101,12 +117,13 @@ async function cleanup() {
       termsAccepted: true, termsVersion: "1.0"
     }, { "x-forwarded-for": IP });
     check("201 créé", ok.status === 201, ok.body);
+    const userId = ok.body.user.user_id;
 
     console.log("\n[4] Preuve conservée en base");
     const proof = await query(
       `SELECT user_id, company_id, document_type, document_version, accepted_at, ip_address, user_agent, context
          FROM terms_acceptances WHERE user_id = $1`,
-      [ok.body.user.user_id]
+      [userId]
     );
     const row = proof.rows[0];
     check("une ligne d'acceptation", proof.rows.length === 1, proof.rows);
@@ -119,11 +136,52 @@ async function cleanup() {
     console.log("\n[5] Preuve non modifiable");
     let blocked = false;
     try {
-      await query("UPDATE terms_acceptances SET document_version = '0.0' WHERE user_id = $1", [ok.body.user.user_id]);
+      await query("UPDATE terms_acceptances SET document_version = '0.0' WHERE user_id = $1", [userId]);
     } catch (e) {
       blocked = /écriture seule/.test(e.message);
     }
     check("UPDATE refusé par la base", blocked);
+
+    console.log("\n[6] Ré-acceptation à la connexion");
+    /* Compte hérité : la preuve disparaît (comme un compte créé avant
+       la mise en place du mécanisme). */
+    await query("DELETE FROM terms_acceptances WHERE user_id = $1", [userId]);
+
+    const needTerms = await call(login, "POST", { email, password: pw }, { "x-forwarded-for": IP });
+    check("403 TERMS_REACCEPTANCE_REQUIRED", needTerms.status === 403 && needTerms.body.code === "TERMS_REACCEPTANCE_REQUIRED", needTerms.body);
+    check("version annoncée au client", !!needTerms.body.terms && needTerms.body.terms.version === "1.0", needTerms.body.terms);
+    check("aucune session ouverte", !needTerms.headers["set-cookie"]);
+
+    const wrong = await call(login, "POST", { email, password: pw, termsAccepted: true, termsVersion: "0.9" }, { "x-forwarded-for": IP });
+    check("version obsolète → 403", wrong.status === 403 && wrong.body.code === "TERMS_REACCEPTANCE_REQUIRED", wrong.body);
+
+    const reaccepted = await call(login, "POST", { email, password: pw, termsAccepted: true, termsVersion: "1.0" }, { "x-forwarded-for": IP });
+    check("connexion après acceptation → 200", reaccepted.status === 200 && !!reaccepted.headers["set-cookie"], reaccepted.body);
+
+    const proof2 = await query(
+      "SELECT context, document_version, ip_address FROM terms_acceptances WHERE user_id = $1",
+      [userId]
+    );
+    check("une preuve REACCEPTANCE", proof2.rows.length === 1 && proof2.rows[0].context === "REACCEPTANCE", proof2.rows);
+    check("version et IP de la connexion", proof2.rows[0] && proof2.rows[0].document_version === "1.0" && proof2.rows[0].ip_address === IP, proof2.rows);
+
+    /* Une fois la preuve posée, la connexion ne la redemande plus. */
+    const again = await call(login, "POST", { email, password: pw }, { "x-forwarded-for": IP });
+    check("connexion suivante sans case → 200", again.status === 200, again.body);
+
+    console.log("\n[7] Compte plateforme non soumis");
+    const comp = await query("INSERT INTO companies (legal_name, status) VALUES ($1, 'ACTIVE') RETURNING company_id", [`Plateforme ${stamp}`]);
+    platformCompanyId = comp.rows[0].company_id;
+    const pUser = await query(
+      `INSERT INTO users (company_id, first_name, last_name, email, password_hash, role, status)
+       VALUES ($1, 'Admin', 'Plateforme', $2, $3, 'PLATFORM_ADMIN', 'ACTIVE') RETURNING user_id`,
+      [platformCompanyId, platformEmail, await hashPassword(pw)]
+    );
+    platformUserId = pUser.rows[0].user_id;
+    const platformLogin = await call(login, "POST", { email: platformEmail, password: pw }, { "x-forwarded-for": IP });
+    check("connexion sans acceptation → 200", platformLogin.status === 200, platformLogin.body);
+    const platformProof = await query("SELECT 1 FROM terms_acceptances WHERE user_id = $1", [platformUserId]);
+    check("aucune preuve créée", platformProof.rows.length === 0, platformProof.rows);
   } finally {
     await cleanup();
     await getPool().end();
