@@ -17,8 +17,8 @@ const ROOT = path.join(__dirname, "..");
 const DEFAULT_FILES = [".env.local", ".env"];
 
 /* Gère export, guillemets, BOM, CRLF et commentaire en fin de ligne. */
-function readEnvFile(name) {
-  const file = path.join(ROOT, name);
+function readEnvFile(name, root) {
+  const file = path.join(root, name);
   if (!fs.existsSync(file)) return false;
   const text = fs.readFileSync(file, "utf8").replace(/^\uFEFF/, "");
   for (const line of text.split(/\r?\n/)) {
@@ -33,9 +33,13 @@ function readEnvFile(name) {
 }
 
 /* Charge les fichiers indiqués et renvoie ceux qui existaient.
-   Rejouable : les variables déjà définies sont conservées. */
-function loadEnv(files) {
-  return (files || DEFAULT_FILES).filter(readEnvFile);
+   Rejouable : les variables déjà définies sont conservées.
+   `root` n'existe que pour les tests (répertoire temporaire). */
+function loadEnv(files, root) {
+  const dir = root || ROOT;
+  return (files || DEFAULT_FILES).filter(function (name) {
+    return readEnvFile(name, dir);
+  });
 }
 
 /* DATABASE_URL contrôlée ; sort en code 2 avec la marche à suivre. */
