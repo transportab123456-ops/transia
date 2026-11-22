@@ -1089,9 +1089,9 @@ table.table { width: 100%; border-collapse: collapse; font-size: 14.5px; }
 /* ---------- Icônes SVG et étapes numérotées ---------- */
 .icon-tile svg { width: 22px; height: 22px; display: block; }
 .big svg { width: 34px; height: 34px; display: block; }
-.steps { list-style: none; counter-reset: step; font-size: 14.5px; line-height: 2.1; color: #1b2d49; }
-.steps li { counter-increment: step; display: flex; gap: 10px; align-items: baseline; }
-.steps li::before {
+.numbered { list-style: none; counter-reset: step; font-size: 14.5px; line-height: 2.1; color: #1b2d49; }
+.numbered li { counter-increment: step; display: flex; gap: 10px; align-items: baseline; }
+.numbered li::before {
   content: counter(step);
   flex: 0 0 21px; width: 21px; height: 21px; border-radius: 50%;
   background: var(--blue-light); color: var(--navy-2);
