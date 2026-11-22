@@ -81,7 +81,32 @@
             <label for="lPassword">Mot de passe</label>
             <input type="password" id="lPassword" autocomplete="current-password" required />
           </div>
+          <p style="margin:-6px 0 14px;text-align:right;">
+            <button type="button" id="btnForgot" style="background:none;border:none;color:#2f6fb3;font-size:13.5px;cursor:pointer;padding:0;font-family:inherit;">Mot de passe oublié ?</button>
+          </p>
           <button type="submit" class="btn btn-primary btn-block btn-lg">Se connecter</button>
+        </form>
+      </div>
+
+      <!-- Réinitialisation : demande de lien -->
+      <div class="panel hidden" id="resetRequestBox">
+        <h3 class="mt-0">Mot de passe oublié</h3>
+        <p class="muted" style="font-size:13.5px;">Indiquez l'adresse de votre compte. Si elle correspond à un compte actif, un lien de réinitialisation valable <b>1 heure</b> est envoyé.</p>
+        <form id="formResetRequest" novalidate>
+          <div class="field"><label for="rEmail">E-mail professionnel</label><input type="email" id="rEmail" autocomplete="email" required /></div>
+          <button type="submit" class="btn btn-primary btn-block btn-lg">Recevoir le lien</button>
+        </form>
+        <p style="margin-top:12px;"><button type="button" id="btnBackToLogin" class="btn btn-ghost">Revenir à la connexion</button></p>
+      </div>
+
+      <!-- Réinitialisation : nouveau mot de passe (?reset=JETON) -->
+      <div class="panel hidden" id="resetConfirmBox">
+        <h3 class="mt-0">Nouveau mot de passe</h3>
+        <p class="muted" style="font-size:13.5px;">Choisissez un mot de passe de 10 caractères minimum. Toutes vos sessions ouvertes seront fermées.</p>
+        <form id="formResetConfirm" novalidate>
+          <div class="field"><label for="rPassword">Nouveau mot de passe</label><input type="password" id="rPassword" autocomplete="new-password" required /></div>
+          <div class="field"><label for="rPassword2">Confirmation</label><input type="password" id="rPassword2" autocomplete="new-password" required /></div>
+          <button type="submit" class="btn btn-primary btn-block btn-lg">Enregistrer le mot de passe</button>
         </form>
       </div>
 

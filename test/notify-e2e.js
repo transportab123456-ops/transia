@@ -85,7 +85,7 @@ function extractCookie(resHeaders) {
 
 const register = require("../api/auth/register");
 const login = require("../api/auth/login");
-const verifyEmail = require("../api/auth/verify-email");
+const verifyEmail = require("../api/auth/tokens");
 const carriers = require("../api/carriers");
 const rfqs = require("../api/rfqs");
 const quotes = require("../api/quotes");

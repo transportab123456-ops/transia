@@ -20,7 +20,7 @@
       var el = get(id); if (el) el.classList.add("hidden");
     });
 
-    API.post("/api/auth/verify-email", { token: verifyToken }).then(function (r) {
+    API.post("/api/auth/tokens", { token: verifyToken }).then(function (r) {
       if (!r.ok) {
         get("verifyBox").innerHTML =
           "<h3 class='mt-0'>❌ Lien invalide ou expiré</h3>" +
@@ -42,6 +42,41 @@
     return; /* ne pas initialiser le reste de la page */
   }
 
+  /* ---------- Réinitialisation par lien (?reset=JETON) ---------- */
+  var resetToken = params.get("reset");
+  if (resetToken) {
+    /* Le jeton est retiré de l'URL pour qu'un rafraîchissement ne le rejoue pas */
+    window.history.replaceState({}, "", "auth.html");
+    ["loginBox", "registerShipperBox", "registerCarrierBox", "alreadyBox", "verifyPendingBox", "resetRequestBox"]
+      .forEach(function (id) { var el = get(id); if (el) el.classList.add("hidden"); });
+    get("resetConfirmBox").classList.remove("hidden");
+    get("authTitle").textContent = "Nouveau mot de passe";
+    get("authSubtitle").textContent = "Choisissez un mot de passe de 10 caractères minimum.";
+
+    get("formResetConfirm").addEventListener("submit", function (e) {
+      e.preventDefault();
+      var p1 = get("rPassword").value;
+      var p2 = get("rPassword2").value;
+      if (p1.length < 10) { toast("Mot de passe : 10 caractères minimum.", "err"); return; }
+      if (p1 !== p2) { toast("Les deux mots de passe ne correspondent pas.", "err"); return; }
+
+      var btn = this.querySelector("button[type=submit]");
+      btn.disabled = true; btn.textContent = "Enregistrement…";
+      API.post("/api/auth/tokens", { action: "reset-confirm", token: resetToken, password: p1 }).then(function (r) {
+        btn.disabled = false; btn.textContent = "Enregistrer le mot de passe";
+        if (!r.ok) { toast(r.body.error || "Lien invalide ou expiré.", "err"); return; }
+        get("resetConfirmBox").innerHTML =
+          "<h3 class='mt-0'>✅ Mot de passe modifié</h3>" +
+          "<p style='font-size:14px;color:#617795;line-height:1.6;'>Vos sessions ouvertes ont été fermées. Vous pouvez vous connecter avec votre nouveau mot de passe.</p>" +
+          "<a href='auth.html' class='btn btn-primary btn-block btn-lg' style='margin-top:14px;'>Se connecter</a>";
+      }).catch(function () {
+        btn.disabled = false; btn.textContent = "Enregistrer le mot de passe";
+        toast("Service injoignable.", "err");
+      });
+    });
+    return; /* page dédiée : on n'initialise pas le reste */
+  }
+
   /* ---------- Encart « vérifiez votre boîte mail » ---------- */
   function showVerifyPending(email) {
     ("loginBox registerShipperBox registerCarrierBox").split(" ").forEach(function (id) {
@@ -56,7 +91,7 @@
     get("btnResendVerify").onclick = function () {
       var btn = this;
       btn.disabled = true; btn.textContent = "Envoi…";
-      API.post("/api/auth/verify-email", { action: "resend", email: email }).then(function (r) {
+      API.post("/api/auth/tokens", { action: "resend", email: email }).then(function (r) {
         btn.disabled = false; btn.textContent = "Renvoyer le lien";
         toast((r.ok && r.body.message) || "Demande envoyée.", r.ok ? "ok" : "err");
       }).catch(function () { btn.disabled = false; btn.textContent = "Renvoyer le lien"; toast("Service injoignable.", "err"); });
@@ -82,6 +117,40 @@
 
   Object.keys(tabs).forEach(function (k) {
     get(tabs[k].btn).addEventListener("click", function () { show(k); });
+  });
+
+  /* ---------- Demande de réinitialisation ---------- */
+  get("btnForgot").addEventListener("click", function () {
+    ["loginBox", "registerShipperBox", "registerCarrierBox", "alreadyBox", "verifyPendingBox"]
+      .forEach(function (id) { var el = get(id); if (el) el.classList.add("hidden"); });
+    get("resetRequestBox").classList.remove("hidden");
+    get("authTitle").textContent = "Mot de passe oublié";
+    get("authSubtitle").textContent = "Un lien de réinitialisation valable 1 heure sera envoyé.";
+  });
+
+  get("btnBackToLogin").addEventListener("click", function () {
+    get("resetRequestBox").classList.add("hidden");
+    show("login");
+  });
+
+  get("formResetRequest").addEventListener("submit", function (e) {
+    e.preventDefault();
+    var email = get("rEmail").value.trim().toLowerCase();
+    if (!email) { toast("E-mail requis.", "err"); return; }
+
+    var btn = this.querySelector("button[type=submit]");
+    btn.disabled = true; btn.textContent = "Envoi…";
+    API.post("/api/auth/tokens", { action: "reset-request", email: email }).then(function (r) {
+      btn.disabled = false; btn.textContent = "Recevoir le lien";
+      if (!r.ok) { toast(r.body.error || "Demande impossible.", "err"); return; }
+      get("resetRequestBox").innerHTML =
+        "<h3 class='mt-0'>📩 Demande enregistrée</h3>" +
+        "<p style='font-size:14px;color:#617795;line-height:1.6;'>Si un compte correspond à <b>" + escapeHtml(email) + "</b>, un lien de réinitialisation vient d'être envoyé (valable 1 heure).</p>" +
+        "<a href='auth.html' class='btn btn-outline' style='margin-top:14px;'>Revenir à la connexion</a>";
+    }).catch(function () {
+      btn.disabled = false; btn.textContent = "Recevoir le lien";
+      toast("Service injoignable.", "err");
+    });
   });
 
   /* ---------- Session existante ---------- */

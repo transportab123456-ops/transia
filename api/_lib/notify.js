@@ -68,6 +68,24 @@ const TEMPLATES = {
     return { subject: "Bienvenue sur Transia", text: `Bonjour ${v.firstName}, votre compte ${v.companyName} est actif. Publiez votre première demande : ${url}`, html: t.html };
   },
 
+  /* Réinitialisation de mot de passe : lien court, usage unique */
+  password_reset: (v) => {
+    const url = `${APP_URL}/auth.html?reset=${encodeURIComponent(v.token)}`;
+    const t = wrap(
+      "Réinitialisez votre mot de passe",
+      `<p style="font-size:14.5px;color:#41597a;line-height:1.6;">Bonjour ${v.firstName},</p>
+       <p style="font-size:14.5px;color:#41597a;line-height:1.6;">Vous avez demandé à réinitialiser le mot de passe de votre compte Transia. Ce lien est valable <b>1 heure</b> et ne peut servir qu'une seule fois.</p>`,
+      "Choisir un nouveau mot de passe", url,
+      `<p style="font-size:12.5px;color:#8aa0bb;">Si vous n'êtes pas à l'origine de cette demande, ignorez ce message : votre mot de passe reste inchangé.</p>
+       <p style="font-size:12.5px;color:#8aa0bb;">Si le bouton ne fonctionne pas, copiez ce lien dans votre navigateur :<br/>${url}</p>`
+    );
+    return {
+      subject: "Transia — réinitialisation de votre mot de passe",
+      text: `Réinitialisez votre mot de passe (lien valable 1 h, usage unique) :\n${url}\n\nSi vous n'êtes pas à l'origine de cette demande, ignorez ce message.`,
+      html: t.html
+    };
+  },
+
   /* Nouvelle RFQ : confirmation au donneur */
   rfq_created: (v) => {
     const url = `${APP_URL}/comparateur.html?ref=${encodeURIComponent(v.rfqNumber)}`;

@@ -126,7 +126,7 @@ function makeClient() {
     const m = vmail.rows.length ? String(vmail.rows[0].body_text).match(/verify=([a-f0-9]{64})/) : null;
     check("e-mail de vérification émis + jeton récupérable", !!m, vmail.rows[0] && String(vmail.rows[0].body_text).slice(0, 120));
     if (m) {
-      const ver = await shipper("POST", "/api/auth/verify-email", { token: m[1] });
+      const ver = await shipper("POST", "/api/auth/tokens", { token: m[1] });
       check("vérification → session ouverte", ver.status === 200 && ver.body.verified === true, ver.body);
     }
   } else {
@@ -141,7 +141,7 @@ function makeClient() {
       skip("outbox : e-mail de bienvenue journalisé", "DATABASE_URL absent, outbox non interrogeable par HTTP");
     }
 
-    const resend = await shipper("POST", "/api/auth/verify-email", { action: "resend", email: sEmail });
+    const resend = await shipper("POST", "/api/auth/tokens", { action: "resend", email: sEmail });
     check("renvoi vérification : réponse générique 200", resend.status === 200 && !!resend.body.message, resend.body);
   }
 

@@ -4,6 +4,11 @@
    GET  ?view=overview   : KPI réels (RFQ, offres, affaires, commissions)
    GET  ?view=carriers   : file de vérification des transporteurs
    GET  ?view=companies  : annuaire des entreprises
+   GET  ?view=outbox     : 50 derniers e-mails de la file (statut,
+                           tentatives, erreur, lien contenu dans le
+                           corps — permet de rejouer un parcours de
+                           vérification ou de réinitialisation sans
+                           boîte aux lettres)
    POST action=verify    : valide/suspend/réactive un transporteur
                            (décision + motif journalisés)
    POST action=purge-smoke : supprime les données de test « smoke »
@@ -18,6 +23,15 @@ const { requireAuth } = require("./_lib/auth");
 const { enqueueEmail, flushOutbox, companyEmails } = require("./_lib/notify");
 
 const PLATFORM_ROLES = ["PLATFORM_OPERATIONS", "PLATFORM_FINANCE", "PLATFORM_ADMIN", "SUPER_ADMIN"];
+
+/* Liens http(s) présents dans le corps texte d'un e-mail. Sert à
+   rejouer un parcours (vérification, réinitialisation) tant que le
+   domaine d'envoi n'est pas vérifié. Désactivable par variable
+   d'environnement pour ne plus exposer de jetons en production. */
+function extractLinks(text) {
+  const found = String(text || "").match(/https?:\/\/[^\s"'<>)\]]+/g) || [];
+  return found.filter((u, i) => found.indexOf(u) === i);
+}
 
 module.exports = handler(async (req, res) => {
   /* ================= GET : vues de lecture ================= */
@@ -101,7 +115,36 @@ module.exports = handler(async (req, res) => {
       return json(res, 200, { companies: r.rows, count: r.rows.length });
     }
 
-    return fail(res, 400, "Vue inconnue : overview, carriers ou companies.", "INVALID_VIEW");
+    if (view === "outbox") {
+      const r = await query(
+        `SELECT email_id, event_type, recipient_email, subject, status,
+                attempts, last_error, created_at, sent_at, body_text
+           FROM outbox_emails
+          ORDER BY email_id DESC
+          LIMIT 50`
+      );
+      /* OUTBOX_EXPOSE_LINKS=false coupe l'exposition des jetons. */
+      const exposeLinks = process.env.OUTBOX_EXPOSE_LINKS !== "false";
+      const emails = r.rows.map((m) => {
+        const links = exposeLinks ? extractLinks(m.body_text) : [];
+        return {
+          email_id: m.email_id,
+          event_type: m.event_type,
+          to: m.recipient_email,
+          subject: m.subject,
+          status: m.status,
+          attempts: m.attempts,
+          last_error: m.last_error,
+          created_at: m.created_at,
+          sent_at: m.sent_at,
+          link: links[0] || null,
+          links
+        };
+      });
+      return json(res, 200, { emails, count: emails.length, links_exposed: exposeLinks });
+    }
+
+    return fail(res, 400, "Vue inconnue : overview, carriers, companies ou outbox.", "INVALID_VIEW");
   }
 
   /* ================= POST : décisions ================= */
