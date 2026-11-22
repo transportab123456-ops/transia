@@ -6,10 +6,13 @@
    acceptation → confirmation → affaire + commission.
 
    Le test fonctionne SANS accès direct à la base : tout le cycle,
-   nettoyage compris, passe par l'API publique (POST /api/admin
-   action=purge-smoke). Seul le contrôle du contenu de
-   outbox_emails reste interne : sans DATABASE_URL il est signalé
-   « ignoré » et le test continue.
+   nettoyage et réinitialisation de mot de passe compris, passe par
+   l'API publique. La vue admin ?view=outbox expose le lien contenu
+   dans un e-mail, ce qui permet d'exercer le parcours de
+   réinitialisation sans boîte aux lettres ni domaine d'envoi
+   vérifié. Seul le contrôle du contenu brut de outbox_emails reste
+   interne : sans DATABASE_URL il est signalé « ignoré » et le test
+   continue.
 
    Usage :
      BASE_URL=https://transia-sooty.vercel.app \
@@ -138,7 +141,7 @@ function makeClient() {
       );
       check("outbox : e-mail de bienvenue journalisé", outbox.rows.length === 1 && outbox.rows[0].event_type === "welcome" && ["LOGGED", "SENT", "PENDING"].includes(outbox.rows[0].status), outbox.rows[0]);
     } else {
-      skip("outbox : e-mail de bienvenue journalisé", "DATABASE_URL absent, outbox non interrogeable par HTTP");
+      skip("outbox : e-mail de bienvenue journalisé (contrôle SQL direct)", "DATABASE_URL absent ; l'outbox est vérifiée par HTTP en [11]");
     }
 
     const resend = await shipper("POST", "/api/auth/tokens", { action: "resend", email: sEmail });
@@ -273,8 +276,51 @@ function makeClient() {
   const headersRes = await fetch(BASE + "/api/health");
   check("en-têtes de sécurité présents", headersRes.headers.get("x-content-type-options") === "nosniff" && !!headersRes.headers.get("x-frame-options"), null);
 
-  /* ---------- Nettoyage ---------- */
-  console.log("\n[11] Nettoyage des données de test");
+  /* ---------- 11. Réinitialisation de mot de passe ---------- */
+  console.log("\n[11] Réinitialisation de mot de passe");
+  const newPw = "NouveauMotDePasse!Prod2026";
+
+  const resetReq = await shipper("POST", "/api/auth/tokens", { action: "reset-request", email: sEmail });
+  check("demande de réinitialisation 200", resetReq.status === 200 && !!resetReq.body.message, resetReq.body);
+
+  /* Anti-énumération : réponse strictement identique pour une adresse
+     inconnue. Cette demande consomme le quota par IP (10/heure), le
+     test reste donc rejouable une dizaine de fois par heure. */
+  const unknownReq = await makeClient()("POST", "/api/auth/tokens", { action: "reset-request", email: `smoke-inconnu-${stamp}@example.fr` });
+  check("réponse identique pour un compte inconnu",
+    unknownReq.status === resetReq.status && JSON.stringify(unknownReq.body) === JSON.stringify(resetReq.body),
+    unknownReq.body);
+
+  /* Le lien est lu par HTTP dans la vue outbox, jamais en base. */
+  const outboxView = await admin("GET", "/api/admin?view=outbox");
+  check("vue outbox 200 + liens exposés", outboxView.status === 200 && outboxView.body.links_exposed === true, outboxView.status);
+  const resetMail = (outboxView.body.emails || []).filter((m) => m.to === sEmail && m.event_type === "password_reset")[0];
+  check("e-mail de réinitialisation présent", !!resetMail, resetMail);
+  const resetLink = resetMail ? resetMail.link : null;
+  const resetTok = resetLink ? new URL(resetLink).searchParams.get("reset") : null;
+  check("lien exploitable extrait", !!resetTok, resetLink ? "lien sans jeton" : null);
+
+  const applied = await shipper("POST", "/api/auth/tokens", { action: "reset-confirm", token: resetTok, password: newPw });
+  check("nouveau mot de passe appliqué", applied.status === 200 && applied.body.reset === true, applied.body);
+
+  const replayed = await makeClient()("POST", "/api/auth/tokens", { action: "reset-confirm", token: resetTok, password: "AutreMotDePasse!2026" });
+  check("jeton non rejouable (400)", replayed.status === 400, replayed.body);
+
+  const weak = await makeClient()("POST", "/api/auth/tokens", { action: "reset-confirm", token: resetTok, password: "court" });
+  check("mot de passe trop court refusé", weak.status === 400 && weak.body.code === "WEAK_PASSWORD", weak.body);
+
+  /* Le changement de mot de passe coupe les sessions en cours. */
+  const stale = await shipper("GET", "/api/auth/me");
+  check("sessions du compte révoquées", stale.status === 200 && stale.body.user === null, stale.body);
+
+  const oldLogin = await makeClient()("POST", "/api/auth/login", { email: sEmail, password: pw });
+  check("ancien mot de passe refusé (401)", oldLogin.status === 401, oldLogin.body);
+
+  const newLogin = await makeClient()("POST", "/api/auth/login", { email: sEmail, password: newPw });
+  check("connexion avec le nouveau mot de passe", newLogin.status === 200, newLogin.body);
+
+  /* ---------- 12. Nettoyage ---------- */
+  console.log("\n[12] Nettoyage des données de test");
   /* La purge passe par l'API : même chemin avec ou sans
      DATABASE_URL, et elle couvre aussi les runs interrompus. */
   const dry = await admin("POST", "/api/admin", { action: "purge-smoke", dryRun: true });

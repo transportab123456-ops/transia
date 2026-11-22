@@ -116,6 +116,13 @@ module.exports = handler(async (req, res) => {
     }
 
     if (view === "outbox") {
+      /* Un lien de réinitialisation est une clé : il permet de prendre
+         la main sur n'importe quel compte, y compris un SUPER_ADMIN.
+         Les autres vues restent ouvertes aux rôles opérations, celle-ci
+         est réservée aux administrateurs plateforme. */
+      if (!["PLATFORM_ADMIN", "SUPER_ADMIN"].includes(req.user.role)) {
+        return fail(res, 403, "Vue réservée aux administrateurs plateforme.", "FORBIDDEN");
+      }
       const r = await query(
         `SELECT email_id, event_type, recipient_email, subject, status,
                 attempts, last_error, created_at, sent_at, body_text
