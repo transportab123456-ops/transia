@@ -212,6 +212,32 @@ const { hashPassword } = require("../api/_lib/auth");
   );
   check("aucune trace de l'offre étrangère en base", foreignRefusal.rows[0].n === 0, foreignRefusal.rows[0]);
 
+  /* ---------- Identifiants malformés ---------- */
+  console.log("\n[4bis] Identifiants malformés : 400, jamais 500");
+
+  const badRefuse = await call(deals, "POST", {
+    action: "refuse", rfqNumber: numB, quoteId: "pas-un-uuid", motif: "test"
+  }, { cookie: cookieB });
+  check("quoteId malformé (refus) → 400", badRefuse.status === 400 && badRefuse.body.code === "INVALID_QUOTE_ID", badRefuse.body);
+
+  const badAccept = await call(deals, "POST", {
+    action: "accept", rfqNumber: numA, quoteId: "123"
+  }, { cookie: cookieA });
+  check("quoteId malformé (acceptation) → 400", badAccept.status === 400 && badAccept.body.code === "INVALID_QUOTE_ID", badAccept.body);
+
+  const badConfirm = await call(deals, "POST", {
+    action: "confirm", rfqNumber: numA, acceptanceId: "pas-un-uuid"
+  }, { cookie: carrierCookies[0] });
+  check("acceptanceId malformé → 400", badConfirm.status === 400 && badConfirm.body.code === "INVALID_ACCEPTANCE_ID", badConfirm.body);
+
+  const unknownConfirm = await call(deals, "POST", {
+    action: "confirm", rfqNumber: numA, acceptanceId: "00000000-0000-0000-0000-000000000000"
+  }, { cookie: carrierCookies[0] });
+  check("acceptanceId bien formé mais inconnu → 404", unknownConfirm.status === 404, unknownConfirm.body);
+
+  const missingConfirm = await call(deals, "POST", { action: "confirm", rfqNumber: numA }, { cookie: carrierCookies[0] });
+  check("acceptanceId absent → 400", missingConfirm.status === 400 && missingConfirm.body.code === "MISSING_ACCEPTANCE", missingConfirm.body);
+
   /* ---------- Affaire : confidentialité financière ---------- */
   console.log("\n[5] Après confirmation : commission invisible aux tiers");
 

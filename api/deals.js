@@ -23,6 +23,12 @@ const PLATFORM_ROLES = ["PLATFORM_OPERATIONS", "PLATFORM_FINANCE", "PLATFORM_ADM
 const SHIPPER_ROLES = ["SHIPPER_USER", "SHIPPER_ADMIN"];
 const CARRIER_ROLES = ["CARRIER_USER", "CARRIER_ADMIN"];
 
+/* quote_id et acceptance_id sont des uuid : une chaîne malformée
+   ferait échouer la requête SQL (22P02) et remonterait en 500.
+   On la rejette en amont comme une entrée invalide. */
+const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const isUuid = (v) => UUID_RE.test(String(v));
+
 async function nextDealNumber(client) {
   const r = await client.query(
     `SELECT 'TR-' || to_char(now(), 'YYYY') || '-' || lpad(nextval('deal_number_seq')::text, 6, '0') AS n`
@@ -112,6 +118,12 @@ module.exports = handler(async (req, res) => {
         return fail(res, 403, "Seul le donneur d'ordre de cette demande peut accepter une offre.", "FORBIDDEN");
       }
 
+      const requestedQuoteId = body.quoteId ? String(body.quoteId).trim() : null;
+      if (requestedQuoteId && !isUuid(requestedQuoteId)) {
+        await client.query("ROLLBACK");
+        return fail(res, 400, "Identifiant d'offre invalide.", "INVALID_QUOTE_ID");
+      }
+
       /* L'offre acceptée doit être la recommandation validée */
       const rec = await client.query(
         `SELECT rec.recommendation_id, q.quote_id, q.carrier_company_id, q.comparable_total,
@@ -128,13 +140,13 @@ module.exports = handler(async (req, res) => {
 
       /* Repli : acceptation directe d'une offre conforme si aucune
          recommandation n'a encore été validée (démarrage à froid) */
-      if (!quoteRow && body.quoteId) {
+      if (!quoteRow && requestedQuoteId) {
         const q = await client.query(
           `SELECT q.quote_id, q.carrier_company_id, q.comparable_total, q.commissionable_amount,
                   q.currency_id, cur.iso_code AS currency
              FROM quotes q JOIN currencies cur ON cur.currency_id = q.currency_id
             WHERE q.rfq_id = $1 AND q.quote_id = $2 AND q.compliance_status = 'CONFORME'`,
-          [rfqRow.rfq_id, String(body.quoteId)]
+          [rfqRow.rfq_id, requestedQuoteId]
         );
         quoteRow = q.rows[0];
       }
@@ -201,7 +213,14 @@ module.exports = handler(async (req, res) => {
     /* ---------- CONFIRMATION (transporteur) ---------- */
     if (action === "confirm") {
       const acceptanceId = String(body.acceptanceId || "").trim();
-      if (!acceptanceId) return fail(res, 400, "Identifiant d'acceptation requis.", "MISSING_ACCEPTANCE");
+      if (!acceptanceId) {
+        await client.query("ROLLBACK");
+        return fail(res, 400, "Identifiant d'acceptation requis.", "MISSING_ACCEPTANCE");
+      }
+      if (!isUuid(acceptanceId)) {
+        await client.query("ROLLBACK");
+        return fail(res, 400, "Identifiant d'acceptation invalide.", "INVALID_ACCEPTANCE_ID");
+      }
 
       const acc = await client.query(
         `SELECT a.acceptance_id, a.status, a.quote_id,
@@ -318,7 +337,11 @@ module.exports = handler(async (req, res) => {
          donneur d'ordre référençait l'offre d'une autre entreprise. */
       let quoteId = null;
       if (body.quoteId) {
-        quoteId = String(body.quoteId);
+        quoteId = String(body.quoteId).trim();
+        if (!isUuid(quoteId)) {
+          await client.query("ROLLBACK");
+          return fail(res, 400, "Identifiant d'offre invalide.", "INVALID_QUOTE_ID");
+        }
         const own = await client.query(
           `SELECT 1 FROM quotes WHERE quote_id = $1 AND rfq_id = $2`,
           [quoteId, rfqRow.rfq_id]
