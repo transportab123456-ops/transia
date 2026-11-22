@@ -50,9 +50,10 @@ function loadEnv(files, root) {
 
 /* DATABASE_URL contrôlée ; sort en code 2 avec la marche à suivre.
    Renvoie { url, source } : `source` vaut le fichier qui a fourni
-   la variable, ou "environnement" si elle était déjà exportée. */
-function requireDatabaseUrl() {
-  const loaded = loadEnv();
+   la variable, ou "environnement" si elle était déjà exportée.
+   `root` n'existe que pour les tests, comme pour loadEnv(). */
+function requireDatabaseUrl(root) {
+  const loaded = loadEnv(undefined, root);
   const url = process.env.DATABASE_URL;
   const source = definedIn.DATABASE_URL || "environnement";
   function fail(why) {

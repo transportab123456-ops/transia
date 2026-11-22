@@ -37,12 +37,24 @@ function write(name, text) { fs.writeFileSync(path.join(tmp, name), text); }
 function reset(keys) { for (const k of keys) delete process.env[k]; }
 
 /* requireDatabaseUrl() dans un processus séparé, pour observer son
-   code de sortie sans terminer le test. */
-function child(databaseUrl) {
+   code de sortie sans terminer le test. Il renvoie son résultat en
+   JSON : source de DATABASE_URL comprise. `root` permet de viser un
+   répertoire de fichiers temporaire ; `null` retire la variable. */
+const CALL = 'const r=require("./db/env").requireDatabaseUrl(process.argv[1]);' +
+  'process.stdout.write(JSON.stringify(r))';
+
+function child(databaseUrl, root) {
   const env = Object.assign({}, process.env);
-  env.DATABASE_URL = databaseUrl;
-  return spawnSync(process.execPath, ["-e", 'require("./db/env").requireDatabaseUrl()'],
-    { cwd: ROOT, env, encoding: "utf8" });
+  if (databaseUrl === null) delete env.DATABASE_URL;
+  else env.DATABASE_URL = databaseUrl;
+  const args = ["-e", CALL];
+  if (root) args.push(root);
+  return spawnSync(process.execPath, args, { cwd: ROOT, env, encoding: "utf8" });
+}
+
+function parsed(result) {
+  try { return JSON.parse(result.stdout || "{}"); }
+  catch (e) { return {}; }
 }
 
 try {
@@ -75,13 +87,23 @@ try {
   check("les deux fichiers sont signalés", loaded.join(",") === ".env.local,.env", loaded);
   delete process.env.ORDRE;
 
-  console.log("\n[3] Fichiers absents");
+  console.log("\n[3] Provenance de DATABASE_URL");
+  write(".env.local", 'DATABASE_URL="postgresql://fichier/db"\n');
+  const fromFile = child(null, tmp);
+  check("fichier → code 0", fromFile.status === 0, fromFile.stderr);
+  check("fichier → source .env.local", parsed(fromFile).source === ".env.local", parsed(fromFile));
+  check("fichier → URL du fichier", parsed(fromFile).url === "postgresql://fichier/db", parsed(fromFile));
+  const fromEnv = child("postgresql://exporte/db", tmp);
+  check("environnement → source environnement", parsed(fromEnv).source === "environnement", parsed(fromEnv));
+  check("environnement → URL exportée", parsed(fromEnv).url === "postgresql://exporte/db", parsed(fromEnv));
+
+  console.log("\n[4] Fichiers absents");
   const before = Object.keys(process.env).length;
   loaded = loadEnv([".env.inexistant"], tmp);
   check("fichier absent ignoré",
     loaded.length === 0 && Object.keys(process.env).length === before, loaded);
 
-  console.log("\n[4] Chaînes refusées (processus enfant)");
+  console.log("\n[5] Chaînes refusées (processus enfant)");
   const masked = child("[SENSITIVE]");
   check("valeur masquée → code 2", masked.status === 2, masked.status);
   check("valeur masquée → message explicite", /masquée/.test(masked.stderr || ""), masked.stderr);
