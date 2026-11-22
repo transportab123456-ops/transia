@@ -6,9 +6,11 @@
    - modes de transport (ROAD/SEA/AIR/MULTIMODAL)
    - les 11 Incoterms® 2020
    - langues principales
-   Usage : DATABASE_URL=... node db/seed.js
+   Usage : node db/seed.js   (lit .env.local / .env via db/env.js)
    ============================================================ */
 "use strict";
+
+require("./env").requireDatabaseUrl();
 
 global.window = {};
 require("../assets/js/reference.js");

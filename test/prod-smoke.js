@@ -34,6 +34,8 @@ if (!ADMIN_EMAIL || !ADMIN_PASSWORD) {
 
 /* Accès base FACULTATIF. Il ne sert qu'à lire l'outbox et à
    supprimer les données de test : le cycle métier n'en dépend pas. */
+require("../db/env").loadEnv();
+
 let dbQuery = null;
 if (process.env.DATABASE_URL) {
   try {

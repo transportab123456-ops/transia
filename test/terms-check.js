@@ -8,17 +8,14 @@
    - ré-acceptation à la connexion pour un compte sans preuve ;
    - comptes plateforme non soumis.
 
-   Usage : DATABASE_URL=postgresql://... node test/terms-check.js
+   Usage : node test/terms-check.js   (lit .env.local / .env)
    Code de sortie 0 = tous les contrôles passent.
    ============================================================ */
 "use strict";
 
 const { PassThrough, Writable } = require("stream");
 
-if (!process.env.DATABASE_URL) {
-  console.error("DATABASE_URL manquant.");
-  process.exit(2);
-}
+require("../db/env").requireDatabaseUrl();
 
 const register = require("../api/auth/register");
 const login = require("../api/auth/login");

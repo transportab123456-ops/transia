@@ -19,10 +19,7 @@
 
 const { PassThrough, Writable } = require("stream");
 
-if (!process.env.DATABASE_URL) {
-  console.error("DATABASE manquant.");
-  process.exit(2);
-}
+require("../db/env").requireDatabaseUrl();
 
 /* Force la vérification d'e-mail même sans transport configuré :
    les e-mails partent alors en mode log (statut LOGGED), leur corps

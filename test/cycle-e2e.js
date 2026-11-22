@@ -15,10 +15,7 @@
 
 const { PassThrough, Writable } = require("stream");
 
-if (!process.env.DATABASE_URL) {
-  console.error("DATABASE_URL manquant.");
-  process.exit(2);
-}
+require("../db/env").requireDatabaseUrl();
 
 function makeReq(method, body, headers = {}, query = {}) {
   const req = new PassThrough();
