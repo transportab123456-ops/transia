@@ -31,7 +31,10 @@ var API = (function () {
   function me(force) {
     if (!_mePromise || force) {
       _mePromise = get("/api/auth/me")
-        .then(function (r) { return (r.ok && r.body.user) || null; })
+        .then(function (r) {
+          if (r.ok && r.body.terms && r.body.terms.required) termsGate(r.body.terms);
+          return (r.ok && r.body.user) || null;
+        })
         .catch(function () { return null; });
     }
     return _mePromise;
@@ -118,6 +121,55 @@ var API = (function () {
       "<a href='auth.html' style='color:#96650f;font-weight:700;'>Connectez-vous</a> pour utiliser la plateforme.";
     var nav = document.querySelector(".nav");
     if (nav && nav.parentNode) nav.parentNode.insertBefore(b, nav.nextSibling);
+  }
+
+  /* ---------- Acceptation des CGU sur session déjà ouverte ---------- */
+  /* Blocage plein écran, non fermable : une session ouverte avant la
+     preuve versionnée ne doit pas continuer sans accepter. */
+  function termsGate(terms) {
+    if (document.getElementById("termsGate")) return;
+
+    var box = document.createElement("div");
+    box.id = "termsGate";
+    box.style.cssText = "position:fixed;inset:0;z-index:10000;background:rgba(11,33,48,.72);display:flex;align-items:center;justify-content:center;padding:20px;";
+    box.innerHTML =
+      "<div style='background:#fff;border-radius:14px;max-width:520px;width:100%;padding:28px;box-shadow:0 24px 60px rgba(0,0,0,.28);'>" +
+        "<h2 style='margin:0 0 10px;font-size:20px;color:#0b2130;'>Conditions générales mises à jour</h2>" +
+        "<p style='margin:0 0 16px;font-size:14px;line-height:1.6;color:#42586b;'>Pour continuer à utiliser votre compte, acceptez la version " +
+          escapeHtmlHtml(terms.version) + " des conditions.</p>" +
+        "<label style='display:flex;gap:9px;align-items:flex-start;font-size:14px;line-height:1.5;color:#0b2130;'>" +
+          "<input type='checkbox' id='termsGateCheck' style='width:auto;margin-top:3px;' />" +
+          "<span>J'accepte les <a href='" + escapeHtmlHtml(terms.url) + "' target='_blank' rel='noopener' style='color:#0a6076;'>" +
+            escapeHtmlHtml(terms.label) + "</a> (version " + escapeHtmlHtml(terms.version) + ").</span>" +
+        "</label>" +
+        "<p id='termsGateErr' style='margin:10px 0 0;font-size:13px;color:#b3261e;display:none;'>Merci de cocher la case pour continuer.</p>" +
+        "<button type='button' id='termsGateBtn' style='margin-top:18px;width:100%;padding:12px 16px;border:none;border-radius:9px;background:#0a6076;color:#fff;font-size:15px;font-weight:600;cursor:pointer;font-family:inherit;'>Accepter et continuer</button>" +
+      "</div>";
+    document.body.appendChild(box);
+
+    var check = document.getElementById("termsGateCheck");
+    var err = document.getElementById("termsGateErr");
+    var btn = document.getElementById("termsGateBtn");
+
+    btn.addEventListener("click", function () {
+      if (!check.checked) { err.style.display = "block"; return; }
+      btn.disabled = true; btn.textContent = "Enregistrement…";
+
+      post("/api/auth/me", { termsAccepted: true, termsVersion: terms.version }).then(function (r) {
+        if (!r.ok) {
+          btn.disabled = false; btn.textContent = "Accepter et continuer";
+          err.textContent = r.body.error || "Enregistrement impossible. Réessayez.";
+          err.style.display = "block";
+          return;
+        }
+        _mePromise = null;
+        window.location.reload();
+      }).catch(function () {
+        btn.disabled = false; btn.textContent = "Accepter et continuer";
+        err.textContent = "Service injoignable. Réessayez.";
+        err.style.display = "block";
+      });
+    });
   }
 
   return {

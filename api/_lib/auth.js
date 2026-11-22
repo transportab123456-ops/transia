@@ -10,6 +10,7 @@
 
 const crypto = require("crypto");
 const { query } = require("./db");
+const { termsForRole, DOCUMENTS } = require("./terms");
 
 const SCRYPT_N = 16384, SCRYPT_r = 8, SCRYPT_p = 1, KEYLEN = 64;
 const SESSION_TTL_MS = 1000 * 60 * 60 * 8; // 8 h
@@ -67,21 +68,41 @@ async function getSessionUser(req) {
   const cookies = parseCookies(req.headers.cookie || "");
   const token = cookies[COOKIE_NAME];
   if (!token) return null;
+  /* La jointure porte l'état d'acceptation des CGU : une session
+     ouverte avant la mise en place de la preuve (ou avant un
+     changement de version) doit être bloquée comme une connexion
+     neuve, sans quoi elle contourne la ré-acceptation. */
   const r = await query(
     `SELECT u.user_id, u.email, u.first_name, u.last_name, u.role, u.company_id, u.status,
-            s.session_id, s.expires_at, s.revoked_at
-       FROM sessions s JOIN users u ON u.user_id = s.user_id
+            s.session_id, s.expires_at, s.revoked_at, ta.acceptance_id
+       FROM sessions s
+       JOIN users u ON u.user_id = s.user_id
+       LEFT JOIN terms_acceptances ta
+         ON ta.user_id = u.user_id
+        AND ta.document_type = CASE
+              WHEN u.role LIKE 'SHIPPER_%' THEN 'SHIPPER_TERMS'
+              WHEN u.role LIKE 'CARRIER_%' THEN 'CARRIER_TERMS'
+            END
+        AND ta.document_version = CASE
+              WHEN u.role LIKE 'SHIPPER_%' THEN $2
+              WHEN u.role LIKE 'CARRIER_%' THEN $3
+            END
       WHERE s.token_hash = $1`,
-    [sha256(token)]
+    [sha256(token), DOCUMENTS.SHIPPER.version, DOCUMENTS.CARRIER.version]
   );
   const row = r.rows[0];
   if (!row) return null;
   if (row.revoked_at || new Date(row.expires_at) < new Date()) return null;
   if (row.status !== "ACTIVE") return null;
+  const terms = termsForRole(row.role);
+
   return {
     user_id: row.user_id, email: row.email, first_name: row.first_name,
     last_name: row.last_name, role: row.role, company_id: row.company_id,
-    session_id: row.session_id
+    session_id: row.session_id,
+    /* Document à accepter, ou null si la preuve existe déjà (ou si
+       le rôle n'est pas soumis aux conditions). */
+    termsPending: terms && !row.acceptance_id ? terms : null
   };
 }
 
@@ -126,6 +147,20 @@ function requireAuth(roles) {
       res.setHeader("Content-Type", "application/json; charset=utf-8");
       return res.end(JSON.stringify({ error: "Droits insuffisants pour cette ressource.", code: "FORBIDDEN" }));
     }
+    /* Session valide mais conditions non acceptées : aucune donnée
+       métier n'est servie tant que la preuve manque. */
+    if (user.termsPending) {
+      const t = user.termsPending;
+      res.statusCode = 403;
+      res.setHeader("Content-Type", "application/json; charset=utf-8");
+      res.setHeader("Cache-Control", "no-store");
+      return res.end(JSON.stringify({
+        error: "Conditions générales à accepter pour continuer.",
+        code: "TERMS_REACCEPTANCE_REQUIRED",
+        terms: { documentType: t.documentType, version: t.version, label: t.label, url: t.url }
+      }));
+    }
+
     req.user = user;
     return null;
   };

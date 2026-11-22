@@ -22,6 +22,8 @@ if (!process.env.DATABASE_URL) {
 
 const register = require("../api/auth/register");
 const login = require("../api/auth/login");
+const me = require("../api/auth/me");
+const rfqs = require("../api/rfqs");
 const { query, getPool } = require("../api/_lib/db");
 const { hashPassword } = require("../api/_lib/auth");
 
@@ -59,6 +61,14 @@ async function call(handler, method, body, headers) {
   await handler(req, res);
   await res._done;
   return { status: res.statusCode, headers: res._headers, body: res.body() };
+}
+
+function extractCookie(headers) {
+  const set = headers["set-cookie"];
+  if (!set) return null;
+  const arr = Array.isArray(set) ? set : [set];
+  const m = arr.join("; ").match(/transia_session=([^;]+)/);
+  return m ? "transia_session=" + m[1] : null;
 }
 
 let pass = 0, fail = 0;
@@ -169,6 +179,39 @@ async function cleanup() {
     const again = await call(login, "POST", { email, password: pw }, { "x-forwarded-for": IP });
     check("connexion suivante sans case → 200", again.status === 200, again.body);
 
+    /* Session ouverte avant la preuve : cas d'un compte hérité,
+       connecté avant la mise en place du mécanisme. La preuve
+       disparaît, la session reste valide (8 h). */
+    const legacyCookie = extractCookie(again.headers);
+    await query("DELETE FROM terms_acceptances WHERE user_id = $1", [userId]);
+
+    const mePending = await call(me, "GET", null, { cookie: legacyCookie, "x-forwarded-for": IP });
+    check("session active : /me signale les CGU",
+      mePending.status === 200 && !!mePending.body.user && !!mePending.body.terms && mePending.body.terms.required === true,
+      mePending.body);
+
+    const blockedApi = await call(rfqs, "GET", null, { cookie: legacyCookie });
+    check("session active : API protégée → 403",
+      blockedApi.status === 403 && blockedApi.body.code === "TERMS_REACCEPTANCE_REQUIRED",
+      blockedApi.body);
+
+    const acceptedInSession = await call(me, "POST", { termsAccepted: true, termsVersion: "1.0" }, { cookie: legacyCookie, "x-forwarded-for": IP });
+    check("acceptation depuis la session → 200", acceptedInSession.status === 200, acceptedInSession.body);
+
+    const unblocked = await call(rfqs, "GET", null, { cookie: legacyCookie });
+    check("API débloquée après acceptation", unblocked.status === 200, unblocked.body);
+
+    const proof3 = await query("SELECT context, ip_address FROM terms_acceptances WHERE user_id = $1", [userId]);
+    check("preuve REACCEPTANCE depuis la session",
+      proof3.rows.length === 1 && proof3.rows[0].context === "REACCEPTANCE" && proof3.rows[0].ip_address === IP,
+      proof3.rows);
+
+    const duplicate = await call(me, "POST", { termsAccepted: true, termsVersion: "1.0" }, { cookie: legacyCookie });
+    const count3 = await query("SELECT count(*)::int AS n FROM terms_acceptances WHERE user_id = $1", [userId]);
+    check("seconde acceptation sans doublon",
+      duplicate.status === 200 && count3.rows[0].n === 1,
+      { body: duplicate.body, n: count3.rows[0].n });
+
     console.log("\n[7] Compte plateforme non soumis");
     const comp = await query("INSERT INTO companies (legal_name, status) VALUES ($1, 'ACTIVE') RETURNING company_id", [`Plateforme ${stamp}`]);
     platformCompanyId = comp.rows[0].company_id;
@@ -182,6 +225,8 @@ async function cleanup() {
     check("connexion sans acceptation → 200", platformLogin.status === 200, platformLogin.body);
     const platformProof = await query("SELECT 1 FROM terms_acceptances WHERE user_id = $1", [platformUserId]);
     check("aucune preuve créée", platformProof.rows.length === 0, platformProof.rows);
+    const platformMe = await call(me, "GET", null, { cookie: extractCookie(platformLogin.headers) });
+    check("/me sans exigence pour la plateforme", platformMe.status === 200 && platformMe.body.terms === null, platformMe.body);
   } finally {
     await cleanup();
     await getPool().end();

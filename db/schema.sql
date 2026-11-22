@@ -704,6 +704,9 @@ CREATE TABLE IF NOT EXISTS terms_acceptances (
 
 CREATE INDEX IF NOT EXISTS idx_terms_user ON terms_acceptances (user_id, accepted_at DESC);
 CREATE INDEX IF NOT EXISTS idx_terms_document ON terms_acceptances (document_type, document_version);
+-- Lu à chaque requête authentifiée (jointure de session) : l'index
+-- évite un parcours de la table à mesure que l'historique grandit.
+CREATE INDEX IF NOT EXISTS idx_terms_lookup ON terms_acceptances (user_id, document_type, document_version);
 
 COMMENT ON TABLE terms_acceptances IS
   'Preuve d''acceptation des CGU : version, horodatage, IP, agent. Une ligne par acceptation, non modifiable.';
