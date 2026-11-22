@@ -1,0 +1,8 @@
+User-agent: *
+Allow: /
+Disallow: /admin.html
+Disallow: /auth.html
+Disallow: /espace-donneur.html
+Disallow: /api/
+
+Sitemap: https://transia-sooty.vercel.app/sitemap.xml
