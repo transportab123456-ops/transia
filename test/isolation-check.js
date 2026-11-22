@@ -296,6 +296,26 @@ const { hashPassword } = require("../api/_lib/auth");
   check("marketplace ne fuit aucune adresse privée", !marketStr.includes("Privée A") && !marketStr.includes("Privée B"), marketStr.slice(0, 300));
   check("marketplace ne fuit aucun nom de donneur d'ordre", !marketStr.includes(`Iso Shippeur A ${stamp}`) && !marketStr.includes(`Iso Shippeur B ${stamp}`));
 
+  /* ---------- Filet de sécurité du wrapper ---------- */
+  console.log("\n[7] Filet de sécurité : erreur PostgreSQL 22P02 → 400");
+
+  const { handler } = require("../api/_lib/respond");
+  const uuidCrash = handler(async () => {
+    const err = new Error("invalid input syntax for type uuid");
+    err.code = "22P02";
+    throw err;
+  });
+  const net = await call(uuidCrash, "POST", {});
+  check("22P02 → 400 INVALID_IDENTIFIER", net.status === 400 && net.body.code === "INVALID_IDENTIFIER", net.body);
+
+  const otherCrash = handler(async () => {
+    const err = new Error("duplicate key value violates unique constraint");
+    err.code = "23505";
+    throw err;
+  });
+  const stillFiveHundred = await call(otherCrash, "POST", {});
+  check("autre erreur SQL → toujours 500", stillFiveHundred.status === 500 && stillFiveHundred.body.code === "INTERNAL", stillFiveHundred.body);
+
   console.log("\n----------------------------------------");
   console.log(`Résultat : ${pass} succès, ${failCount} échec(s)`);
   process.exit(failCount === 0 ? 0 : 1);

@@ -72,6 +72,13 @@ function handler(fn) {
       if (err.code === "PAYLOAD_TOO_LARGE" || err.code === "INVALID_JSON") {
         return fail(res, 400, err.message, err.code);
       }
+      /* Filet de sécurité : un uuid malformé qui aurait échappé à la
+         validation d'entrée fait échouer PostgreSQL avec 22P02. C'est
+         une faute du client, pas du serveur : 400, sans journaliser
+         la requête SQL. */
+      if (err.code === "22P02") {
+        return fail(res, 400, "Identifiant invalide.", "INVALID_IDENTIFIER");
+      }
       console.error("[api]", err);
       return fail(res, 500, "Erreur interne du serveur.", "INTERNAL");
     }
