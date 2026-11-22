@@ -6,13 +6,13 @@
    acceptation → confirmation → affaire + commission.
 
    Le test fonctionne SANS accès direct à la base : tout le cycle,
-   nettoyage et réinitialisation de mot de passe compris, passe par
-   l'API publique. La vue admin ?view=outbox expose le lien contenu
-   dans un e-mail, ce qui permet d'exercer le parcours de
-   réinitialisation sans boîte aux lettres ni domaine d'envoi
-   vérifié. Seul le contrôle du contenu brut de outbox_emails reste
-   interne : sans DATABASE_URL il est signalé « ignoré » et le test
-   continue.
+   nettoyage, réinitialisation de mot de passe et lecture de l'outbox
+   compris, passe par l'API publique. La vue admin ?view=outbox expose
+   le statut et le lien des e-mails en attente, ce qui permet d'exercer
+   le parcours de réinitialisation sans boîte aux lettres ni domaine
+   d'envoi vérifié. Aucun contrôle n'est ignoré. DATABASE_URL ne sert
+   plus qu'à lire le jeton de vérification d'e-mail quand
+   REQUIRE_EMAIL_VERIFY est actif sur l'environnement ciblé.
 
    Usage :
      BASE_URL=https://transia-sooty.vercel.app \
@@ -44,14 +44,10 @@ if (process.env.DATABASE_URL) {
 }
 const HAS_DB = typeof dbQuery === "function";
 
-let pass = 0, failCount = 0, skipped = 0;
+let pass = 0, failCount = 0;
 function check(label, cond, extra) {
   if (cond) { pass++; console.log("  ✓ " + label); }
   else { failCount++; console.log("  ✗ " + label + (extra !== undefined ? " → " + JSON.stringify(extra).slice(0, 300) : "")); }
-}
-function skip(label, why) {
-  skipped++;
-  console.log("  – " + label + " (ignoré : " + why + ")");
 }
 
 /* Mini client HTTP avec jar de cookies */
@@ -85,7 +81,7 @@ function makeClient() {
   const idsToDelete = { companies: [], users: [] };
 
   console.log(`\nCible : ${BASE}`);
-  console.log(`Accès base directe : ${HAS_DB ? "oui (outbox + nettoyage)" : "non (HTTP seul)"}`);
+  console.log(`Accès base directe : ${HAS_DB ? "oui (jeton de vérification uniquement)" : "non (HTTP seul)"}`);
 
   /* ---------- 1. Santé ---------- */
   console.log("\n[1] Santé de l'API");
@@ -133,16 +129,18 @@ function makeClient() {
       check("vérification → session ouverte", ver.status === 200 && ver.body.verified === true, ver.body);
     }
   } else {
-    if (HAS_DB) {
-      const outbox = await dbQuery(
-        `SELECT event_type, status, recipient_email FROM outbox_emails
-          WHERE recipient_email = $1 ORDER BY email_id DESC LIMIT 1`,
-        [sEmail]
-      );
-      check("outbox : e-mail de bienvenue journalisé", outbox.rows.length === 1 && outbox.rows[0].event_type === "welcome" && ["LOGGED", "SENT", "PENDING"].includes(outbox.rows[0].status), outbox.rows[0]);
-    } else {
-      skip("outbox : e-mail de bienvenue journalisé (contrôle SQL direct)", "DATABASE_URL absent ; l'outbox est vérifiée par HTTP en [11]");
-    }
+    /* L'e-mail de bienvenue se lit par HTTP dans la vue outbox :
+       plus besoin d'accès base, et le contrôle n'est jamais ignoré.
+       La connexion admin réussie ne consomme pas de quota. */
+    const outboxAdmin = makeClient();
+    const outboxLogin = await outboxAdmin("POST", "/api/auth/login", { email: ADMIN_EMAIL, password: ADMIN_PASSWORD });
+    const ob = outboxLogin.status === 200
+      ? await outboxAdmin("GET", "/api/admin?view=outbox")
+      : { status: outboxLogin.status, body: {} };
+    const welcomeMail = (ob.body.emails || []).filter((m) => m.to === sEmail && m.event_type === "welcome")[0];
+    check("outbox : e-mail de bienvenue journalisé",
+      outboxLogin.status === 200 && ob.status === 200 && !!welcomeMail && ["LOGGED", "SENT", "PENDING"].includes(welcomeMail.status),
+      welcomeMail || ob.body);
 
     const resend = await shipper("POST", "/api/auth/tokens", { action: "resend", email: sEmail });
     check("renvoi vérification : réponse générique 200", resend.status === 200 && !!resend.body.message, resend.body);
@@ -348,6 +346,6 @@ function makeClient() {
   }
 
   console.log("\n----------------------------------------");
-  console.log(`Résultat production : ${pass} succès, ${failCount} échec(s), ${skipped} ignoré(s)`);
+  console.log(`Résultat production : ${pass} succès, ${failCount} échec(s)`);
   process.exit(failCount === 0 ? 0 : 1);
 })().catch((e) => { console.error("ERREUR FATALE:", e); process.exit(1); });
