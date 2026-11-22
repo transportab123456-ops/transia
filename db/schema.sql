@@ -725,3 +725,30 @@ CREATE TRIGGER trg_terms_acceptances_immutable
   FOR EACH ROW EXECUTE FUNCTION terms_acceptances_immutable();
 
 COMMIT;
+
+/* ============================================================
+   Migrations (idempotentes) — incrément 5 : unicité de la preuve
+   ============================================================ */
+BEGIN;
+
+-- Une seule acceptation par compte, document et version. Deux
+-- onglets qui acceptent simultanément ne peuvent donc pas créer
+-- deux preuves : la base arbitre, pas l'application.
+-- Les doublons éventuels (antérieurs à l'index) sont réduits à la
+-- première preuve : les lignes concernées portent la même version
+-- et le même document.
+DELETE FROM terms_acceptances a
+ USING terms_acceptances b
+ WHERE a.acceptance_id > b.acceptance_id
+   AND a.user_id = b.user_id
+   AND a.document_type = b.document_type
+   AND a.document_version = b.document_version;
+
+CREATE UNIQUE INDEX IF NOT EXISTS uq_terms_user_version
+  ON terms_acceptances (user_id, document_type, document_version);
+
+-- L'index unique couvre exactement la jointure de session ajoutée
+-- pour la ré-acceptation : l'index non unique devient redondant.
+DROP INDEX IF EXISTS idx_terms_lookup;
+
+COMMIT;

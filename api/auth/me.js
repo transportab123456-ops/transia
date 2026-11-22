@@ -10,7 +10,7 @@
 const { handler, json, readBody } = require("../_lib/respond");
 const { getSessionUser, revokeSession, clearCookie } = require("../_lib/auth");
 const { query } = require("../_lib/db");
-const { termsForRole, recordAcceptance } = require("../_lib/terms");
+const { termsForRole, parseAcceptance, acceptanceError, recordAcceptance } = require("../_lib/terms");
 
 module.exports = handler(async (req, res) => {
   if (req.method === "GET") {
@@ -46,27 +46,24 @@ module.exports = handler(async (req, res) => {
         return json(res, 400, { error: "Aucune condition à accepter pour ce compte.", code: "NO_TERMS" });
       }
 
-      /* Déjà accepté (double clic, deux onglets) : rien à écrire. */
-      if (!user.termsPending) {
-        return json(res, 200, { ok: true, alreadyAccepted: true });
-      }
-
-      if (body.termsAccepted !== true ||
-          String(body.termsVersion == null ? "" : body.termsVersion).trim() !== terms.version) {
-        return json(res, 409, {
-          error: "Les conditions ont été mises à jour. Rechargez la page pour en prendre connaissance.",
-          code: "TERMS_VERSION_OUTDATED",
+      const state = parseAcceptance(body, terms);
+      if (!state.accepted) {
+        const err = acceptanceError(state.reason);
+        return json(res, err.status, {
+          error: err.message,
+          code: err.code,
           terms: { documentType: terms.documentType, version: terms.version, label: terms.label, url: terms.url }
         });
       }
 
-      await recordAcceptance({ query }, {
+      const written = await recordAcceptance({ query }, {
         userId: user.user_id, companyId: user.company_id,
         terms, req, context: "REACCEPTANCE"
       });
 
       return json(res, 200, {
         ok: true,
+        alreadyAccepted: !written.inserted,
         terms: { documentType: terms.documentType, version: terms.version }
       });
     }

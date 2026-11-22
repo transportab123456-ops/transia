@@ -212,6 +212,36 @@ async function cleanup() {
       duplicate.status === 200 && count3.rows[0].n === 1,
       { body: duplicate.body, n: count3.rows[0].n });
 
+    console.log("\n[6bis] Concurrence et unicité");
+    await query("DELETE FROM terms_acceptances WHERE user_id = $1", [userId]);
+    const [raceA, raceB] = await Promise.all([
+      call(me, "POST", { termsAccepted: true, termsVersion: "1.0" }, { cookie: legacyCookie, "x-forwarded-for": IP }),
+      call(me, "POST", { termsAccepted: true, termsVersion: "1.0" }, { cookie: legacyCookie, "x-forwarded-for": IP })
+    ]);
+    const raced = await query("SELECT count(*)::int AS n FROM terms_acceptances WHERE user_id = $1", [userId]);
+    check("deux acceptations simultanées → 200", raceA.status === 200 && raceB.status === 200, [raceA.body, raceB.body]);
+    check("une seule preuve malgré la course", raced.rows[0].n === 1, raced.rows);
+    check("une requête signale l'existant",
+      (raceA.body.alreadyAccepted === false && raceB.body.alreadyAccepted === true) ||
+      (raceA.body.alreadyAccepted === true && raceB.body.alreadyAccepted === false),
+      [raceA.body, raceB.body]);
+
+    const uniqueIdx = await query("SELECT indexdef FROM pg_indexes WHERE indexname = 'uq_terms_user_version'");
+    check("index unique présent",
+      uniqueIdx.rows.length === 1 && /UNIQUE/i.test(uniqueIdx.rows[0].indexdef),
+      uniqueIdx.rows);
+
+    let duplicateRejected = false;
+    try {
+      await query(
+        "INSERT INTO terms_acceptances (user_id, document_type, document_version) VALUES ($1, 'SHIPPER_TERMS', '1.0')",
+        [userId]
+      );
+    } catch (e) {
+      duplicateRejected = /duplicate key|unique/i.test(e.message);
+    }
+    check("doublon direct rejeté par la base", duplicateRejected);
+
     console.log("\n[7] Compte plateforme non soumis");
     const comp = await query("INSERT INTO companies (legal_name, status) VALUES ($1, 'ACTIVE') RETURNING company_id", [`Plateforme ${stamp}`]);
     platformCompanyId = comp.rows[0].company_id;

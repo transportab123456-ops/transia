@@ -9,7 +9,7 @@ const { handler, json, readBody, fail } = require("../_lib/respond");
 const { query } = require("../_lib/db");
 const { verifyPassword, createSession, sessionCookie } = require("../_lib/auth");
 const { rateLimit, recordAttempt, pruneAttempts, clientIp } = require("../_lib/security");
-const { termsForRole, hasAccepted, recordAcceptance } = require("../_lib/terms");
+const { termsForRole, hasAccepted, parseAcceptance, recordAcceptance } = require("../_lib/terms");
 
 const GENERIC = "E-mail ou mot de passe incorrect.";
 
@@ -68,10 +68,7 @@ module.exports = handler(async (req, res) => {
      avec le contexte REACCEPTANCE. */
   const terms = termsForRole(user.role);
   if (terms && !(await hasAccepted(user.user_id, terms))) {
-    const acceptedNow = body.termsAccepted === true &&
-      String(body.termsVersion == null ? "" : body.termsVersion).trim() === terms.version;
-
-    if (!acceptedNow) {
+    if (!parseAcceptance(body, terms).accepted) {
       return json(res, 403, {
         error: "Les conditions générales ont évolué : acceptez-les pour ouvrir une session.",
         code: "TERMS_REACCEPTANCE_REQUIRED",
