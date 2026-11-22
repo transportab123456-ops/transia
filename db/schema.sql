@@ -678,3 +678,47 @@ ALTER TABLE outbox_emails ADD COLUMN IF NOT EXISTS next_attempt_at timestamptz N
 CREATE INDEX IF NOT EXISTS idx_outbox_pending ON outbox_emails (status, next_attempt_at);
 
 COMMIT;
+
+/* ============================================================
+   Migrations (idempotentes) — incrément 4 : preuve d'acceptation
+   des conditions générales
+   ============================================================ */
+BEGIN;
+
+-- Une ligne par acceptation, jamais réécrite. La version en vigueur
+-- est définie côté serveur (api/_lib/terms.js) ; la version stockée
+-- est celle du serveur, jamais celle annoncée par le client.
+CREATE TABLE IF NOT EXISTS terms_acceptances (
+  acceptance_id    bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+  user_id          uuid NOT NULL REFERENCES users(user_id) ON DELETE CASCADE,
+  company_id       uuid REFERENCES companies(company_id) ON DELETE SET NULL,
+  document_type    text NOT NULL
+                   CHECK (document_type IN ('SHIPPER_TERMS','CARRIER_TERMS')),
+  document_version text NOT NULL,
+  accepted_at      timestamptz NOT NULL DEFAULT now(),
+  ip_address       text,
+  user_agent       text,
+  context          text NOT NULL DEFAULT 'REGISTRATION'
+                   CHECK (context IN ('REGISTRATION','REACCEPTANCE'))
+);
+
+CREATE INDEX IF NOT EXISTS idx_terms_user ON terms_acceptances (user_id, accepted_at DESC);
+CREATE INDEX IF NOT EXISTS idx_terms_document ON terms_acceptances (document_type, document_version);
+
+COMMENT ON TABLE terms_acceptances IS
+  'Preuve d''acceptation des CGU : version, horodatage, IP, agent. Une ligne par acceptation, non modifiable.';
+
+-- La preuve ne peut pas être réécrite. La suppression du compte
+-- reste possible (cascade sur users) : le trigger ne vise que UPDATE.
+CREATE OR REPLACE FUNCTION terms_acceptances_immutable() RETURNS trigger AS $$
+BEGIN
+  RAISE EXCEPTION 'terms_acceptances est en écriture seule';
+END;
+$$ LANGUAGE plpgsql;
+
+DROP TRIGGER IF EXISTS trg_terms_acceptances_immutable ON terms_acceptances;
+CREATE TRIGGER trg_terms_acceptances_immutable
+  BEFORE UPDATE ON terms_acceptances
+  FOR EACH ROW EXECUTE FUNCTION terms_acceptances_immutable();
+
+COMMIT;

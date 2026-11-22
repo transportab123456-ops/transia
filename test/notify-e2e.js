@@ -132,7 +132,8 @@ function tokenFrom(mail) {
   const email = `notify-shipper-${stamp}@example.fr`;
   const reg = await call(register, "POST", {
     email, password: pw,
-    firstName: "Nadia", lastName: "Notify", companyName: `Notify ${stamp}`, countryCode: "FR"
+    firstName: "Nadia", lastName: "Notify", companyName: `Notify ${stamp}`, countryCode: "FR",
+    termsAccepted: true, termsVersion: "1.0"
   });
   check("201 avec requiresEmailVerification", reg.status === 201 && reg.body.requiresEmailVerification === true, reg.body);
   check("aucune session ouverte (pas de cookie)", !extractCookie(reg.headers));
@@ -204,7 +205,8 @@ function tokenFrom(mail) {
   const car = await call(carriers, "POST", {
     companyName: `Transporteur Notif ${stamp}`, countryCode: "FR",
     email: carrierEmail, password: pw,
-    firstName: "Marc", lastName: "Notif", modes: ["ROAD"]
+    firstName: "Marc", lastName: "Notif", modes: ["ROAD"],
+    termsAccepted: true, termsVersion: "1.0"
   });
   check("transporteur inscrit (PENDING_EMAIL)", car.status === 201 && car.body.requiresEmailVerification === true, car.body);
 

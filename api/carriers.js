@@ -16,6 +16,7 @@ const { hashPassword, createSession, sessionCookie, requireAuth } = require("./_
 const { rateLimit, recordAttempt, clientIp } = require("./_lib/security");
 const { mailEnabled } = require("./_lib/mailer");
 const { enqueueEmail, flushOutbox } = require("./_lib/notify");
+const { checkAcceptance, recordAcceptance } = require("./_lib/terms");
 
 function verificationRequired() {
   const flag = process.env.REQUIRE_EMAIL_VERIFY;
@@ -96,6 +97,10 @@ module.exports = handler(async (req, res) => {
     const cleanModes = modes.filter((m) => MODES.includes(m));
     if (!cleanModes.length) return fail(res, 400, "Au moins un mode de transport est requis.", "MISSING_MODES");
 
+    /* Acceptation des conditions transporteur, avant toute écriture. */
+    const acceptance = checkAcceptance(body, "CARRIER");
+    if (!acceptance.ok) return fail(res, acceptance.status, acceptance.message, acceptance.code);
+
     const existing = await query("SELECT 1 FROM users WHERE email = $1", [email]);
     if (existing.rows.length) return fail(res, 409, "Un compte existe déjà avec cet e-mail.", "EMAIL_TAKEN");
 
@@ -151,10 +156,15 @@ module.exports = handler(async (req, res) => {
       );
       const userId = user.rows[0].user_id;
 
+      /* Preuve d'acceptation, dans la même transaction que le compte. */
+      await recordAcceptance(client, {
+        userId, companyId, terms: acceptance.terms, req, context: "REGISTRATION"
+      });
+
       await client.query(
         `INSERT INTO audit_log (user_id, action_type, entity_type, entity_id, new_value)
          VALUES ($1,'CARRIER_REGISTERED','companies',$2,$3)`,
-        [userId, companyId, JSON.stringify({ legalName, modes: cleanModes })]
+        [userId, companyId, JSON.stringify({ legalName, modes: cleanModes, termsVersion: acceptance.terms.version })]
       );
 
       /* E-mail de vérification écrit dans la transaction (outbox). */

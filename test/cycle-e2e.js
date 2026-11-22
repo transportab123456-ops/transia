@@ -93,14 +93,16 @@ const admin = require("../api/admin");
 
   const shipper = await call(register, "POST", {
     email: `cycle-shipper-${stamp}@example.fr`, password: pw,
-    firstName: "Karine", lastName: "Lopez", companyName: `Industrie Cycle ${stamp}`, countryCode: "FR"
+    firstName: "Karine", lastName: "Lopez", companyName: `Industrie Cycle ${stamp}`, countryCode: "FR",
+    termsAccepted: true, termsVersion: "1.0"
   });
   check("shipper créé", shipper.status === 201, shipper.body);
   const shipperCookie = extractCookie(shipper.headers);
 
   const shipperB = await call(register, "POST", {
     email: `cycle-shipper-b-${stamp}@example.fr`, password: pw,
-    firstName: "Autre", lastName: "Client", companyName: `Autre Client ${stamp}`, countryCode: "FR"
+    firstName: "Autre", lastName: "Client", companyName: `Autre Client ${stamp}`, countryCode: "FR",
+    termsAccepted: true, termsVersion: "1.0"
   });
   const shipperBCookie = extractCookie(shipperB.headers);
 
@@ -112,7 +114,8 @@ const admin = require("../api/admin");
       companyName: `Transporteur Cycle ${i} ${stamp}`, countryCode: "FR",
       email: `cycle-carrier${i}-${stamp}@example.fr`, password: pw,
       firstName: "Carl", lastName: `Carrier${i}`, modes: ["ROAD"],
-      taxId: `FR-812 449 3${i}0`, vatNumber: `FR4281244930${i}`
+      taxId: `FR-812 449 3${i}0`, vatNumber: `FR4281244930${i}`,
+      termsAccepted: true, termsVersion: "1.0"
     });
     check(`transporteur ${i} inscrit (201, PENDING)`, c.status === 201 && c.body.verification.status === "PENDING", c.body);
     carrierCookies.push(extractCookie(c.headers));

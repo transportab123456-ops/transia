@@ -65,6 +65,7 @@ const register = require("../api/auth/register");
 const login = require("../api/auth/login");
 const me = require("../api/auth/me");
 const rfqs = require("../api/rfqs");
+const { query } = require("../api/_lib/db");
 
 function extractCookie(resHeaders) {
   const set = resHeaders["set-cookie"];
@@ -86,8 +87,9 @@ function extractCookie(resHeaders) {
   const email = `e2e-${stamp}@example.fr`;
   const reg = await call(register, "POST", {
     email, password: "motdepasse-test-2026", firstName: "Émilie",
-    lastName: "Dupont", companyName: "E2E Test SAS", countryCode: "FR"
-  });
+    lastName: "Dupont", companyName: "E2E Test SAS", countryCode: "FR",
+    termsAccepted: true, termsVersion: "1.0"
+  }, { "x-forwarded-for": "203.0.113.7" });
   check("201 créé", reg.status === 201, reg.body);
   check("rôle SHIPPER_USER", reg.body.user && reg.body.user.role === "SHIPPER_USER", reg.body.user);
   check("company_id présent", !!(reg.body.company && reg.body.company.company_id), reg.body);
@@ -97,12 +99,25 @@ function extractCookie(resHeaders) {
   console.log("\n[3] Rejets de validation register");
   const weak = await call(register, "POST", { email: `x-${stamp}@example.fr`, password: "court", firstName: "A", lastName: "B", companyName: "X" });
   check("mot de passe faible → 400", weak.status === 400 && weak.body.code === "WEAK_PASSWORD", weak.body);
-  const dup = await call(register, "POST", { email, password: "motdepasse-test-2026", firstName: "A", lastName: "B", companyName: "Dup" });
+  const dup = await call(register, "POST", { email, password: "motdepasse-test-2026", firstName: "A", lastName: "B", companyName: "Dup", termsAccepted: true, termsVersion: "1.0" });
   check("e-mail dupliqué → 409", dup.status === 409 && dup.body.code === "EMAIL_TAKEN", dup.body);
   const badCountry = await call(register, "POST", { email: `y-${stamp}@example.fr`, password: "motdepasse-test-2026", firstName: "A", lastName: "B", companyName: "Y", countryCode: "XYZ" });
   check("code pays invalide → 400", badCountry.status === 400, badCountry.body);
-  const unknownCountry = await call(register, "POST", { email: `z-${stamp}@example.fr`, password: "motdepasse-test-2026", firstName: "A", lastName: "B", companyName: "Z", countryCode: "ZZ" });
+  const unknownCountry = await call(register, "POST", { email: `z-${stamp}@example.fr`, password: "motdepasse-test-2026", firstName: "A", lastName: "B", companyName: "Z", countryCode: "ZZ", termsAccepted: true, termsVersion: "1.0" });
   check("pays inconnu référentiel → 400", unknownCountry.status === 400 && unknownCountry.body.code === "UNKNOWN_COUNTRY", unknownCountry.body);
+
+  console.log("\n[3bis] Acceptation des CGU");
+  const noTerms = await call(register, "POST", { email: `nt-${stamp}@example.fr`, password: "motdepasse-test-2026", firstName: "A", lastName: "B", companyName: "NT" });
+  check("CGU non acceptées → 400", noTerms.status === 400 && noTerms.body.code === "TERMS_NOT_ACCEPTED", noTerms.body);
+  const staleTerms = await call(register, "POST", { email: `st-${stamp}@example.fr`, password: "motdepasse-test-2026", firstName: "A", lastName: "B", companyName: "ST", termsAccepted: true, termsVersion: "0.9" });
+  check("version obsolète → 409", staleTerms.status === 409 && staleTerms.body.code === "TERMS_VERSION_OUTDATED", staleTerms.body);
+  const proof = await query(
+    `SELECT document_type, document_version, ip_address, user_agent, accepted_at
+       FROM terms_acceptances WHERE user_id = $1`,
+    [reg.body.user.user_id]
+  );
+  check("preuve CGU enregistrée", proof.rows.length === 1 && proof.rows[0].document_type === "SHIPPER_TERMS" && proof.rows[0].document_version === "1.0", proof.rows);
+  check("IP et horodatage conservés", !!proof.rows[0] && proof.rows[0].ip_address === "203.0.113.7" && !!proof.rows[0].accepted_at, proof.rows[0]);
 
   console.log("\n[4] GET /api/auth/me");
   const anon = await call(me, "GET");
@@ -170,7 +185,7 @@ function extractCookie(resHeaders) {
 
   console.log("\n[9] Isolation RBAC : un 2e shipper ne voit pas les RFQ du 1er");
   const emailB = `e2e-b-${stamp}@example.fr`;
-  const regB = await call(register, "POST", { email: emailB, password: "motdepasse-test-2026", firstName: "Bruno", lastName: "Martin", companyName: "Concurrent SAS", countryCode: "BE" });
+  const regB = await call(register, "POST", { email: emailB, password: "motdepasse-test-2026", firstName: "Bruno", lastName: "Martin", companyName: "Concurrent SAS", countryCode: "BE", termsAccepted: true, termsVersion: "1.0" });
   const cookieB = extractCookie(regB.headers);
   const listB = await call(rfqs, "GET", null, { cookie: cookieB });
   check("2e shipper : 0 RFQ", listB.status === 200 && listB.body.count === 0, listB.body);

@@ -18,6 +18,7 @@ const { hashPassword, sessionCookie, createSession } = require("../_lib/auth");
 const { rateLimit, recordAttempt, clientIp } = require("../_lib/security");
 const { mailEnabled } = require("../_lib/mailer");
 const { enqueueEmail, flushOutbox } = require("../_lib/notify");
+const { checkAcceptance, recordAcceptance } = require("../_lib/terms");
 
 /* Activation de la vérification :
    - REQUIRE_EMAIL_VERIFY=true  → exigée même sans transport
@@ -67,6 +68,10 @@ module.exports = handler(async (req, res) => {
   if (!companyName) return fail(res, 400, "Raison sociale obligatoire.", "MISSING_COMPANY");
   if (countryCode && !/^[A-Z]{2}$/.test(countryCode)) return fail(res, 400, "Code pays ISO à 2 lettres attendu (ex. FR).", "INVALID_COUNTRY");
 
+  /* Acceptation des CGU : vérifiée avant toute écriture. */
+  const acceptance = checkAcceptance(body, "SHIPPER");
+  if (!acceptance.ok) return fail(res, acceptance.status, acceptance.message, acceptance.code);
+
   /* Unicité de l'e-mail */
   const existing = await query("SELECT 1 FROM users WHERE email = $1", [email]);
   if (existing.rows.length) return fail(res, 409, "Un compte existe déjà avec cet e-mail.", "EMAIL_TAKEN");
@@ -110,10 +115,15 @@ module.exports = handler(async (req, res) => {
     );
     const userId = user.rows[0].user_id;
 
+    /* Preuve d'acceptation, dans la même transaction que le compte. */
+    await recordAcceptance(client, {
+      userId, companyId, terms: acceptance.terms, req, context: "REGISTRATION"
+    });
+
     await client.query(
       `INSERT INTO audit_log (user_id, action_type, entity_type, entity_id, new_value)
        VALUES ($1, 'ACCOUNT_REGISTERED', 'users', $1, $2)`,
-      [userId, JSON.stringify({ email, companyName })]
+      [userId, JSON.stringify({ email, companyName, termsVersion: acceptance.terms.version })]
     );
 
     /* Événement d'e-mail écrit DANS LA TRANSACTION : soit le lien

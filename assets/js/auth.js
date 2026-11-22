@@ -210,11 +210,14 @@
       firstName: get("sFirst").value.trim(),
       lastName: get("sLast").value.trim(),
       email: get("sEmail").value.trim().toLowerCase(),
-      password: get("sPassword").value
+      password: get("sPassword").value,
+      termsAccepted: get("sTerms").checked,
+      termsVersion: (window.TRANSIA_TERMS || {}).shipper || ""
     };
     if (!payload.companyName || !payload.firstName || !payload.lastName || !payload.email || !payload.password) {
       toast("Merci de compléter les champs obligatoires.", "err"); return;
     }
+    if (!get("sTerms").checked) { toast("Merci d'accepter les conditions générales.", "err"); return; }
     API.post("/api/auth/register", payload).then(function (r) {
       if (!r.ok) { toast(r.body.error || "Inscription impossible.", "err"); return; }
       if (r.body.requiresEmailVerification) {
@@ -249,12 +252,15 @@
       password: get("cPassword").value,
       taxId: get("cTax").value.trim() || null,
       vatNumber: get("cVat").value.trim() || null,
-      modes: modes
+      modes: modes,
+      termsAccepted: get("cTerms").checked,
+      termsVersion: (window.TRANSIA_TERMS || {}).carrier || ""
     };
     if (!payload.companyName || !payload.firstName || !payload.lastName || !payload.email || !payload.password) {
       toast("Merci de compléter les champs obligatoires.", "err"); return;
     }
     if (!modes.length) { toast("Sélectionnez au moins un mode de transport.", "err"); return; }
+    if (!get("cTerms").checked) { toast("Merci d'accepter les conditions d'accès et d'intermédiation.", "err"); return; }
 
     API.post("/api/carriers", payload).then(function (r) {
       if (!r.ok) { toast(r.body.error || "Inscription impossible.", "err"); return; }

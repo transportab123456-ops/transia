@@ -94,7 +94,8 @@ function makeClient() {
   const sEmail = `smoke-shipper-${stamp}@example.fr`;
   const reg = await shipper("POST", "/api/auth/register", {
     companyName: `${TAG} Industrie`, countryCode: "FR",
-    email: sEmail, password: pw, firstName: "Smoke", lastName: "Shipper"
+    email: sEmail, password: pw, firstName: "Smoke", lastName: "Shipper",
+    termsAccepted: true, termsVersion: "1.0"
   });
   check("shipper 201", reg.status === 201, reg.body);
   if (reg.body.company) idsToDelete.companies.push(reg.body.company.company_id);
@@ -156,6 +157,7 @@ function makeClient() {
       companyName: `${TAG} Transport ${i}`, countryCode: "FR",
       email: `smoke-carrier${i}-${stamp}@example.fr`, password: pw,
       firstName: "Smoke", lastName: `Carrier${i}`, modes: ["ROAD", "SEA"],
+      termsAccepted: true, termsVersion: "1.0",
       taxId: `FR-999 000 10${i}`, vatNumber: `FR4299900010${i}`
     });
     check(`transporteur ${i} inscrit (PENDING)`, r.status === 201 && r.body.verification.status === "PENDING", r.body);
