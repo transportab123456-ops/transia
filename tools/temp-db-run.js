@@ -1,9 +1,8 @@
 /* ============================================================
    Transia — tools/temp-db-run.js
-   Exécute un ou plusieurs scripts Node contre une base PostgreSQL
-   jetable dans Docker : création du conteneur, préparation
-   facultative (migration, seed), scripts dans l'ordre, puis
-   suppression du conteneur — même en cas d'échec ou de Ctrl+C.
+   Exécute une séquence d'étapes contre une base PostgreSQL jetable
+   dans Docker : migration, seed et scripts Node dans l'ordre donné,
+   puis suppression du conteneur — même en cas d'échec ou de Ctrl+C.
 
    Le conteneur porte l'étiquette transia.tempdb=1 : si un run
    précédent a été tué avant son nettoyage, il est supprimé au
@@ -11,15 +10,15 @@
    aucune collision avec une base déjà en marche.
 
    Usage :
-     node tools/temp-db-run.js [options] <script.js…>
-   Options :
-     --migrate           applique db/schema.sql avant les scripts
-     --seed              peuple le référentiel (db/seed.js)
+     node tools/temp-db-run.js [--migrate] [--seed] [options] <script.js…>
+   Les options s'appliquent à leur position dans la séquence :
+     --migrate           applique db/schema.sql à cet endroit
+     --seed              peuple le référentiel (db/seed.js) à cet endroit
      --env-for motif:CLE=VALEUR
                          variable réservée aux scripts dont le nom
                          contient « motif » (répétable)
-   Code de sortie : celui du premier script en échec (2 si Docker,
-   la base ou un script ne peuvent pas démarrer).
+   Code de sortie : celui de la première étape en échec (2 si Docker,
+   la base ou une étape ne peuvent pas démarrer).
    ============================================================ */
 "use strict";
 
@@ -33,16 +32,14 @@ const DATABASE = "transia";
 const ROOT = path.join(__dirname, "..");
 const LABEL = "transia.tempdb=1";
 
-/* ---------- Arguments ---------- */
-const scripts = [];
+/* ---------- Arguments : une séquence d'étapes ---------- */
+const steps = [];
 const envFor = [];
-let doMigrate = false;
-let doSeed = false;
 
 for (let i = 2; i < process.argv.length; i++) {
   const arg = process.argv[i];
-  if (arg === "--migrate") doMigrate = true;
-  else if (arg === "--seed") doSeed = true;
+  if (arg === "--migrate") steps.push({ type: "migrate" });
+  else if (arg === "--seed") steps.push({ type: "seed" });
   else if (arg === "--env-for") {
     const spec = process.argv[++i] || "";
     const colon = spec.indexOf(":");
@@ -60,10 +57,10 @@ for (let i = 2; i < process.argv.length; i++) {
     console.error("Option inconnue : " + arg);
     process.exit(2);
   } else {
-    scripts.push(arg);
+    steps.push({ type: "script", path: arg });
   }
 }
-if (!scripts.length) {
+if (!steps.some((step) => step.type === "script")) {
   console.error("Usage : node tools/temp-db-run.js [--migrate] [--seed] [--env-for motif:CLE=VALEUR] <script.js…>");
   process.exit(2);
 }
@@ -97,6 +94,17 @@ function runNode(args, extraEnv) {
     });
     child.on("close", (code) => resolve(code === null ? 2 : code));
   });
+}
+
+/* Libellé affiché et commande de chaque étape. */
+function describe(step) {
+  if (step.type === "migrate") return { label: "db/migrate.js", args: ["db/migrate.js"], env: {} };
+  if (step.type === "seed") return { label: "db/seed.js", args: ["db/seed.js"], env: {} };
+  const env = {};
+  for (const rule of envFor) {
+    if (step.path.includes(rule.match)) env[rule.key] = rule.value;
+  }
+  return { label: step.path, args: [path.resolve(ROOT, step.path)], env };
 }
 
 (async () => {
@@ -149,25 +157,14 @@ function runNode(args, extraEnv) {
 
     console.log("Base jetable sur 127.0.0.1:" + hostPort + "\n");
 
-    if (doMigrate) {
-      console.log("▶ db/migrate.js");
-      const code = await runNode(["db/migrate.js"]);
-      if (code) { console.error("Migration échouée (code " + code + ")."); return code; }
-    }
-    if (doSeed) {
-      console.log("▶ db/seed.js");
-      const code = await runNode(["db/seed.js"]);
-      if (code) { console.error("Peuplement échoué (code " + code + ")."); return code; }
-    }
-
-    for (const script of scripts) {
-      console.log("▶ " + script);
-      const env = {};
-      for (const rule of envFor) {
-        if (script.includes(rule.match)) env[rule.key] = rule.value;
+    for (const step of steps) {
+      const { label, args, env } = describe(step);
+      console.log("▶ " + label);
+      const code = await runNode(args, env);
+      if (code) {
+        console.error("\n" + label + " a échoué (code " + code + ").");
+        return code;
       }
-      const code = await runNode([path.resolve(ROOT, script)], env);
-      if (code) { console.error("\n" + script + " a échoué (code " + code + ")."); return code; }
     }
     return 0;
   } finally {

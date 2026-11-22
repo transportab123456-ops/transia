@@ -6,6 +6,7 @@
   "type": "commonjs",
   "scripts": {
     "migrate": "node db/migrate.js",
+    "test": "node tools/temp-db-run.js test/migration-upgrade.js --seed --env-for notify-e2e:REQUIRE_EMAIL_VERIFY=true test/api-e2e.js test/cycle-e2e.js test/notify-e2e.js test/terms-check.js test/commission-check.js test/token-check.js test/env-check.js",
     "test:env": "node test/env-check.js",
     "test:upgrade": "node tools/temp-db-run.js test/migration-upgrade.js",
     "test:e2e": "node tools/temp-db-run.js --migrate --seed --env-for notify-e2e:REQUIRE_EMAIL_VERIFY=true test/api-e2e.js test/cycle-e2e.js test/notify-e2e.js"
