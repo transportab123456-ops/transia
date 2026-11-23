@@ -58,17 +58,36 @@ Pour l'activer sans passer par npm :
 git config core.hooksPath .githooks
 ```
 
-`git commit --no-verify` et `git push --no-verify` contournent les hooks : à
-éviter, le déploiement serait bloqué côté Vercel.
+`git commit --no-verify` et `git push --no-verify` contournent les hooks : le
+contrôle en CI les rattrape après coup, mais Vercel bloque alors le déploiement.
 
 Un rebase ne passe pas par `pre-commit` (git ne l'exécute pas) et conserve
 l'auteur d'origine : c'est `pre-push` qui refuse alors les anciens commits
 réattribués, en indiquant comment corriger un seul commit ou toute une série.
 
+## Contrôle en CI (dernier filet)
+
+`--no-verify` contourne les hooks locaux : le workflow **Auteur des commits**
+(`.github/workflows/auteur.yml`) rejoue le contrôle sur chaque push vers `main`,
+avant que Vercel ne bloque le déploiement.
+
+- portée : `github.event.before..github.event.after`, c'est-à-dire exactement les
+  commits du push ; premier push ou `before` introuvable (force-push) : seul le
+  commit de tête est vérifié, l'historique antérieur à la règle n'est pas jugé ;
+- clone complet (`fetch-depth: 0`), sinon le commit d'avant le push est absent ;
+- échec : une ligne `::error::` par commit fautif, plus un récapitulatif dans le
+  résumé du run avec les commandes de correction ;
+- succès : `N commit(s) vérifié(s), 0 non conforme(s).`
+
+Une fusion de pull request depuis l'interface GitHub crée un commit dont l'auteur
+est le compte qui fusionne : si ce compte n'est pas `transportab123456-ops`, le
+contrôle échoue — et Vercel aurait bloqué le déploiement de la même façon.
+
 ## Ce que fait un push sur `main`
 
-1. le workflow **Tests** exécute `npm test` (14 suites, base PostgreSQL jetable) ;
-2. Vercel déploie la production et réattribue `https://transia-sooty.vercel.app`.
+1. le workflow **Auteur des commits** vérifie l'auteur des commits poussés ;
+2. le workflow **Tests** exécute `npm test` (14 suites, base PostgreSQL jetable) ;
+3. Vercel déploie la production et réattribue `https://transia-sooty.vercel.app`.
 
 Un déploiement bloqué ne peut pas être relancé : il faut corriger l'identité
 puis pousser un nouveau commit.

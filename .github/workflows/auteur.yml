@@ -1,0 +1,95 @@
+name: Auteur des commits
+
+# Vercel refuse un déploiement dont l'auteur du commit n'est pas membre de
+# l'équipe (TEAM_ACCESS_REQUIRED), et ce refus n'apparaît qu'après le push.
+# Les hooks locaux (.githooks/) le signalent avant le commit, mais
+# `git commit --no-verify` / `git push --no-verify` les contournent : ce
+# contrôle est le dernier filet, côté CI, sur chaque push vers main.
+on:
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: auteur-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  auteur:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      # Historique complet : la vérification remonte jusqu'au commit d'avant
+      # le push, absent d'un clone superficiel.
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Vérifier l'auteur des commits poussés
+        env:
+          AVANT: ${{ github.event.before }}
+          APRES: ${{ github.event.after }}
+          TETE: ${{ github.sha }}
+        run: |
+          set -u
+          ATTENDU="transportab123456-ops <transportab123456@gmail.com>"
+          ZERO="0000000000000000000000000000000000000000"
+          APRES="${APRES:-$TETE}"
+
+          # Premier push de la branche, ou commit d'avant introuvable (force-push) :
+          # seul le commit de tête est vérifié. L'historique antérieur à la règle
+          # n'est pas jugé, comme dans le hook pre-push.
+          if [ "$AVANT" = "$ZERO" ] || ! git cat-file -e "$AVANT^{commit}" 2>/dev/null; then
+            PORTEE=""
+            echo "Portée : commit de tête $APRES (historique antérieur non vérifié)."
+          else
+            PORTEE="$AVANT..$APRES"
+            echo "Portée : $PORTEE"
+          fi
+
+          # PORTEE vide : le commit de tête seul, sans remonter son historique.
+          auteurs() {
+            if [ -n "$PORTEE" ]; then
+              git log --format='%H %an <%ae>' "$PORTEE"
+            else
+              git log -1 --format='%H %an <%ae>' "$APRES"
+            fi
+          }
+
+          mauvais=0
+          total=0
+          while read -r sha auteur; do
+            [ -n "$sha" ] || continue
+            total=$((total + 1))
+            if [ "$auteur" != "$ATTENDU" ]; then
+              mauvais=$((mauvais + 1))
+              echo "::error title=Auteur refusé::$sha — « $auteur »"
+            fi
+          done < <(auteurs)
+
+          echo "$total commit(s) vérifié(s), $mauvais non conforme(s)."
+
+          if [ "$mauvais" -gt 0 ]; then
+            {
+              echo "### Auteur refusé"
+              echo ""
+              echo "Attendu : \`$ATTENDU\`"
+              echo "Vercel bloquerait ce déploiement (TEAM_ACCESS_REQUIRED)."
+              echo ""
+              echo "Réglage :"
+              echo '```bash'
+              echo 'git config --global user.name  "transportab123456-ops"'
+              echo 'git config --global user.email "transportab123456@gmail.com"'
+              echo '```'
+              echo "Correction des commits déjà créés :"
+              echo '```bash'
+              echo "git rebase --exec 'git commit --amend --reset-author --no-edit' <base>"
+              echo "git push --force-with-lease"
+              echo '```'
+            } >> "$GITHUB_STEP_SUMMARY"
+            echo "::error::$mauvais commit(s) avec un auteur autre que « $ATTENDU »."
+            exit 1
+          fi
+          echo "Tous les commits poussés sont conformes."
