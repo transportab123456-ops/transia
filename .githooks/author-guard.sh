@@ -22,7 +22,9 @@ refuser() {
   echo "Vercel bloquerait ce déploiement (TEAM_ACCESS_REQUIRED)." >&2
   echo "  git config --global user.name  \"transportab123456-ops\"" >&2
   echo "  git config --global user.email \"transportab123456@gmail.com\"" >&2
-  echo "Commit déjà créé : git commit --amend --reset-author" >&2
+  echo "Corriger l'auteur (un rebase conserve celui d'origine) :" >&2
+  echo "  dernier commit : git commit --amend --reset-author" >&2
+  echo "  plusieurs      : git rebase --exec 'git commit --amend --reset-author --no-edit' <base>" >&2
   exit 1
 }
 

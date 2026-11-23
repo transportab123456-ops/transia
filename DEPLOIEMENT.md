@@ -61,6 +61,10 @@ git config core.hooksPath .githooks
 `git commit --no-verify` et `git push --no-verify` contournent les hooks : à
 éviter, le déploiement serait bloqué côté Vercel.
 
+Un rebase ne passe pas par `pre-commit` (git ne l'exécute pas) et conserve
+l'auteur d'origine : c'est `pre-push` qui refuse alors les anciens commits
+réattribués, en indiquant comment corriger un seul commit ou toute une série.
+
 ## Ce que fait un push sur `main`
 
 1. le workflow **Tests** exécute `npm test` (14 suites, base PostgreSQL jetable) ;
