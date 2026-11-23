@@ -299,6 +299,7 @@ function migrate() {
   }
 
   console.log("\n" + pass + " contrôle(s) OK, " + failCount + " échec(s).");
+  require("../tools/fin-de-suite")(__filename);
   if (failCount) process.exitCode = 1;
 })().catch((err) => {
   console.error("ERREUR FATALE:", err.message);

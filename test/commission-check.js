@@ -65,3 +65,4 @@ if (echecs) {
   process.exit(1);
 }
 console.log("OK — barème conforme, une seule implémentation.");
+require("../tools/fin-de-suite")(__filename);

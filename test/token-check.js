@@ -65,4 +65,5 @@ check("configured() vrai avec secret", resetToken.configured() === true);
 
 console.log("\n----------------------------------------");
 console.log("Jeton : " + ok + " succès, " + ko + " échec(s)");
+require("../tools/fin-de-suite")(__filename);
 process.exit(ko ? 1 : 0);

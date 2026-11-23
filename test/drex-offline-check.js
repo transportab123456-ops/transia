@@ -267,6 +267,7 @@ const QUESTIONS = {
   delete process.env.NACE_DREX_MODEL;
 
   console.log("\n" + pass + " contrôle(s) OK, " + failCount + " échec(s).");
+  require("../tools/fin-de-suite")(__filename);
   process.exit(failCount ? 1 : 0);
 })().catch((err) => {
   globalThis.fetch = realFetch;

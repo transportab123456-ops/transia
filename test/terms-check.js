@@ -260,5 +260,6 @@ async function cleanup() {
   }
 
   console.log(`\n${pass} contrôle(s) OK, ${fail} échec(s).`);
+  require("../tools/fin-de-suite")(__filename);
   process.exit(fail ? 1 : 0);
 })();

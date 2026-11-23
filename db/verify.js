@@ -115,7 +115,7 @@ async function main() {
 }
 
 if (require.main === module) {
-  main().catch((err) => {
+  main().then(() => require("../tools/fin-de-suite")(__filename)).catch((err) => {
     console.error("Vérification échouée : " + err.message);
     process.exit(1);
   });

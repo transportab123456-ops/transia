@@ -113,6 +113,7 @@ const FX_RATES = [
 
     await client.query("COMMIT");
     console.log(`Seed OK — pays:${countries} devises:${currencies} modes:${modes} incoterms:${incoterms} langues:${langs} taux:${fx}`);
+    require("../tools/fin-de-suite")(__filename);
     process.exit(0);
   } catch (err) {
     await client.query("ROLLBACK").catch(() => {});

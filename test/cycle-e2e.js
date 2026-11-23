@@ -535,5 +535,6 @@ const admin = require("../api/admin");
 
   console.log("\n----------------------------------------");
   console.log(`Résultat : ${pass} succès, ${failCount} échec(s)`);
+  require("../tools/fin-de-suite")(__filename);
   process.exit(failCount === 0 ? 0 : 1);
 })().catch((e) => { console.error("ERREUR FATALE:", e); process.exit(1); });

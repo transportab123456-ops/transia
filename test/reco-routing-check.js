@@ -82,4 +82,5 @@ check("classement vide → empreinte vide",
   rankingFingerprint([]) === "" && rankingFingerprint(null) === "");
 
 console.log("\n" + pass + " contrôle(s) OK, " + failCount + " échec(s).");
+require("../tools/fin-de-suite")(__filename);
 if (failCount) process.exitCode = 1;

@@ -62,6 +62,7 @@ const local = /localhost|127\.0\.0\.1/.test(url);
   } finally {
     await client.end();
   }
+  require("../tools/fin-de-suite")(__filename);
 })().catch((err) => {
   console.error("Migration échouée : " + err.message);
   process.exit(1);
