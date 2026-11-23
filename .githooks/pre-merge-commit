@@ -1,0 +1,4 @@
+#!/bin/sh
+# Un commit de fusion ne passe pas par pre-commit : git exécute
+# pre-merge-commit, et seulement celui-ci.
+exec "$(dirname "$0")/author-guard.sh" commit

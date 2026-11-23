@@ -38,17 +38,23 @@ n'est pas nécessaire.
 
 ## Garde-fou automatique
 
-Deux hooks versionnés dans `.githooks/` refusent le travail avant que Vercel
+Trois hooks versionnés dans `.githooks/` refusent le travail avant que Vercel
 ne le bloque :
 
-- `pre-commit` vérifie l'identité qui sera enregistrée dans le commit ;
-- `pre-push` vérifie tous les commits réellement poussés (couvre l'amend, les
-  fusions et un `--no-verify` sur le commit).
+- `pre-commit` vérifie l'identité enregistrée dans un commit ordinaire ;
+- `pre-merge-commit` fait de même pour un commit de fusion, que git ne fait pas
+  passer par `pre-commit` ;
+- `pre-push` vérifie tous les commits réellement poussés : filet de sécurité si
+  un commit a été créé hors de ces chemins, ou avec `--no-verify`.
 
-Activation, une fois par clone :
+L'activation est **automatique** : `npm install` et `npm ci` lancent le script
+`postinstall` `install-git-hooks.js`, qui pose `core.hooksPath=.githooks` pour le
+clone courant. Sans dépôt Git (build Vercel, archive), il ne fait rien et ne fait
+jamais échouer l'installation.
+
+Pour l'activer sans passer par npm :
 
 ```bash
-chmod +x .githooks/pre-commit .githooks/pre-push .githooks/author-guard.sh
 git config core.hooksPath .githooks
 ```
 
