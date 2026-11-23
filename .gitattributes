@@ -1,0 +1,3 @@
+# Les hooks sont des scripts shell : LF obligatoire, sinon le shebang
+# casse sous sh dans un clone neuf (core.autocrlf=true sur Windows).
+.githooks/* text eol=lf

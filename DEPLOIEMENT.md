@@ -36,6 +36,25 @@ deux commandes ci-dessus, puis créer le commit suivant : un commit déjà pouss
 avec la mauvaise identité exigerait un `push --force` pour être corrigé, ce qui
 n'est pas nécessaire.
 
+## Garde-fou automatique
+
+Deux hooks versionnés dans `.githooks/` refusent le travail avant que Vercel
+ne le bloque :
+
+- `pre-commit` vérifie l'identité qui sera enregistrée dans le commit ;
+- `pre-push` vérifie tous les commits réellement poussés (couvre l'amend, les
+  fusions et un `--no-verify` sur le commit).
+
+Activation, une fois par clone :
+
+```bash
+chmod +x .githooks/pre-commit .githooks/pre-push .githooks/author-guard.sh
+git config core.hooksPath .githooks
+```
+
+`git commit --no-verify` et `git push --no-verify` contournent les hooks : à
+éviter, le déploiement serait bloqué côté Vercel.
+
 ## Ce que fait un push sur `main`
 
 1. le workflow **Tests** exécute `npm test` (14 suites, base PostgreSQL jetable) ;

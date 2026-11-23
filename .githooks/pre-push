@@ -1,0 +1,4 @@
+#!/bin/sh
+# Refuse un push contenant un commit d'un autre auteur que le compte
+# Vercel propriétaire (couvre amend, merge et --no-verify).
+exec "$(dirname "$0")/author-guard.sh" push
