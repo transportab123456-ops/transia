@@ -449,6 +449,27 @@ const admin = require("../api/admin");
   );
   check("écart motivé : un seul e-mail recommendation_ready", altMail.rows[0].n === 1, altMail.rows[0]);
 
+  /* Journal d'audit : l'écart doit laisser une trace unique portant
+     l'offre proposée par le moteur, l'offre réellement retenue et le
+     motif — c'est cette ligne qui sert de preuve en cas de litige. */
+  const altAudit = await query(
+    `SELECT old_value, new_value, reason FROM audit_log
+      WHERE action_type = 'RECOMMENDATION_VALIDATED'
+        AND entity_type = 'rfqs'
+        AND entity_id = (SELECT rfq_id FROM rfqs WHERE rfq_number = $1)`,
+    [altNum]
+  );
+  check("audit_log : une seule validation journalisée", altAudit.rows.length === 1, altAudit.rows.length);
+  const trace = altAudit.rows[0] || {};
+  check("audit_log : offre du moteur conservée en old_value",
+    trace.old_value && trace.old_value.quote_id === altA.body.quote.quote_id, trace.old_value);
+  check("audit_log : offre retenue et motif en new_value",
+    trace.new_value && trace.new_value.chosen === altB.body.quote.quote_id &&
+    trace.new_value.override === "Délai de 3 jours exigé par le client" &&
+    trace.new_value.ranking === "relu", trace.new_value);
+  check("audit_log : motif inscrit dans reason",
+    trace.reason === "Écart motivé : Délai de 3 jours exigé par le client", trace.reason);
+
   /* ---------- Double confirmation ---------- */
   console.log("\n[9] Acceptation → confirmation → affaire");
   const wrongCarrier = await call(deals, "POST", { action: "confirm", acceptanceId: "00000000-0000-0000-0000-000000000000", rfqNumber: rfqNum }, { cookie: carrierCookies[1] });
