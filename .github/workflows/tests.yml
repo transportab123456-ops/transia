@@ -16,24 +16,13 @@ jobs:
   test:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-
     steps:
       - uses: actions/checkout@v4
-
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
-
-      - name: Installer les dépendances
-        run: npm ci
-
-      # npm test lance une base PostgreSQL jetable dans un conteneur
-      # (tools/temp-db-run.js). Docker est préinstallé sur les runners
-      # ubuntu-latest ; ce contrôle rend un défaut d'environnement
-      # explicite au lieu d'un échec obscur du lanceur.
-      - name: Vérifier Docker
-        run: docker version
-
-      - name: Lancer les tests
-        run: npm test
+      - run: npm ci
+      # npm test monte une base PostgreSQL jetable dans Docker,
+      # préinstallé sur les runners ubuntu-latest.
+      - run: npm test
