@@ -187,7 +187,7 @@ module.exports = handler(async (req, res) => {
       }
 
       await client.query("COMMIT");
-      await recordAttempt("carrier-register", clientIp(req), true);
+      await recordAttempt("carrier-register", clientIp(req), true, client);
       await flushOutbox(client);
 
       if (needVerify) {
@@ -203,7 +203,7 @@ module.exports = handler(async (req, res) => {
         });
       }
 
-      const { token, expires } = await createSession(user.rows[0], req);
+      const { token, expires } = await createSession(user.rows[0], req, client);
       res.setHeader("Set-Cookie", sessionCookie(token, expires));
 
       return json(res, 201, {

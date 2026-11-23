@@ -590,6 +590,59 @@ const { hashPassword } = require("../api/_lib/auth");
   );
   check("4 profils vérifiés en base", verifiedCount.rows[0].n === 4, verifiedCount.rows[0]);
 
+  /* ---------- Inscriptions simultanées ---------- */
+  console.log("\n[13] Inscriptions simultanées : aucune 500");
+
+  /* Quatre comptes donneurs d'ordre (la limite est de 10 par minute
+     et par IP : deux ont déjà été créés en [1]). */
+  const signups = await Promise.all([1, 2, 3, 4].map((i) => call(register, "POST", {
+    email: `iso-load-${i}-${stamp}@example.fr`, password: pw,
+    firstName: "Léa", lastName: `L${i}`,
+    companyName: `Iso Charge ${i} ${stamp}`, countryCode: "FR", ...terms
+  })));
+  const signupStatuses = signups.map((r) => r.status);
+  check("4 inscriptions simultanées : aucune 500", signupStatuses.every((s) => s !== 500), signupStatuses);
+  check("les 4 inscriptions aboutissent", signupStatuses.every((s) => s === 201), signups.map((r) => r.body && r.body.code));
+
+  const signupCount = await query(
+    `SELECT count(*)::int AS n FROM users WHERE email LIKE $1`,
+    [`iso-load-%-${stamp}@example.fr`]
+  );
+  check("4 comptes créés en base", signupCount.rows[0].n === 4, signupCount.rows[0]);
+
+  /* ---------- Recommandations simultanées ---------- */
+  console.log("\n[14] Recommandations simultanées : aucune 500");
+
+  const recoNums = [];
+  for (let i = 0; i < 4; i++) {
+    const r = await call(rfqs, "POST", {
+      originCity: "Marseille", originCountry: "FR", destinationCity: `Zone ${i + 1}`, destinationCountry: "MA",
+      mode: "ROAD", cargoDescription: `Charge reco ${i + 1}`, palletCount: 1
+    }, { cookie: cookieB });
+    check(`RFQ reco ${i + 1} créée`, r.status === 201, r.body);
+    if (r.status !== 201) continue;
+    recoNums.push(r.body.rfq.rfq_number);
+    const q = await call(quotes, "POST", {
+      rfqNumber: r.body.rfq.rfq_number, currency: "EUR", baseTransportPrice: 1500 + i * 100, transitTimeValue: 3
+    }, { cookie: crew[i] });
+    check(`offre reco ${i + 1} déposée`, q.status === 201, q.body);
+  }
+
+  /* Sans NACE_API_KEY, Drex est indisponible : la validation est
+     automatique et le chemin flushOutbox(client) est bien pris. */
+  const recos = await Promise.all(recoNums.map((rfqNumber) => call(recommendations, "POST", { rfqNumber }, { cookie: adminCookie })));
+  const recoStatuses = recos.map((r) => r.status);
+  check("4 recommandations simultanées : aucune 500", recoStatuses.every((s) => s !== 500), recoStatuses);
+  check("les 4 recommandations aboutissent", recoStatuses.every((s) => s === 200), recos.map((r) => r.body && r.body.code));
+
+  const recoCount = await query(
+    `SELECT count(*)::int AS n FROM rfq_recommendations
+      WHERE rfq_id IN (SELECT rfq_id FROM rfqs WHERE rfq_number = ANY($1))
+        AND status <> 'SUPERSEDED'`,
+    [recoNums]
+  );
+  check("4 recommandations en base", recoCount.rows[0].n === 4, recoCount.rows[0]);
+
   console.log("\n----------------------------------------");
   console.log(`Résultat : ${pass} succès, ${failCount} échec(s)`);
   process.exit(failCount === 0 ? 0 : 1);
