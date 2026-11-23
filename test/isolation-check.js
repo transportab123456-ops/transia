@@ -80,7 +80,7 @@ const quotes = require("../api/quotes");
 const recommendations = require("../api/recommendations");
 const deals = require("../api/deals");
 const admin = require("../api/admin");
-const { query } = require("../api/_lib/db");
+const { getPool, query } = require("../api/_lib/db");
 const { hashPassword } = require("../api/_lib/auth");
 
 (async () => {
@@ -363,6 +363,51 @@ const { hashPassword } = require("../api/_lib/auth");
   });
   const stillFiveHundred = await call(otherCrash, "POST", {});
   check("erreur serveur (42P01) → toujours 500", stillFiveHundred.status === 500 && stillFiveHundred.body.code === "INTERNAL", stillFiveHundred.body);
+
+  /* ---------- Concurrence réelle ---------- */
+  console.log("\n[8] Concurrence réelle : violation d'unicité → 409");
+
+  /* Une transaction concurrente insère l'e-mail sans le valider :
+     le contrôle préalable de l'inscription ne peut pas la voir, et
+     l'INSERT concurrent attend l'index unique. On valide seulement
+     quand cette attente est observée, donc sans dépendre du hasard. */
+  const raceEmail = `iso-race-${stamp}@example.fr`;
+  const holder = await getPool().connect();
+  try {
+    await holder.query("BEGIN");
+    const raceCo = await holder.query(
+      `INSERT INTO companies (legal_name) VALUES ($1) RETURNING company_id`,
+      [`Iso Race ${stamp}`]
+    );
+    await holder.query(
+      `INSERT INTO users (company_id, first_name, last_name, email, password_hash, role, status)
+       VALUES ($1,'Race','Test',$2,'x','SHIPPER_USER','ACTIVE')`,
+      [raceCo.rows[0].company_id, raceEmail]
+    );
+
+    const pending = call(register, "POST", {
+      email: raceEmail, password: pw, firstName: "Race", lastName: "Test",
+      companyName: `Iso Race Client ${stamp}`, countryCode: "FR", ...terms
+    });
+
+    let blocked = false;
+    for (let i = 0; i < 250 && !blocked; i++) {
+      const w = await query(
+        `SELECT count(*)::int AS n FROM pg_stat_activity
+          WHERE wait_event_type = 'Lock' AND query ILIKE '%INSERT INTO users%'`
+      );
+      blocked = w.rows[0].n > 0;
+      if (!blocked) await new Promise((r) => setTimeout(r, 20));
+    }
+    check("l'INSERT concurrent attend l'index unique", blocked, blocked);
+
+    await holder.query("COMMIT");
+    const raced = await pending;
+    check("course d'inscription → 409 CONFLICT", raced.status === 409 && raced.body.code === "CONFLICT", raced.body);
+  } finally {
+    await holder.query("ROLLBACK").catch(() => {});
+    holder.release();
+  }
 
   console.log("\n----------------------------------------");
   console.log(`Résultat : ${pass} succès, ${failCount} échec(s)`);
