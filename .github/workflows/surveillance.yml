@@ -1,0 +1,182 @@
+name: Surveillance API
+
+# Sonde externe de /api/health, toutes les 5 minutes.
+#
+# Pourquoi : /api/health interroge réellement PostgreSQL (SELECT now()) et
+# répond 503 dès que la base ne répond plus. Personne ne l'appelait : le cron
+# Vercel ne s'en sert que pour vider la file d'e-mails. Une panne Neon se
+# découvrait donc par un client mécontent.
+#
+# Coût : nul. Les minutes Actions sont gratuites sur un dépôt public, et aucun
+# service de surveillance tiers n'est nécessaire.
+#
+# Chemin d'alerte, sans configuration supplémentaire :
+#   1. une issue « incident » est ouverte (ou complétée) dans ce dépôt, avec
+#      la mention du responsable → notification par e-mail ;
+#   2. le run passe en échec → GitHub envoie aussi un e-mail d'échec au
+#      dernier auteur du cron dans ce fichier.
+# Au retour à la normale, la sonde commente l'issue et la ferme.
+#
+# Limites connues : GitHub peut retarder un cron de quelques minutes, et
+# désactive les workflows planifiés après 60 jours sans activité du dépôt.
+# Un push (ou une exécution manuelle) réactive la planification.
+#
+# Effet de bord utile : la sonde garde la base Neon éveillée (suspension après
+# 5 min d'inactivité sur l'offre gratuite), ce qui évite le premier 500 après
+# une période creuse.
+on:
+  schedule:
+    - cron: "*/5 * * * *"
+  workflow_dispatch:
+    inputs:
+      simuler_panne:
+        description: "Forcer une alerte pour vérifier le chemin de notification"
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  issues: write
+
+# Un seul passage à la fois : deux runs simultanés ouvriraient deux issues.
+concurrency:
+  group: surveillance-api
+  cancel-in-progress: false
+
+jobs:
+  sonde:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      HEALTH_URL: ${{ vars.HEALTH_URL || 'https://transia-sooty.vercel.app/api/health' }}
+      GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      REPO: ${{ github.repository }}
+      SIMULER: ${{ inputs.simuler_panne }}
+    steps:
+      - name: Sonder /api/health
+        id: sonde
+        run: |
+          set -uo pipefail
+
+          echo "Cible : $HEALTH_URL"
+
+          if [ "${SIMULER:-}" = "true" ]; then
+            echo "::warning title=Simulation::Alerte forcée : aucune requête réelle n'a été faite."
+            {
+              echo "ok=0"
+              echo "code=simulation"
+              echo "statut=simulation"
+              echo "db_ok=simulation"
+              echo "detail=Alerte déclenchée manuellement pour vérifier le chemin de notification."
+            } >> "$GITHUB_OUTPUT"
+            exit 0
+          fi
+
+          ok=0
+          code="000"
+          statut="illisible"
+          db_ok="false"
+          detail=""
+
+          # Trois essais espacés de 20 s : un paquet perdu ne doit pas réveiller
+          # quelqu'un, une panne de 40 s si.
+          for essai in 1 2 3; do
+            code=$(curl -sS -o /tmp/health.json -w '%{http_code}' --max-time 10 "$HEALTH_URL" 2>/dev/null || echo "000")
+            body=$(cat /tmp/health.json 2>/dev/null || true)
+            statut=$(printf '%s' "$body" | jq -r '.status // "illisible"' 2>/dev/null || echo "illisible")
+            db_ok=$(printf '%s' "$body" | jq -r '.db.ok // false' 2>/dev/null || echo "false")
+            detail=$(printf '%s' "$body" | jq -r '.db.error // ""' 2>/dev/null || echo "")
+            echo "Essai $essai : HTTP $code · statut=$statut · db.ok=$db_ok${detail:+ · $detail}"
+
+            if [ "$code" = "200" ] && [ "$statut" = "ok" ] && [ "$db_ok" = "true" ]; then
+              ok=1
+              break
+            fi
+            if [ "$essai" -lt 3 ]; then sleep 20; fi
+          done
+
+          {
+            echo "ok=$ok"
+            echo "code=$code"
+            echo "statut=$statut"
+            echo "db_ok=$db_ok"
+            echo "detail=$detail"
+          } >> "$GITHUB_OUTPUT"
+
+          {
+            echo "### Sonde /api/health"
+            echo ""
+            echo "| Champ | Valeur |"
+            echo "|---|---|"
+            echo "| Cible | \`$HEALTH_URL\` |"
+            echo "| HTTP | $code |"
+            echo "| Statut | $statut |"
+            echo "| Base | $db_ok |"
+            if [ -n "$detail" ]; then echo "| Erreur base | \`$detail\` |"; fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          if [ "$ok" = "1" ]; then
+            echo "API et base disponibles."
+          else
+            echo "::error title=Base injoignable::HTTP $code, statut=$statut, db.ok=$db_ok${detail:+ ($detail)}"
+          fi
+
+      - name: Alerter (issue + run en échec)
+        if: steps.sonde.outputs.ok != '1'
+        run: |
+          set -uo pipefail
+
+          gh label create incident --color B60205 \
+            --description "Panne détectée par la sonde /api/health" >/dev/null 2>&1 || true
+
+          corps=$(cat <<EOF
+          **La sonde a échoué le $(date -u '+%Y-%m-%d à %H:%M UTC').**
+
+          | Champ | Valeur |
+          |---|---|
+          | Cible | \`$HEALTH_URL\` |
+          | HTTP | \`${{ steps.sonde.outputs.code }}\` |
+          | Statut renvoyé | \`${{ steps.sonde.outputs.statut }}\` |
+          | Base disponible | \`${{ steps.sonde.outputs.db_ok }}\` |
+          | Erreur base | \`${{ steps.sonde.outputs.detail }}\` |
+
+          @transportab123456-ops — dans cet ordre :
+          1. \`curl -i $HEALTH_URL\`
+          2. console Neon : base suspendue, quota, incident en cours
+          3. Vercel → Functions → logs de \`api/health\`
+
+          L'issue se ferme automatiquement au premier passage réussi de la sonde.
+          EOF
+          )
+
+          existante=$(gh issue list --repo "$REPO" --label incident --state open \
+            --limit 1 --json number --jq '.[0].number // empty')
+
+          if [ -n "$existante" ]; then
+            gh issue comment "$existante" --repo "$REPO" --body "$corps"
+            echo "::error title=Base toujours injoignable::Incident #$existante complété."
+          else
+            gh issue create --repo "$REPO" \
+              --title "[incident] API Transia — base injoignable" \
+              --label incident --body "$corps"
+            echo "::error title=Base injoignable::Issue d'incident créée."
+          fi
+
+          exit 1
+
+      - name: Clore l'incident si la base répond
+        if: steps.sonde.outputs.ok == '1'
+        run: |
+          set -uo pipefail
+
+          existante=$(gh issue list --repo "$REPO" --label incident --state open \
+            --limit 1 --json number --jq '.[0].number // empty')
+
+          if [ -n "$existante" ]; then
+            gh issue comment "$existante" --repo "$REPO" \
+              --body "Retour à la normale constaté le $(date -u '+%Y-%m-%d à %H:%M UTC') : /api/health répond 200 avec db.ok=true."
+            gh issue close "$existante" --repo "$REPO" --reason completed
+            echo "Incident #$existante clos."
+          else
+            echo "Aucun incident ouvert."
+          fi
