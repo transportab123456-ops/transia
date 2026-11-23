@@ -528,6 +528,52 @@ const { hashPassword } = require("../api/_lib/auth");
   );
   check("4 offres en base", stored.rows[0].n === 4, stored.rows[0]);
 
+  /* ---------- Créations de RFQ et acceptations simultanées ---------- */
+  console.log("\n[11] Créations de RFQ et acceptations simultanées : aucune 500");
+
+  const rfqBodies = [1, 2, 3, 4].map((i) => ({
+    originCity: "Lille", originCountry: "FR", destinationCity: `Port ${i}`, destinationCountry: "MA",
+    mode: "ROAD", cargoDescription: `Charge RFQ ${i}`, palletCount: i
+  }));
+  const created = await Promise.all(rfqBodies.map((b) => call(rfqs, "POST", b, { cookie: cookieA })));
+  const createdStatuses = created.map((r) => r.status);
+  check("4 créations de RFQ simultanées : aucune 500", createdStatuses.every((s) => s !== 500), createdStatuses);
+  check("les 4 RFQ sont créées", createdStatuses.every((s) => s === 201), created.map((r) => r.body && r.body.code));
+  const nums = created.map((r) => r.body.rfq.rfq_number);
+
+  /* Une offre conforme par RFQ, puis acceptation des quatre en parallèle. */
+  for (let i = 0; i < nums.length; i++) {
+    const q = await call(quotes, "POST", {
+      rfqNumber: nums[i], currency: "EUR", baseTransportPrice: 1800 + i * 100, transitTimeValue: 5
+    }, { cookie: crew[i] });
+    check(`offre ${i + 1} déposée pour l'acceptation`, q.status === 201, q.body);
+  }
+  await query(
+    `UPDATE quotes SET compliance_status = 'CONFORME'
+      WHERE rfq_id IN (SELECT rfq_id FROM rfqs WHERE rfq_number = ANY($1))`,
+    [nums]
+  );
+  const qids = await query(
+    `SELECT r.rfq_number, q.quote_id FROM quotes q JOIN rfqs r ON r.rfq_id = q.rfq_id
+      WHERE r.rfq_number = ANY($1)`,
+    [nums]
+  );
+  const quoteIdByNum = new Map(qids.rows.map((r) => [r.rfq_number, r.quote_id]));
+
+  const accepts = await Promise.all(nums.map((rfqNumber) => call(deals, "POST", {
+    rfqNumber, action: "accept", quoteId: quoteIdByNum.get(rfqNumber)
+  }, { cookie: cookieA })));
+  const acceptStatuses = accepts.map((r) => r.status);
+  check("4 acceptations simultanées : aucune 500", acceptStatuses.every((s) => s !== 500), acceptStatuses);
+  check("les 4 acceptations aboutissent", acceptStatuses.every((s) => s === 201), accepts.map((r) => r.body && r.body.code));
+
+  const accCount = await query(
+    `SELECT count(*)::int AS n FROM quote_acceptances
+      WHERE rfq_id IN (SELECT rfq_id FROM rfqs WHERE rfq_number = ANY($1))`,
+    [nums]
+  );
+  check("4 acceptations en base", accCount.rows[0].n === 4, accCount.rows[0]);
+
   console.log("\n----------------------------------------");
   console.log(`Résultat : ${pass} succès, ${failCount} échec(s)`);
   process.exit(failCount === 0 ? 0 : 1);
