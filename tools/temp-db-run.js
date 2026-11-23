@@ -14,11 +14,19 @@
    --migrate et --seed sont des raccourcis pour db/migrate.js et
    db/seed.js, placés à leur position dans la séquence.
 
+   La ligne de commande et scripts.test sont analysées par le même
+   parseArgs : mêmes raccourcis, mêmes chemins normalisés, et une
+   option inconnue est une erreur des deux côtés.
+
    Sauf --partial, le run doit couvrir toutes les suites listées dans
    scripts.test de package.json : la liste attendue y est relue et
    toute suite absente fait échouer le lanceur avant Docker, en la
-   nommant. --partial autorise un run volontairement partiel (mise
-   au point d'une seule suite).
+   nommant. --partial autorise un run volontairement partiel (mise au
+   point d'une seule suite), mais ce n'est pas un interrupteur muet :
+   il est refusé en CI (process.env.CI) et refusé dans scripts.test,
+   les deux chemins par lesquels un run incomplet se ferait passer
+   pour complet. Il ne dispense que de la couverture complète, jamais
+   du marqueur de fin.
 
    La liste seule ne prouve rien : un script peut sortir en 0 sans
    avoir rien exécuté. Le lanceur capture donc la sortie de chaque
@@ -28,8 +36,8 @@
 
    Code de sortie : celui du premier script en échec (2 si Docker,
    la base ou un script ne peuvent pas démarrer, si une suite listée
-   dans package.json manque au run, ou si une suite s'arrête sans
-   son marqueur de fin).
+   dans package.json manque au run, si une suite s'arrête sans son
+   marqueur de fin, ou si les arguments sont invalides).
    ============================================================ */
 "use strict";
 
@@ -46,28 +54,44 @@ const LABEL = "transia.tempdb=1";
 const RUNNER = "tools/temp-db-run.js";
 const USAGE = "Usage : node " + RUNNER + " [--partial] [--migrate] [--seed] <script.js…>";
 const MARKER = "[fin de suite] ";
+const SHORTCUTS = { "--migrate": "db/migrate.js", "--seed": "db/seed.js" };
 
-/* ---------- Arguments : la séquence à exécuter ---------- */
-let partial = false;
-const steps = [];
-for (let i = 2; i < process.argv.length; i++) {
-  const arg = process.argv[i];
-  if (arg === "--partial") partial = true;
-  else if (arg === "--migrate") steps.push("db/migrate.js");
-  else if (arg === "--seed") steps.push("db/seed.js");
-  else if (arg.startsWith("--")) {
-    console.error("Option inconnue : " + arg + "\n" + USAGE);
-    process.exit(2);
-  } else steps.push(arg);
+/* ---------- Arguments : une seule analyse, deux appelants ---------- */
+/* Un script est ramené à son chemin relatif à la racine, en slashes,
+   pour que `./db/verify.js`, `db\verify.js` et `db/verify.js` soient
+   la même suite — celle que scripts.test liste et que le marqueur
+   nomme. */
+function parseArgs(tokens) {
+  const list = [];
+  let partial = false;
+  for (const token of tokens) {
+    if (token === "--partial") partial = true;
+    else if (SHORTCUTS[token]) list.push(SHORTCUTS[token]);
+    else if (token.startsWith("--")) return { error: "Option inconnue : " + token };
+    else list.push(path.relative(ROOT, path.resolve(ROOT, token)).split(path.sep).join("/"));
+  }
+  return { list, partial };
 }
+
+const argv = parseArgs(process.argv.slice(2));
+if (argv.error) {
+  console.error(argv.error + "\n" + USAGE);
+  process.exit(2);
+}
+const steps = argv.list;
+const partial = argv.partial;
+
 if (!steps.length) {
   console.error(USAGE);
   process.exit(2);
 }
+const duplicate = steps.find((script, i) => steps.indexOf(script) !== i);
+if (duplicate) {
+  console.error("Suite listée deux fois : " + duplicate + "\n" + USAGE);
+  process.exit(2);
+}
 
 /* ---------- La liste attendue : scripts.test de package.json ---------- */
-/* Les raccourcis y sont écrits comme ici, donc la même expansion donne
-   la séquence exacte que npm test demande au lanceur. */
 function expectedSteps() {
   let pkg;
   try {
@@ -77,44 +101,48 @@ function expectedSteps() {
   }
   const test = pkg && pkg.scripts && pkg.scripts.test;
   if (typeof test !== "string") return { error: "scripts.test absent de package.json." };
-  const tokens = test.trim().split(/\s+/).map((t) => t.replace(/\\/g, "/"));
+  const tokens = test.trim().split(/\s+/);
   const at = tokens.indexOf(RUNNER);
   if (at < 0) return { error: "scripts.test ne passe pas par " + RUNNER + "." };
-  const list = [];
-  for (const token of tokens.slice(at + 1)) {
-    if (token === "--partial") continue;
-    else if (token === "--migrate") list.push("db/migrate.js");
-    else if (token === "--seed") list.push("db/seed.js");
-    else if (token.startsWith("--")) continue;
-    else list.push(token);
-  }
-  if (!list.length) return { error: "scripts.test ne liste aucune suite." };
-  return { list };
+  const parsed = parseArgs(tokens.slice(at + 1));
+  if (parsed.error) return { error: "scripts.test : " + parsed.error };
+  /* Un --partial dans package.json désarmerait la garde pour npm test. */
+  if (parsed.partial) return { error: "scripts.test passe --partial : la liste attendue doit rester complète." };
+  if (!parsed.list.length) return { error: "scripts.test ne liste aucune suite." };
+  return { list: parsed.list };
+}
+
+/* ---------- --partial : refusé là où un run incomplet se cacherait ---------- */
+if (partial && process.env.CI) {
+  console.error(
+    "--partial refusé en CI : un run d'intégration doit couvrir toutes les suites de package.json."
+  );
+  process.exit(2);
 }
 
 const expected = expectedSteps();
+const expectedList = expected.list || null;
 
-if (!partial) {
-  if (expected.error) {
-    console.error("Garde des suites impossible : " + expected.error);
-    process.exit(2);
-  }
-  const rest = new Map();
-  for (const script of steps) rest.set(script, (rest.get(script) || 0) + 1);
-  const missing = [];
-  for (const script of expected.list) {
-    const n = rest.get(script) || 0;
-    if (!n) missing.push(script);
-    else rest.set(script, n - 1);
-  }
-  if (missing.length) {
-    console.error(
-      "Garde des suites : " + missing.length + " suite(s) listée(s) dans package.json manque(nt) à ce run :\n  " +
-        missing.join("\n  ") +
-        "\nUtilisez --partial pour un run volontairement partiel.\n" + USAGE
-    );
-    process.exit(2);
-  }
+if (!partial && expected.error) {
+  console.error("Garde des suites impossible : " + expected.error);
+  process.exit(2);
+}
+
+/* Sous --partial, la liste peut rester illisible : le run est alors
+   annoncé partiel, sans prétendre couvrir package.json. */
+const missing = expectedList ? expectedList.filter((script) => !steps.includes(script)) : [];
+
+if (!partial && missing.length) {
+  console.error(
+    "Garde des suites : " + missing.length + " suite(s) listée(s) dans package.json manque(nt) à ce run :\n  " +
+      missing.join("\n  ") +
+      "\nUtilisez --partial pour un run volontairement partiel.\n" + USAGE
+  );
+  process.exit(2);
+}
+
+if (partial) {
+  console.log("Run partiel demandé : couverture complète non exigée, marqueur de fin toujours exigé.\n");
 }
 
 const name = "transia-tempdb-" + crypto.randomBytes(4).toString("hex");
@@ -179,7 +207,6 @@ function runNode(script) {
   ]);
   if (started.status !== 0) {
     console.error("Démarrage du conteneur impossible : " + (started.stderr || "").trim().slice(0, 300));
-    stop();
     return 2;
   }
 
@@ -228,19 +255,13 @@ function runNode(script) {
 
     /* Confirmation finale : ce qui a réellement tourné, face à la liste
        attendue, pour que le log porte la preuve sans relecture. */
-    if (partial) {
+    if (expectedList && !missing.length) {
+      console.log("\n" + done + " suite(s) exécutée(s) : toutes celles listées dans package.json.");
+    } else {
       console.log(
         "\nRun partiel : " + done + " suite(s) exécutée(s)" +
-          (expected.list ? " sur " + expected.list.length + " listée(s) dans package.json" : "") + "."
+          (expectedList ? " sur " + expectedList.length + " listée(s) dans package.json" : "") + "."
       );
-    } else if (!expected.list || done !== expected.list.length) {
-      console.error(
-        "\nGarde des suites : " + done + " suite(s) exécutée(s) pour " +
-          (expected.list ? expected.list.length : "?") + " listée(s) dans package.json."
-      );
-      return 2;
-    } else {
-      console.log("\n" + done + " suite(s) exécutée(s) : toutes celles listées dans package.json.");
     }
     return 0;
   } finally {
@@ -250,6 +271,5 @@ function runNode(script) {
   process.exitCode = code;
 }).catch((err) => {
   console.error("ERREUR : " + err.message);
-  stop();
   process.exitCode = 2;
 });
