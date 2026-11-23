@@ -194,7 +194,7 @@ module.exports = handler(async (req, res) => {
       }
 
       await client.query("COMMIT");
-      await flushOutbox();
+      await flushOutbox(client);
       return json(res, 201, {
         status: "AWAITING_CARRIER",
         acceptance_id: acc.rows[0].acceptance_id,
@@ -303,7 +303,7 @@ module.exports = handler(async (req, res) => {
       }
 
       await client.query("COMMIT");
-      await flushOutbox();
+      await flushOutbox(client);
       return json(res, 201, {
         status: "CONFIRMED",
         deal: {

@@ -5,8 +5,8 @@
      TRANSACTION que l'événement métier (le client PostgreSQL est
      passé par l'appelant). Un commit réussi garantit que
      l'événement sera traité ; un rollback ne laisse aucun e-mail.
-   - flushOutbox() : meilleur-effort APRÈS le commit (appelé par le
-     cron /api/cron/flush-emails et en fin de requêtes clés).
+   - flushOutbox(client) : meilleur-effort APRÈS le commit (appelé par
+     le cron et en fin de requêtes clés), sur la connexion déjà tenue.
    - Gabarits : e-mails français, texte + HTML sobre.
    ============================================================ */
 "use strict";
@@ -232,10 +232,12 @@ async function adminEmails(client) {
   return r.rows;
 }
 
-/* Flush best-effort après commit. N'échoue jamais la requête. */
-async function flushOutbox() {
+/* Flush best-effort après commit. N'échoue jamais la requête.
+   `client` : connexion encore tenue par l'appelant, réutilisée pour
+   ne pas demander une seconde connexion au pool. */
+async function flushOutbox(client) {
   try {
-    await drainOutbox(5);
+    await drainOutbox(5, client);
   } catch (err) {
     console.error("[notify] flush:", err.message);
   }

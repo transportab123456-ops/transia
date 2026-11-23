@@ -47,9 +47,12 @@ async function sendViaResend({ to, subject, html, text, dedupeKey }) {
    écrit dans l'outbox, et par le cron. Ne doit JAMAIS faire échouer
    la requête métier : les erreurs sont absorbées ici (l'événement
    reste PENDING et sera repris). */
-async function drainOutbox(limit) {
-  const pool = getPool();
-  const client = await pool.connect();
+async function drainOutbox(limit, existing) {
+  /* `existing` : connexion déjà tenue par l'appelant (juste après un
+     COMMIT). Sans elle, le drain en ouvre une seconde, ce qui affame
+     le pool quand plusieurs requêtes se terminent ensemble. */
+  const owns = !existing;
+  const client = existing || await getPool().connect();
   try {
     /* Verrouillage optimiste : une seule instance draine à la fois.
        (FOR UPDATE SKIP LOCKED protège aussi si le verrou expire.) */
@@ -118,7 +121,7 @@ async function drainOutbox(limit) {
     }
     return picked.rows.length;
   } finally {
-    client.release();
+    if (owns) client.release();
   }
 }
 

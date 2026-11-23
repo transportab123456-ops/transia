@@ -190,7 +190,7 @@ module.exports = handler(async (req, res) => {
       });
 
       await client.query("COMMIT");
-      await flushOutbox();
+      await flushOutbox(client);
       return json(res, 201, { rfq: rfq.rows[0] });
     } catch (err) {
       await client.query("ROLLBACK").catch(() => {});

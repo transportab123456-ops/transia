@@ -465,6 +465,68 @@ const { hashPassword } = require("../api/_lib/auth");
     await quoteHolder.end().catch(() => {});
   }
 
+  /* ---------- Cotations simultanées ---------- */
+  console.log("\n[10] Cotations simultanées : aucune 500");
+
+  /* Le plafond du pool est lu à la création, donc vérifié dans un
+     processus neuf pour chaque valeur. */
+  const { spawnSync } = require("child_process");
+  const dbPath = require.resolve("../api/_lib/db");
+  const probeMax = (value) => {
+    const code =
+      `delete process.env.PG_POOL_MAX;` +
+      (value === undefined ? "" : `process.env.PG_POOL_MAX=${JSON.stringify(value)};`) +
+      `const { getPool } = require(${JSON.stringify(dbPath)});` +
+      `process.stdout.write(String(getPool().options.max));`;
+    return (spawnSync(process.execPath, ["-e", code], { encoding: "utf8" }).stdout || "").trim();
+  };
+  const byDefault = probeMax();
+  check("plafond par défaut = 3", byDefault === "3", byDefault);
+  const six = probeMax("6");
+  check("PG_POOL_MAX=6 → plafond 6", six === "6", six);
+  const invalid = probeMax("abc");
+  check("PG_POOL_MAX invalide → 3", invalid === "3", invalid);
+  const capped = probeMax("999");
+  check("PG_POOL_MAX=999 → plafonné à 20", capped === "20", capped);
+
+  /* Quatre transporteurs déposent en même temps sur la même RFQ :
+     le pool en sert trois, le quatrième attend une connexion. Aucune
+     requête ne doit finir en 500. */
+  const extraCookies = [];
+  for (const i of [3, 4]) {
+    const c = await call(carriers, "POST", {
+      companyName: `Iso Transporteur ${i} ${stamp}`, countryCode: "FR",
+      email: `iso-carrier${i}-${stamp}@example.fr`, password: pw,
+      firstName: "Carl", lastName: `C${i}`, modes: ["ROAD"], ...terms
+    });
+    const v = await call(admin, "POST", {
+      action: "verify", companyId: c.body.company.company_id, decision: "VERIFIED"
+    }, { cookie: adminCookie });
+    check(`transporteur ${i} prêt pour la charge`, c.status === 201 && v.status === 200, v.body);
+    extraCookies.push(extractCookie(c.headers));
+  }
+
+  const rfqC = await call(rfqs, "POST", {
+    originCity: "Nantes", originCountry: "FR", destinationCity: "Agadir", destinationCountry: "MA",
+    mode: "ROAD", cargoDescription: "Charge simultanée", palletCount: 2
+  }, { cookie: cookieA });
+  check("RFQ de charge créée", rfqC.status === 201, rfqC.body);
+  const numC = rfqC.body.rfq.rfq_number;
+
+  const crew = [carrierCookies[0], carrierCookies[1], ...extraCookies];
+  const deposits = await Promise.all(crew.map((cookie, i) => call(quotes, "POST", {
+    rfqNumber: numC, currency: "EUR", baseTransportPrice: 2400 + i * 100, transitTimeValue: 4 + i
+  }, { cookie })));
+  const statuses = deposits.map((d) => d.status);
+  check("4 cotations simultanées : aucune 500", statuses.every((s) => s !== 500), statuses);
+  check("les 4 cotations sont acceptées", statuses.every((s) => s === 201), deposits.map((d) => d.body && d.body.code));
+
+  const stored = await query(
+    `SELECT count(*)::int AS n FROM quotes WHERE rfq_id = (SELECT rfq_id FROM rfqs WHERE rfq_number = $1)`,
+    [numC]
+  );
+  check("4 offres en base", stored.rows[0].n === 4, stored.rows[0]);
+
   console.log("\n----------------------------------------");
   console.log(`Résultat : ${pass} succès, ${failCount} échec(s)`);
   process.exit(failCount === 0 ? 0 : 1);

@@ -9,6 +9,20 @@ const { Pool } = require("pg");
 
 let pool = null;
 
+const DEFAULT_POOL_MAX = 3;
+const MAX_POOL_MAX = 20;
+
+/* Plafond du pool : 3 par défaut (budget serverless), surchargeable
+   par PG_POOL_MAX et borné à 20 pour qu'une valeur fautive n'épuise
+   pas le quota de la base (Neon : 105 connexions directes utilisables
+   sur un calcul 0,25 CU). Lu à la création du pool, une seule fois
+   par processus. */
+function poolMax() {
+  const raw = Number.parseInt(process.env.PG_POOL_MAX, 10);
+  if (!Number.isInteger(raw) || raw < 1) return DEFAULT_POOL_MAX;
+  return Math.min(raw, MAX_POOL_MAX);
+}
+
 function getPool() {
   const url = process.env.DATABASE_URL;
   if (!url) {
@@ -19,7 +33,7 @@ function getPool() {
   if (!pool) {
     pool = new Pool({
       connectionString: url,
-      max: 3,                 // budget serverless
+      max: poolMax(),
       idleTimeoutMillis: 20000,
       connectionTimeoutMillis: 8000,
       // Neon (et Supabase) exigent SSL en production

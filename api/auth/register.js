@@ -158,7 +158,7 @@ module.exports = handler(async (req, res) => {
 
     await client.query("COMMIT");
     await recordAttempt("register", clientIp(req), true);
-    await flushOutbox();
+    await flushOutbox(client);
 
     /* Session : ouverte seulement si la vérification n'est pas exigée */
     if (needVerify) {

@@ -188,7 +188,7 @@ module.exports = handler(async (req, res) => {
 
       await client.query("COMMIT");
       await recordAttempt("carrier-register", clientIp(req), true);
-      await flushOutbox();
+      await flushOutbox(client);
 
       if (needVerify) {
         return json(res, 201, {

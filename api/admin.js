@@ -335,7 +335,7 @@ module.exports = handler(async (req, res) => {
       }
 
       await client.query("COMMIT");
-      await flushOutbox();
+      await flushOutbox(client);
       return json(res, 200, {
         company_id: companyId,
         validation_status: decision,

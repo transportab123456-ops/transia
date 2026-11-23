@@ -207,7 +207,7 @@ module.exports = handler(async (req, res) => {
       }
 
       await client.query("COMMIT");
-      await flushOutbox();
+      await flushOutbox(client);
       return json(res, 201, {
         quote: {
           quote_id: q.rows[0].quote_id,
