@@ -84,8 +84,8 @@ que ce check bloque réellement `main`.
 - succès : `N commit(s) vérifié(s), 0 non conforme(s).`
 
 Le ruleset **main - PR obligatoire et checks auteur/test** (actif, sur
-`refs/heads/main`) exige une pull request et les checks `auteur` et `test`, sans
-acteur de contournement ; force-push et suppression de `main` sont bloqués. Un
+`refs/heads/main`) exige une pull request et les checks `auteur`, `test` et `Vercel`, sans
+acteur de contournement ; force-push et suppression de `main` sont bloqués. Le check `Vercel` n'est pas un job de ce dépôt : c'est le statut de déploiement publié par Vercel sur la tête de la PR, et un build en échec rend donc la fusion impossible. Un
 push direct est refusé par le serveur (`GH013`), et une PR dont le check
 `auteur` échoue reste `BLOCKED` : la fusion est refusée même pour le
 propriétaire, sauf `--admin` (à éviter).
@@ -100,10 +100,10 @@ contrôle échoue — et Vercel aurait bloqué le déploiement de la même faço
 
 ## Ce que fait une fusion sur `main`
 
-1. la PR ne peut être fusionnée que si les checks `auteur` et `test` sont verts ;
+1. la PR ne peut être fusionnée que si les checks `auteur`, `test` et `Vercel` sont verts ;
 2. le workflow **Auteur des commits** rejoue le contrôle sur le commit de fusion
    poussé sur `main` ;
-3. le workflow **Tests** exécute `npm test` (14 suites, base PostgreSQL jetable) ;
+3. le workflow **Tests** exécute `npm test` (15 suites, base PostgreSQL jetable) ;
 4. Vercel déploie la production et réattribue `https://transia-sooty.vercel.app`.
 
 Un déploiement bloqué ne peut pas être relancé : il faut corriger l'identité
