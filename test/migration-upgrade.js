@@ -15,7 +15,9 @@
         ramenés à la plus ancienne preuve, que l'index unique est
         créé, que idx_terms_lookup disparaît, qu'aucune autre table
         ne bouge ;
-     5. rejoue la migration : même résultat, aucune écriture ;
+     5. rejoue db/schema.sql tel quel : sortie (stdout et stderr)
+        IDENTIQUE au premier passage, code 0, aucune écriture —
+        toute migration future non idempotente casse ici ;
      6. supprime ses comptes et preuves de test (schéma migré
         conservé), y compris si un contrôle échoue.
 
@@ -257,11 +259,24 @@ function migrate() {
     const changed = diff(snapshotBefore, snapshotAfter);
     check("aucune autre table n'a bougé", changed.length === 0, changed);
 
-    /* ---------- 8. Rejouabilité ---------- */
+    /* ---------- 8. Rejouabilité ----------
+       db/schema.sql est rejoué tel quel sur la base déjà migrée : même
+       code de sortie, même stdout, même stderr, aucune écriture. Une
+       migration future non idempotente (CREATE sans IF NOT EXISTS,
+       trigger recréé sans DROP, index en double…) fait échouer
+       `npm run migrate` ici, donc `npm test` aussi. */
     console.log("\n[8] Second passage");
     const termsBefore = await termsHash();
     const run2 = migrate();
     check("second passage : code 0", run2.status === 0, (run2.stderr || "").slice(0, 300));
+    check("second passage : db/schema.sql bien rejoué",
+      /Application de db\/schema\.sql/.test(run2.stdout || ""), (run2.stdout || "").slice(-200));
+    check("second passage : sortie identique au premier",
+      run2.stdout === run1.stdout,
+      { premier: (run1.stdout || "").slice(-300), second: (run2.stdout || "").slice(-300) });
+    check("second passage : stderr identique au premier",
+      (run2.stderr || "") === (run1.stderr || ""),
+      { premier: (run1.stderr || "").slice(0, 300), second: (run2.stderr || "").slice(0, 300) });
     check("second passage : autres tables inchangées",
       diff(snapshotAfter, await snapshot(client, ["terms_acceptances"])).length === 0);
     const termsAfter = await termsHash();
