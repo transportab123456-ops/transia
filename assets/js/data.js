@@ -112,6 +112,39 @@ window.DB = {
       dangereuse: false,
       statut: "OUVERTE",
       reponses: 0
+    },
+    {
+      ref: "RFQ-00037",
+      origine: { pays: "Allemagne", ville: "Hambourg", cp: "20457", lieu: "Terminal Altenwerder, hall B", date: "15/09/2026" },
+      dest: { pays: "France", ville: "Lyon", cp: "69007", lieu: "Entrepôt Rhône-Alpes Logistique" },
+      mode: "Routier",
+      marchandise: { type: "Palettes", desc: "Machines-outils", colis: 8, palettes: 4, poids: "2 600 kg", volume: "12 m³", dims: "120x80x130 cm" },
+      incoterm: "DAP",
+      dangereuse: false,
+      statut: "OUVERTE",
+      reponses: 0
+    },
+    {
+      ref: "RFQ-00038",
+      origine: { pays: "Maroc", ville: "Casablanca", cp: "20000", lieu: "Zone franche, lot 12", date: "18/09/2026" },
+      dest: { pays: "France", ville: "Marseille", cp: "13002", lieu: "Terminal Port Sud, poste 4" },
+      mode: "Maritime",
+      marchandise: { type: "Conteneur", desc: "Textiles et cuir", colis: 180, palettes: 18, poids: "7 400 kg", volume: "48 m³", dims: "40' HC" },
+      incoterm: "FOB",
+      dangereuse: false,
+      statut: "OUVERTE",
+      reponses: 0
+    },
+    {
+      ref: "RFQ-00039",
+      origine: { pays: "Chine", ville: "Shanghai", cp: "200000", lieu: "Yangshan Deep-Water Port, quai 3", date: "22/09/2026" },
+      dest: { pays: "France", ville: "Le Havre", cp: "76600", lieu: "Port, terminal 20' quai Ouest" },
+      mode: "Maritime",
+      marchandise: { type: "Conteneur", desc: "Composants électroniques", colis: 320, palettes: 22, poids: "11 200 kg", volume: "56 m³", dims: "40' HC" },
+      incoterm: "CFR",
+      dangereuse: false,
+      statut: "OUVERTE",
+      reponses: 0
     }
   ],
 

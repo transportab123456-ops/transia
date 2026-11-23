@@ -109,6 +109,10 @@
       sel.appendChild(o);
     });
   }
+  /* Pays de départ et d'arrivée : seulement ceux qui portent une demande
+     de l'échantillon. Une liste des 196 pays dont 192 sans offre
+     promettrait un marché qui n'existe pas ; l'échantillon couvre les
+     deux sens (France ↔ Allemagne, Maroc, Chine…). */
   var rfqs = getAllRfqs();
   fillSelect(fDepart, rfqs.map(function (r) { return r.origine.pays; }).filter(function (v, i, a) { return a.indexOf(v) === i; }));
   fillSelect(fArrivee, rfqs.map(function (r) { return r.dest.pays; }).filter(function (v, i, a) { return a.indexOf(v) === i; }));

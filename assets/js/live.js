@@ -185,20 +185,28 @@
       });
     }
 
-    /* Remplir les filtres avec les pays réels du marché */
+    /* Remplir les filtres avec les pays réellement présents dans le
+       marché chargé : proposer 196 pays dont la plupart n'ont aucune
+       demande promettrait un marché qui n'existe pas. */
     function fillFilters() {
       var seen = {};
       rfqsCache.forEach(function (x) { seen[x.origin_country] = 1; seen[x.destination_country] = 1; });
       [["fDepart", "origin_country"], ["fArrivee", "destination_country"]].forEach(function (pair) {
         var sel = get(pair[0]);
+        /* La démo a rempli la liste avec des noms de pays : on retrouve le
+           code ISO de la sélection avant de reconstruire les options. */
         var current = sel.value;
+        var keep = seen[current] ? current
+          : ((window.REF && window.REF.pays) || []).filter(function (p) { return p.n === current; }).map(function (p) { return p.c; })[0];
         sel.innerHTML = "<option value=''>Tous</option>";
-        Object.keys(seen).forEach(function (iso) {
+        Object.keys(seen).filter(Boolean).sort(function (a, b) {
+          return API.countryName(a).localeCompare(API.countryName(b), "fr");
+        }).forEach(function (iso) {
           var o = document.createElement("option");
           o.value = iso; o.textContent = API.countryName(iso);
           sel.appendChild(o);
         });
-        sel.value = current;
+        sel.value = keep && seen[keep] ? keep : "";
       });
     }
 
