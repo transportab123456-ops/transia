@@ -79,6 +79,21 @@ function handler(fn) {
       if (err.code === "22P02") {
         return fail(res, 400, "Identifiant invalide.", "INVALID_IDENTIFIER");
       }
+      /* Toute la classe 22 (data exception) vient d'une valeur fournie
+         par le client : dépassement de capacité (22003), date
+         inexistante (22007/22008), chaîne trop longue (22001)… Seul
+         le code est journalisé, jamais la requête ni la valeur. */
+      if (typeof err.code === "string" && err.code.startsWith("22")) {
+        console.warn("[api] valeur client rejetée par PostgreSQL :", err.code);
+        return fail(res, 400, "Donnée invalide.", "INVALID_DATA");
+      }
+      /* Violation d'unicité : atteignable quand deux requêtes du même
+         client passent le contrôle préalable en même temps (e-mail
+         d'inscription, version d'offre). Conflit, pas incident. */
+      if (err.code === "23505") {
+        console.warn("[api] conflit d'unicité :", err.constraint || "contrainte inconnue");
+        return fail(res, 409, "Cette valeur existe déjà.", "CONFLICT");
+      }
       console.error("[api]", err);
       return fail(res, 500, "Erreur interne du serveur.", "INTERNAL");
     }

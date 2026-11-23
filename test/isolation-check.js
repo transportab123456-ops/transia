@@ -256,6 +256,37 @@ const { hashPassword } = require("../api/_lib/auth");
   }, { cookie: adminCookie });
   check("overrideQuoteId malformé → 400, jamais 500", badOverride.status === 400 && badOverride.body.code === "INVALID_OVERRIDE", badOverride.body);
 
+  /* ---------- Valeurs hors limites PostgreSQL ---------- */
+  console.log("\n[4ter] Valeurs hors limites : 400, jamais 500");
+
+  const hugePackage = await call(rfqs, "POST", {
+    originCity: "Lyon", originCountry: "FR", destinationCity: "Tanger", destinationCountry: "MA",
+    mode: "ROAD", packageCount: 1e15
+  }, { cookie: cookieB });
+  check("packageCount hors capacité int → 400", hugePackage.status === 400 && hugePackage.body.code === "INVALID_DATA", hugePackage.body);
+
+  const impossibleDate = await call(rfqs, "POST", {
+    originCity: "Lyon", originCountry: "FR", destinationCity: "Tanger", destinationCountry: "MA",
+    mode: "ROAD", pickupDate: "2026-02-31"
+  }, { cookie: cookieB });
+  check("date de chargement inexistante → 400", impossibleDate.status === 400 && impossibleDate.body.code === "INVALID_DATA", impossibleDate.body);
+
+  const hugePrice = await call(quotes, "POST", {
+    rfqNumber: numB, currency: "EUR", baseTransportPrice: 1e15
+  }, { cookie: carrierCookies[1] });
+  check("prix hors capacité numeric(14,2) → 400", hugePrice.status === 400 && hugePrice.body.code === "INVALID_DATA", hugePrice.body);
+
+  const badValidity = await call(quotes, "POST", {
+    rfqNumber: numB, currency: "EUR", baseTransportPrice: 2000, validUntil: "2026-02-31"
+  }, { cookie: carrierCookies[1] });
+  check("validité inexistante → 400", badValidity.status === 400 && badValidity.body.code === "INVALID_DATA", badValidity.body);
+
+  /* Aucune de ces requêtes n'a laissé de trace. */
+  const leftover = await query(
+    `SELECT count(*)::int AS n FROM quotes WHERE rfq_id = (SELECT rfq_id FROM rfqs WHERE rfq_number = $1)`, [numB]
+  );
+  check("aucune offre partielle écrite", leftover.rows[0].n === 1, leftover.rows[0]);
+
   /* ---------- Affaire : confidentialité financière ---------- */
   console.log("\n[5] Après confirmation : commission invisible aux tiers");
 
@@ -308,13 +339,30 @@ const { hashPassword } = require("../api/_lib/auth");
   const net = await call(uuidCrash, "POST", {});
   check("22P02 → 400 INVALID_IDENTIFIER", net.status === 400 && net.body.code === "INVALID_IDENTIFIER", net.body);
 
-  const otherCrash = handler(async () => {
+  const overflowCrash = handler(async () => {
+    const err = new Error("numeric field overflow");
+    err.code = "22003";
+    throw err;
+  });
+  const overflow = await call(overflowCrash, "POST", {});
+  check("22003 (capacité) → 400 INVALID_DATA", overflow.status === 400 && overflow.body.code === "INVALID_DATA", overflow.body);
+
+  const conflictCrash = handler(async () => {
     const err = new Error("duplicate key value violates unique constraint");
     err.code = "23505";
+    err.constraint = "users_email_key";
+    throw err;
+  });
+  const conflict = await call(conflictCrash, "POST", {});
+  check("23505 (unicité) → 409 CONFLICT", conflict.status === 409 && conflict.body.code === "CONFLICT", conflict.body);
+
+  const otherCrash = handler(async () => {
+    const err = new Error('relation "rfqs" does not exist');
+    err.code = "42P01";
     throw err;
   });
   const stillFiveHundred = await call(otherCrash, "POST", {});
-  check("autre erreur SQL → toujours 500", stillFiveHundred.status === 500 && stillFiveHundred.body.code === "INTERNAL", stillFiveHundred.body);
+  check("erreur serveur (42P01) → toujours 500", stillFiveHundred.status === 500 && stillFiveHundred.body.code === "INTERNAL", stillFiveHundred.body);
 
   console.log("\n----------------------------------------");
   console.log(`Résultat : ${pass} succès, ${failCount} échec(s)`);
