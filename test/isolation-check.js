@@ -63,6 +63,23 @@ function check(label, cond, extra) {
   else { failCount++; console.log("  ✗ " + label + (extra !== undefined ? " → " + JSON.stringify(extra) : "")); }
 }
 
+/* Attend que `expected` sessions soient bloquées sur une requête dont
+   le texte contient `pattern` ; renvoie le nombre observé (0 si rien
+   ne s'est bloqué dans le délai). */
+async function waitForBlocked(pattern, expected) {
+  let waiting = 0;
+  for (let i = 0; i < 250 && waiting < expected; i++) {
+    const w = await query(
+      `SELECT count(*)::int AS n FROM pg_stat_activity
+        WHERE wait_event_type = 'Lock' AND query ILIKE $1`,
+      ["%" + pattern + "%"]
+    );
+    waiting = w.rows[0].n;
+    if (waiting < expected) await new Promise((r) => setTimeout(r, 20));
+  }
+  return waiting;
+}
+
 function extractCookie(resHeaders) {
   const set = resHeaders["set-cookie"];
   if (!set) return null;
@@ -390,16 +407,8 @@ const { hashPassword } = require("../api/_lib/auth");
       companyName: `Iso Race Client ${stamp}`, countryCode: "FR", ...terms
     });
 
-    let blocked = false;
-    for (let i = 0; i < 250 && !blocked; i++) {
-      const w = await query(
-        `SELECT count(*)::int AS n FROM pg_stat_activity
-          WHERE wait_event_type = 'Lock' AND query ILIKE '%INSERT INTO users%'`
-      );
-      blocked = w.rows[0].n > 0;
-      if (!blocked) await new Promise((r) => setTimeout(r, 20));
-    }
-    check("l'INSERT concurrent attend l'index unique", blocked, blocked);
+    const blocked = await waitForBlocked("INSERT INTO users", 1);
+    check("l'INSERT concurrent attend l'index unique", blocked >= 1, blocked);
 
     await holder.query("COMMIT");
     const raced = await pending;
@@ -444,15 +453,7 @@ const { hashPassword } = require("../api/_lib/auth");
     const first = deposit();
     const second = deposit();
 
-    let waiting = 0;
-    for (let i = 0; i < 250 && waiting < 2; i++) {
-      const w = await query(
-        `SELECT count(*)::int AS n FROM pg_stat_activity
-          WHERE wait_event_type = 'Lock' AND query ILIKE '%INSERT INTO quotes%'`
-      );
-      waiting = w.rows[0].n;
-      if (waiting < 2) await new Promise((r) => setTimeout(r, 20));
-    }
+    const waiting = await waitForBlocked("INSERT INTO quotes", 2);
     check("les deux dépôts attendent l'index unique", waiting >= 2, waiting);
 
     await quoteHolder.query("COMMIT");

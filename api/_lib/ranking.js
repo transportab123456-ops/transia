@@ -17,16 +17,14 @@ const { query } = require("./db");
 
 /* Taux : table fx_rates, dernier snapshot (1 unité de la devise
    cotée = rate unités de la base EUR — cf. db/seed.js). */
-/* `runner` permet de lire les taux sur la transaction en cours :
+/* `client` permet de lire les taux sur la transaction en cours :
    sans cela, un appelant qui tient déjà une connexion du pool en
    demande une seconde et peut l'épuiser (pool plafonné à 3). */
-async function loadFx(runner) {
+async function loadFx(client) {
   const sql = `SELECT base_currency, quote_currency, rate
                  FROM fx_rates
                 WHERE rate_date = (SELECT max(rate_date) FROM fx_rates)`;
-  /* `runner.query` doit garder son contexte : on ne détache pas la
-     méthode de l'objet. */
-  const r = runner ? await runner.query(sql) : await query(sql);
+  const r = client ? await client.query(sql) : await query(sql);
   const map = { EUR: 1 };
   r.rows.forEach((row) => {
     /* on stocke « vaut combien en base EUR » : inverse si besoin */
