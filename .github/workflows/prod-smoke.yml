@@ -1,0 +1,74 @@
+name: Smoke production (manuel)
+
+# Volontairement hors de `npm test` : ce test écrit dans la vraie base
+# (comptes, RFQ, offres, affaire) puis les purge, et dépend du déploiement
+# en cours. Il ne tourne donc jamais sur push ni sur pull request : seul un
+# lancement manuel depuis l'onglet Actions le déclenche.
+on:
+  workflow_dispatch:
+    inputs:
+      base_url:
+        description: "Origine ciblée (sans slash final)"
+        required: true
+        default: "https://transia-sooty.vercel.app"
+      confirmation:
+        description: 'Tapez PURGE-SMOKE pour confirmer que ce run crée puis supprime des données réelles'
+        required: true
+        default: ""
+
+permissions:
+  contents: read
+
+# Un seul smoke à la fois : deux runs simultanés se disputeraient la purge
+# des comptes « Smoke … » et fausseraient les contrôles.
+concurrency:
+  group: prod-smoke
+  cancel-in-progress: false
+
+jobs:
+  smoke:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Vérifier la confirmation
+        env:
+          CONFIRMATION: ${{ inputs.confirmation }}
+        run: |
+          if [ "$CONFIRMATION" != "PURGE-SMOKE" ]; then
+            echo "::error::Confirmation absente : relancez le workflow avec PURGE-SMOKE."
+            exit 1
+          fi
+
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Vérifier les secrets requis
+        env:
+          ADMIN_EMAIL: ${{ secrets.PROD_SMOKE_ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.PROD_SMOKE_ADMIN_PASSWORD }}
+        run: |
+          missing=""
+          [ -n "$ADMIN_EMAIL" ] || missing="$missing PROD_SMOKE_ADMIN_EMAIL"
+          [ -n "$ADMIN_PASSWORD" ] || missing="$missing PROD_SMOKE_ADMIN_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "::error::Secrets manquants (Settings → Secrets and variables → Actions) :$missing"
+            exit 1
+          fi
+
+      - run: npm ci
+
+      # Ni base jetable ni Docker ici : le test parle uniquement à l'API
+      # publique. DATABASE_URL reste facultatif et ne sert qu'à lire le
+      # jeton de vérification d'e-mail quand REQUIRE_EMAIL_VERIFY est actif ;
+      # sans lui, le test s'arrête avec le code 2 et le message explicite.
+      - name: Cycle complet contre la production
+        env:
+          BASE_URL: ${{ inputs.base_url }}
+          ADMIN_EMAIL: ${{ secrets.PROD_SMOKE_ADMIN_EMAIL }}
+          ADMIN_PASSWORD: ${{ secrets.PROD_SMOKE_ADMIN_PASSWORD }}
+          DATABASE_URL: ${{ secrets.PROD_DATABASE_URL }}
+        run: node test/prod-smoke.js
