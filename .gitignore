@@ -7,3 +7,6 @@ node_modules/
 .env*
 !.env.example
 !.env.admin.example
+
+# Captures d'écran locales (~10 Mo de PNG), non versionnées
+screenshots/

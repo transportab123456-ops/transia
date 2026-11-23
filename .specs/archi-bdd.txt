@@ -1,0 +1,2458 @@
+
+
+
+    
+    ARCHITECTURE DE LA BASE DE DONNÉES
+
+    
+    1. OBJECTIF
+
+    LA BASE DE DONNÉES DOIT ÊTRE CONÇUE DÈS LE DÉPART POUR SUPPORTER :
+
+    PLUSIEURS PAYS ;
+
+    PLUSIEURS LANGUES ;
+
+    PLUSIEURS DEVISES ;
+
+    PLUSIEURS TYPES D’ENTREPRISES ;
+
+    PLUSIEURS UTILISATEURS PAR ENTREPRISE ;
+
+    PLUSIEURS CONTACTS PAR ENTREPRISE ;
+
+    PLUSIEURS MODES DE TRANSPORT ;
+
+    DES MILLIERS PUIS DES MILLIONS DE RFQ ;
+
+    UN HISTORIQUE COMPLET DES COTATIONS ;
+
+    LE CALCUL DES COMMISSIONS ;
+
+    LA TRAÇABILITÉ ;
+
+    L’EXPANSION INTERNATIONALE.
+
+    LE PRINCIPE TECHNIQUE EST SIMPLE :
+
+    
+    UNE INFORMATION IMPORTANTE NE DOIT PAS ÊTRE DUPLIQUÉE PARTOUT.
+
+    ELLE DOIT ÊTRE STOCKÉE UNE SEULE FOIS, PUIS RELIÉE AUX AUTRES ÉLÉMENTS.
+
+    
+
+    
+    
+    
+    
+    2. TABLE PRINCIPALE : ENTREPRISES
+
+    TABLE :
+
+    
+    COMPANIES
+
+    ELLE CONTIENT TOUTES LES PERSONNES MORALES INSCRITES OU IDENTIFIÉES DANS LE SYSTÈME.
+
+    UNE ENTREPRISE PEUT ÊTRE :
+
+    DONNEUR D’ORDRE ;
+
+    TRANSPORTEUR ;
+
+    LES DEUX ;
+
+    CONTACT INTERNATIONAL ;
+
+    CORRESPONDANT D’UN TRANSPORTEUR.
+
+    CHAMPS PRINCIPAUX :
+
+    COMPANY_ID ;
+
+    LEGAL_NAME ;
+
+    TRADE_NAME ;
+
+    COMPANY_TYPE ;
+
+    COUNTRY_ID ;
+
+    ADDRESS ;
+
+    POSTAL_CODE ;
+
+    CITY ;
+
+    TAX_ID ;
+
+    VAT_NUMBER ;
+
+    REGISTRATION_NUMBER ;
+
+    WEBSITE ;
+
+    MAIN_EMAIL ;
+
+    MAIN_PHONE ;
+
+    STATUS ;
+
+    CREATED_AT ;
+
+    UPDATED_AT.
+
+    
+
+    
+    
+    
+    3. NE PAS CRÉER DEUX BASES SÉPARÉES
+
+    IL NE FAUT PAS AVOIR :
+
+    
+    TABLE CLIENTS
+
+    ET
+
+    
+    
+    TABLE TRANSPORTEURS
+
+    AVEC DES INFORMATIONS DUPLIQUÉES.
+
+    MEILLEURE APPROCHE :
+
+    
+    
+    COMPANY
+
+    PUIS DES RÔLES.
+
+    EXEMPLE :
+
+    ENTREPRISE X :
+
+    DONNEUR D’ORDRE = OUI ;
+
+    TRANSPORTEUR = NON.
+
+    ENTREPRISE Y :
+
+    DONNEUR D’ORDRE = OUI ;
+
+    TRANSPORTEUR = OUI.
+
+    CETTE STRUCTURE SERA BEAUCOUP PLUS PUISSANTE POUR L’EXPANSION INTERNATIONALE.
+
+    
+
+    
+    
+    
+    4. TABLE RÔLES ENTREPRISE
+
+    TABLE :
+
+    
+    COMPANY_ROLES
+
+    CHAMPS :
+
+    COMPANY_ROLE_ID ;
+
+    COMPANY_ID ;
+
+    ROLE_TYPE ;
+
+    ACTIVE ;
+
+    START_DATE ;
+
+    END_DATE.
+
+    VALEURS POSSIBLES :
+
+    
+    
+    SHIPPER
+
+    
+    
+    CARRIER
+
+    
+    
+    FREIGHT_FORWARDER
+
+    
+    
+    FOREIGN_PARTNER
+
+    
+    
+    EXPORTER
+
+    
+    
+    IMPORTER
+
+    
+    
+    OTHER
+
+    
+
+    
+    
+    
+    5. TABLE UTILISATEURS
+
+    TABLE :
+
+    
+    USERS
+
+    UN UTILISATEUR EST UNE PERSONNE QUI PEUT SE CONNECTER À LA PLATEFORME.
+
+    CHAMPS :
+
+    USER_ID ;
+
+    COMPANY_ID ;
+
+    FIRST_NAME ;
+
+    LAST_NAME ;
+
+    JOB_TITLE ;
+
+    EMAIL ;
+
+    PHONE ;
+
+    PASSWORD_HASH ;
+
+    LANGUAGE ;
+
+    TIMEZONE ;
+
+    STATUS ;
+
+    LAST_LOGIN_AT ;
+
+    CREATED_AT ;
+
+    UPDATED_AT.
+
+    
+
+    
+    
+    
+    6. TABLE CONTACTS
+
+    TOUS LES CONTACTS NE DOIVENT PAS OBLIGATOIREMENT ÊTRE DES UTILISATEURS.
+
+    EXEMPLE :
+
+    UN RESPONSABLE EXPORT PEUT ÊTRE ENREGISTRÉ DANS LA BASE SANS AVOIR DE COMPTE.
+
+    TABLE :
+
+    
+    CONTACTS
+
+    CHAMPS :
+
+    CONTACT_ID ;
+
+    COMPANY_ID ;
+
+    FIRST_NAME ;
+
+    LAST_NAME ;
+
+    JOB_TITLE ;
+
+    EMAIL ;
+
+    PHONE ;
+
+    COUNTRY_ID ;
+
+    LANGUAGE ;
+
+    ACTIVE ;
+
+    SOURCE_TYPE ;
+
+    SOURCE_ID ;
+
+    CREATED_AT.
+
+    
+
+    
+    
+    
+    7. RÔLES DES CONTACTS
+
+    TABLE :
+
+    
+    CONTACT_ROLES
+
+    EXEMPLES :
+
+    IMPORT_MANAGER ;
+
+    EXPORT_MANAGER ;
+
+    LOGISTICS_MANAGER ;
+
+    TRANSPORT_MANAGER ;
+
+    SHIPPING_MANAGER ;
+
+    PURCHASING_MANAGER ;
+
+    GENERAL_MANAGER ;
+
+    OPERATIONS_CONTACT.
+
+    UN MÊME CONTACT PEUT AVOIR PLUSIEURS RÔLES.
+
+    
+
+    
+    
+    
+    8. SOURCE DU CONTACT
+
+    CHAMP IMPORTANT :
+
+    
+    SOURCE_TYPE
+
+    EXEMPLES :
+
+    DIRECT_REGISTRATION ;
+
+    RFQ ;
+
+    DEAL ;
+
+    CARRIER_PARTNER ;
+
+    MANUAL_ADMIN ;
+
+    IMPORTED_DATA.
+
+    CELA PERMET DE SAVOIR D’OÙ VIENT CHAQUE CONTACT.
+
+    
+
+    
+    
+    
+    9. TABLE PAYS
+
+    TABLE :
+
+    
+    COUNTRIES
+
+    CHAMPS :
+
+    COUNTRY_ID ;
+
+    ISO_CODE ;
+
+    COUNTRY_NAME ;
+
+    DEFAULT_CURRENCY ;
+
+    DEFAULT_LANGUAGE ;
+
+    MARKET_STATUS ;
+
+    ACTIVE ;
+
+    CREATED_AT.
+
+    
+
+    
+    
+    
+    10. STATUT DU MARCHÉ
+
+    CHAMP :
+
+    
+    MARKET_STATUS
+
+    VALEURS POSSIBLES :
+
+    NOT_TARGETED ;
+
+    OBSERVATION ;
+
+    BUILDING_DATABASE ;
+
+    READY_FOR_REVIEW ;
+
+    APPROVED_FOR_LAUNCH ;
+
+    ACTIVE ;
+
+    SUSPENDED.
+
+    
+
+    
+    
+    
+    11. TABLE LANGUES
+
+    TABLE :
+
+    
+    LANGUAGES
+
+    CHAMPS :
+
+    LANGUAGE_ID ;
+
+    CODE ;
+
+    NAME ;
+
+    ACTIVE.
+
+    EXEMPLES :
+
+    FR
+
+    EN
+
+    ES
+
+    IT
+
+    DE
+
+    AR
+
+    PT.
+
+    
+
+    
+    
+    
+    12. TABLE DEVISES
+
+    TABLE :
+
+    
+    CURRENCIES
+
+    CHAMPS :
+
+    CURRENCY_ID ;
+
+    ISO_CODE ;
+
+    NAME ;
+
+    SYMBOL ;
+
+    ACTIVE.
+
+    EXEMPLES :
+
+    EUR
+
+    USD
+
+    GBP
+
+    MAD
+
+    CHF.
+
+    
+
+    
+    
+    
+    13. TABLE TAUX DE CHANGE
+
+    TABLE :
+
+    
+    FX_RATES
+
+    CHAMPS :
+
+    FX_RATE_ID ;
+
+    BASE_CURRENCY ;
+
+    QUOTE_CURRENCY ;
+
+    RATE ;
+
+    RATE_DATE ;
+
+    PROVIDER ;
+
+    CREATED_AT.
+
+    LE TAUX UTILISÉ POUR UNE COTATION DOIT ÊTRE ENREGISTRÉ.
+
+    
+
+    
+    
+    
+    14. TABLE PROFIL TRANSPORTEUR
+
+    TABLE :
+
+    
+    CARRIER_PROFILES
+
+    CHAMPS :
+
+    CARRIER_PROFILE_ID ;
+
+    COMPANY_ID ;
+
+    VALIDATION_STATUS ;
+
+    INSURANCE_STATUS ;
+
+    LICENSE_STATUS ;
+
+    DANGEROUS_GOODS_ALLOWED ;
+
+    TEMPERATURE_CONTROLLED ;
+
+    ACTIVE ;
+
+    VERIFIED_AT.
+
+    
+
+    
+    
+    
+    15. MODES DE TRANSPORT
+
+    TABLE :
+
+    
+    TRANSPORT_MODES
+
+    VALEURS :
+
+    ROAD ;
+
+    SEA ;
+
+    AIR ;
+
+    MULTIMODAL.
+
+    
+
+    
+    
+    
+    16. RELATION TRANSPORTEUR / MODE
+
+    TABLE :
+
+    
+    CARRIER_TRANSPORT_MODES
+
+    CHAMPS :
+
+    COMPANY_ID ;
+
+    TRANSPORT_MODE_ID ;
+
+    ACTIVE.
+
+    EXEMPLE :
+
+    T048 :
+
+    ROAD = OUI
+
+    SEA = OUI
+
+    AIR = NON.
+
+    
+
+    
+    
+    
+    17. ZONES DESSERVIES
+
+    TABLE :
+
+    
+    CARRIER_LANES
+
+    CHAMPS :
+
+    CARRIER_LANE_ID ;
+
+    COMPANY_ID ;
+
+    ORIGIN_COUNTRY_ID ;
+
+    DESTINATION_COUNTRY_ID ;
+
+    TRANSPORT_MODE_ID ;
+
+    ACTIVE ;
+
+    PRIORITY.
+
+    EXEMPLE :
+
+    FRANCE → MAROC → ROUTIER.
+
+    
+
+    
+    
+    
+    18. TABLE DOCUMENTS TRANSPORTEUR
+
+    TABLE :
+
+    
+    CARRIER_DOCUMENTS
+
+    CHAMPS :
+
+    DOCUMENT_ID ;
+
+    COMPANY_ID ;
+
+    DOCUMENT_TYPE ;
+
+    FILE_REFERENCE ;
+
+    ISSUE_DATE ;
+
+    EXPIRY_DATE ;
+
+    STATUS ;
+
+    VERIFIED_BY ;
+
+    VERIFIED_AT.
+
+    
+
+    
+    
+    
+    19. TYPES DE DOCUMENTS
+
+    TABLE :
+
+    
+    DOCUMENT_TYPES
+
+    EXEMPLES :
+
+    COMPANY_REGISTRATION ;
+
+    INSURANCE ;
+
+    TRANSPORT_LICENSE ;
+
+    ADR_CERTIFICATE ;
+
+    VAT_CERTIFICATE ;
+
+    OTHER.
+
+    
+
+    
+    
+    
+    20. TABLE RFQ
+
+    TABLE CENTRALE :
+
+    
+    RFQS
+
+    CHAMPS :
+
+    RFQ_ID ;
+
+    RFQ_NUMBER ;
+
+    SHIPPER_COMPANY_ID ;
+
+    CREATED_BY_USER_ID ;
+
+    ORIGIN_COUNTRY_ID ;
+
+    ORIGIN_CITY ;
+
+    ORIGIN_POSTAL_CODE ;
+
+    DESTINATION_COUNTRY_ID ;
+
+    DESTINATION_CITY ;
+
+    DESTINATION_POSTAL_CODE ;
+
+    TRANSPORT_MODE_ID ;
+
+    INCOTERM_ID ;
+
+    PICKUP_DATE ;
+
+    DELIVERY_DATE_REQUESTED ;
+
+    QUOTE_DEADLINE ;
+
+    QUOTE_CURRENCY_ID ;
+
+    STATUS ;
+
+    CREATED_AT ;
+
+    PUBLISHED_AT ;
+
+    CLOSED_AT.
+
+    
+
+    
+    
+    
+    21. ADRESSES SENSIBLES
+
+    LES ADRESSES EXACTES NE DOIVENT PAS ÊTRE STOCKÉES UNIQUEMENT DANS LE CHAMP TEXTE PUBLIC DE LA RFQ.
+
+    NOUS POUVONS AVOIR :
+
+    
+    ORIGIN_PUBLIC_LOCATION
+
+    ET
+
+    
+    
+    ORIGIN_PRIVATE_ADDRESS
+
+    DE MÊME POUR LA DESTINATION.
+
+    CELA FACILITE LE MASQUAGE AVANT CONFIRMATION.
+
+    
+
+    
+    
+    
+    22. TABLE MARCHANDISES RFQ
+
+    TABLE :
+
+    
+    RFQ_CARGO
+
+    CHAMPS :
+
+    RFQ_CARGO_ID ;
+
+    RFQ_ID ;
+
+    DESCRIPTION ;
+
+    PACKAGE_TYPE ;
+
+    PACKAGE_COUNT ;
+
+    PALLET_COUNT ;
+
+    GROSS_WEIGHT ;
+
+    VOLUME ;
+
+    STACKABLE ;
+
+    FRAGILE ;
+
+    TEMPERATURE_CONTROLLED ;
+
+    DECLARED_VALUE ;
+
+    DANGEROUS_GOODS ;
+
+    CREATED_AT.
+
+    
+
+    
+    
+    
+    23. DIMENSIONS
+
+    SI PLUSIEURS TYPES DE COLIS EXISTENT :
+
+    TABLE :
+
+    
+    CARGO_DIMENSIONS
+
+    CHAMPS :
+
+    CARGO_DIMENSION_ID ;
+
+    RFQ_CARGO_ID ;
+
+    LENGTH ;
+
+    WIDTH ;
+
+    HEIGHT ;
+
+    UNIT ;
+
+    QUANTITY ;
+
+    WEIGHT.
+
+    
+
+    
+    
+    
+    24. MARCHANDISES DANGEREUSES
+
+    TABLE :
+
+    
+    DANGEROUS_GOODS_DETAILS
+
+    CHAMPS :
+
+    DANGEROUS_GOODS_ID ;
+
+    RFQ_CARGO_ID ;
+
+    UN_NUMBER ;
+
+    PROPER_SHIPPING_NAME ;
+
+    HAZARD_CLASS ;
+
+    PACKING_GROUP ;
+
+    QUANTITY ;
+
+    PACKAGING_TYPE ;
+
+    REGULATION_REFERENCE ;
+
+    SAFETY_DATA_SHEET_FILE.
+
+    
+
+    
+    
+    
+    25. INCOTERMS
+
+    TABLE :
+
+    
+    INCOTERMS
+
+    CHAMPS :
+
+    INCOTERM_ID ;
+
+    CODE ;
+
+    NAME ;
+
+    VERSION ;
+
+    TRANSPORT_SCOPE ;
+
+    ACTIVE.
+
+    EXEMPLES :
+
+    EXW
+
+    FCA
+
+    FOB
+
+    CIF
+
+    DAP
+
+    DDP.
+
+    
+
+    
+    
+    
+    26. TABLE PIÈCES JOINTES RFQ
+
+    TABLE :
+
+    
+    RFQ_ATTACHMENTS
+
+    CHAMPS :
+
+    ATTACHMENT_ID ;
+
+    RFQ_ID ;
+
+    FILE_REFERENCE ;
+
+    FILE_TYPE ;
+
+    UPLOADED_BY ;
+
+    PRIVACY_STATUS ;
+
+    SANITIZED ;
+
+    CREATED_AT.
+
+    
+
+    
+    
+    
+    27. PRIVACY_STATUS
+
+    EXEMPLES :
+
+    
+    PRIVATE
+
+    VISIBLE UNIQUEMENT ADMIN.
+
+    
+    
+    ANONYMIZED
+
+    VISIBLE PAR TRANSPORTEURS.
+
+    
+    
+    RELEASE_AFTER_CONFIRMATION
+
+    VISIBLE APRÈS CONFIRMATION.
+
+    
+
+    
+    
+    
+    28. TABLE QUESTIONS / RÉPONSES
+
+    TABLE :
+
+    
+    RFQ_QUESTIONS
+
+    CHAMPS :
+
+    QUESTION_ID ;
+
+    RFQ_ID ;
+
+    CARRIER_COMPANY_ID ;
+
+    QUESTION_TEXT ;
+
+    STATUS ;
+
+    CREATED_AT.
+
+    TABLE :
+
+    
+    
+    RFQ_ANSWERS
+
+    CHAMPS :
+
+    ANSWER_ID ;
+
+    QUESTION_ID ;
+
+    ANSWER_TEXT ;
+
+    ANSWERED_BY ;
+
+    PUBLIC_TO_ALL_BIDDERS ;
+
+    CREATED_AT.
+
+    
+
+    
+    
+    
+    29. TABLE COTATIONS
+
+    TABLE CENTRALE :
+
+    
+    QUOTES
+
+    CHAMPS :
+
+    QUOTE_ID ;
+
+    RFQ_ID ;
+
+    CARRIER_COMPANY_ID ;
+
+    QUOTE_VERSION ;
+
+    CURRENCY_ID ;
+
+    BASE_TRANSPORT_PRICE ;
+
+    MANDATORY_FEES_TOTAL ;
+
+    COMPARABLE_TOTAL ;
+
+    COMMISSIONABLE_AMOUNT ;
+
+    TRANSIT_TIME_VALUE ;
+
+    TRANSIT_TIME_UNIT ;
+
+    PICKUP_DATE ;
+
+    VALID_UNTIL ;
+
+    COMPLIANCE_STATUS ;
+
+    RANK ;
+
+    STATUS ;
+
+    SUBMITTED_AT ;
+
+    UPDATED_AT.
+
+    
+
+    
+    
+    
+    30. LIGNES DE PRIX
+
+    IL EST PRÉFÉRABLE D’AVOIR UNE TABLE :
+
+    
+    QUOTE_PRICE_LINES
+
+    CHAMPS :
+
+    QUOTE_PRICE_LINE_ID ;
+
+    QUOTE_ID ;
+
+    LINE_TYPE ;
+
+    DESCRIPTION ;
+
+    AMOUNT ;
+
+    CURRENCY_ID ;
+
+    MANDATORY ;
+
+    COMMISSIONABLE ;
+
+    INCLUDED_IN_COMPARISON.
+
+    EXEMPLE :
+
+    TRANSPORT PRINCIPAL = 1 800 €
+
+    PORT FEE = 120 €
+
+    ASSURANCE OPTIONNELLE = 40 €.
+
+    
+
+    
+    
+    
+    31. POURQUOI CETTE TABLE EST IMPORTANTE
+
+    ELLE PERMET DE SAVOIR EXACTEMENT :
+
+    
+    CE QUI ENTRE DANS LE PRIX COMPARABLE.
+
+    
+    
+    CE QUI ENTRE DANS LA COMMISSION.
+
+    
+    
+    CE QUI EST OPTIONNEL.
+
+    
+    
+    CE QUI EST OBLIGATOIRE.
+
+    C’EST UNE DES TABLES LES PLUS IMPORTANTES DU MODÈLE.
+
+    
+
+    
+    
+    
+    32. HISTORIQUE DES COTATIONS
+
+    TABLE :
+
+    
+    QUOTE_VERSIONS
+
+    CHAMPS :
+
+    QUOTE_VERSION_ID ;
+
+    QUOTE_ID ;
+
+    VERSION_NUMBER ;
+
+    SNAPSHOT_DATA ;
+
+    MODIFIED_BY ;
+
+    MODIFICATION_REASON ;
+
+    CREATED_AT.
+
+    AUCUNE MODIFICATION IMPORTANTE NE DOIT ÉCRASER L’HISTORIQUE.
+
+    
+
+    
+    
+    
+    33. TABLE CLASSEMENT
+
+    LE CLASSEMENT PEUT ÊTRE STOCKÉ DANS :
+
+    
+    QUOTE_RANKINGS
+
+    CHAMPS :
+
+    RANKING_ID ;
+
+    RFQ_ID ;
+
+    QUOTE_ID ;
+
+    RANK_POSITION ;
+
+    COMPARABLE_PRICE ;
+
+    COMPLIANCE_SCORE ;
+
+    SYSTEM_RECOMMENDED ;
+
+    ADMIN_VALIDATED ;
+
+    ADMIN_USER_ID ;
+
+    ADMIN_REASON ;
+
+    CREATED_AT.
+
+    
+
+    
+    
+    
+    34. TABLE RECOMMANDATIONS
+
+    TABLE :
+
+    
+    RFQ_RECOMMENDATIONS
+
+    CHAMPS :
+
+    RECOMMENDATION_ID ;
+
+    RFQ_ID ;
+
+    QUOTE_ID ;
+
+    SYSTEM_RECOMMENDED_AT ;
+
+    ADMIN_VALIDATED_AT ;
+
+    SENT_TO_CLIENT_AT ;
+
+    STATUS.
+
+    
+
+    
+    
+    
+    35. TABLE ACCEPTATIONS
+
+    TABLE :
+
+    
+    QUOTE_ACCEPTANCES
+
+    CHAMPS :
+
+    ACCEPTANCE_ID ;
+
+    RFQ_ID ;
+
+    QUOTE_ID ;
+
+    SHIPPER_USER_ID ;
+
+    ACCEPTED_AT ;
+
+    STATUS ;
+
+    CLIENT_COMMENT.
+
+    
+
+    
+    
+    
+    36. CONFIRMATION TRANSPORTEUR
+
+    TABLE :
+
+    
+    CARRIER_CONFIRMATIONS
+
+    CHAMPS :
+
+    CONFIRMATION_ID ;
+
+    ACCEPTANCE_ID ;
+
+    CARRIER_USER_ID ;
+
+    CONFIRMED ;
+
+    CONFIRMED_AT ;
+
+    REFUSAL_REASON.
+
+    
+
+    
+    
+    
+    37. TABLE AFFAIRES
+
+    APRÈS DOUBLE CONFIRMATION :
+
+    TABLE :
+
+    
+    DEALS
+
+    CHAMPS :
+
+    DEAL_ID ;
+
+    DEAL_NUMBER ;
+
+    RFQ_ID ;
+
+    QUOTE_ID ;
+
+    SHIPPER_COMPANY_ID ;
+
+    CARRIER_COMPANY_ID ;
+
+    DEAL_CURRENCY_ID ;
+
+    TRANSPORT_AMOUNT ;
+
+    COMMISSIONABLE_AMOUNT ;
+
+    COMMISSION_RATE ;
+
+    COMMISSION_AMOUNT ;
+
+    STATUS ;
+
+    CONFIRMED_AT ;
+
+    COMPLETED_AT ;
+
+    CANCELLED_AT.
+
+    
+
+    
+    
+    
+    38. POURQUOI STOCKER LE TAUX DE COMMISSION DANS L’AFFAIRE
+
+    SI LE TAUX GLOBAL CHANGE PLUS TARD :
+
+    8 %
+
+    ↓
+
+    7 %
+
+    LES ANCIENNES AFFAIRES DOIVENT RESTER À 8 %.
+
+    DONC :
+
+    CHAQUE AFFAIRE DOIT CONSERVER LE TAUX QUI LUI A ÉTÉ APPLIQUÉ.
+
+    
+
+    
+    
+    39. TABLE COMMISSIONS
+
+    TABLE :
+
+    
+    COMMISSIONS
+
+    CHAMPS :
+
+    COMMISSION_ID ;
+
+    DEAL_ID ;
+
+    CARRIER_COMPANY_ID ;
+
+    COMMISSIONABLE_AMOUNT ;
+
+    COMMISSION_RATE ;
+
+    COMMISSION_AMOUNT ;
+
+    TAX_AMOUNT ;
+
+    TOTAL_AMOUNT ;
+
+    STATUS ;
+
+    DUE_DATE ;
+
+    PAID_AT.
+
+    
+
+    
+    
+    
+    40. TABLE FACTURES
+
+    TABLE :
+
+    
+    INVOICES
+
+    CHAMPS :
+
+    INVOICE_ID ;
+
+    INVOICE_NUMBER ;
+
+    CARRIER_COMPANY_ID ;
+
+    ISSUE_DATE ;
+
+    DUE_DATE ;
+
+    CURRENCY_ID ;
+
+    SUBTOTAL ;
+
+    TAX_TOTAL ;
+
+    TOTAL ;
+
+    STATUS ;
+
+    FILE_REFERENCE.
+
+    
+
+    
+    
+    
+    41. FACTURE MULTI-AFFAIRES
+
+    UNE FACTURE PEUT REGROUPER PLUSIEURS COMMISSIONS.
+
+    TABLE DE RELATION :
+
+    
+    INVOICE_COMMISSIONS
+
+    CHAMPS :
+
+    INVOICE_ID ;
+
+    COMMISSION_ID.
+
+    
+
+    
+    
+    
+    42. TABLE PAIEMENTS
+
+    TABLE :
+
+    
+    PAYMENTS
+
+    CHAMPS :
+
+    PAYMENT_ID ;
+
+    INVOICE_ID ;
+
+    AMOUNT ;
+
+    CURRENCY_ID ;
+
+    PAYMENT_DATE ;
+
+    PAYMENT_METHOD ;
+
+    REFERENCE ;
+
+    STATUS.
+
+    
+
+    
+    
+    
+    43. TABLE INCIDENTS
+
+    TABLE :
+
+    
+    INCIDENTS
+
+    CHAMPS :
+
+    INCIDENT_ID ;
+
+    INCIDENT_TYPE ;
+
+    RELATED_ENTITY_TYPE ;
+
+    RELATED_ENTITY_ID ;
+
+    REPORTED_BY ;
+
+    DESCRIPTION ;
+
+    SEVERITY ;
+
+    STATUS ;
+
+    ASSIGNED_TO ;
+
+    CREATED_AT ;
+
+    RESOLVED_AT.
+
+    
+
+    
+    
+    
+    44. ANTI-CONTOURNEMENT
+
+    TABLE :
+
+    
+    CONTENT_FLAGS
+
+    CHAMPS :
+
+    FLAG_ID ;
+
+    ENTITY_TYPE ;
+
+    ENTITY_ID ;
+
+    FLAG_TYPE ;
+
+    DETECTED_CONTENT ;
+
+    RISK_LEVEL ;
+
+    STATUS ;
+
+    REVIEWED_BY ;
+
+    REVIEWED_AT.
+
+    EXEMPLES :
+
+    PHONE_DETECTED
+
+    EMAIL_DETECTED
+
+    URL_DETECTED
+
+    COMPANY_NAME_DETECTED.
+
+    
+
+    
+    
+    
+    45. TABLE NOTIFICATIONS
+
+    TABLE :
+
+    
+    NOTIFICATIONS
+
+    CHAMPS :
+
+    NOTIFICATION_ID ;
+
+    USER_ID ;
+
+    TYPE ;
+
+    TITLE ;
+
+    MESSAGE ;
+
+    RELATED_ENTITY_TYPE ;
+
+    RELATED_ENTITY_ID ;
+
+    READ_AT ;
+
+    CREATED_AT.
+
+    
+
+    
+    
+    
+    46. TABLE PRÉFÉRENCES DE NOTIFICATION
+
+    TABLE :
+
+    
+    USER_NOTIFICATION_SETTINGS
+
+    PAR UTILISATEUR :
+
+    EMAIL_ENABLED ;
+
+    IN_APP_ENABLED ;
+
+    RFQ_ALERTS ;
+
+    QUOTE_UPDATES ;
+
+    DEAL_ALERTS ;
+
+    BILLING_ALERTS.
+
+    
+
+    
+    
+    
+    47. JOURNAL D’AUDIT
+
+    TABLE :
+
+    
+    AUDIT_LOG
+
+    CHAMPS :
+
+    AUDIT_ID ;
+
+    USER_ID ;
+
+    ACTION_TYPE ;
+
+    ENTITY_TYPE ;
+
+    ENTITY_ID ;
+
+    OLD_VALUE ;
+
+    NEW_VALUE ;
+
+    REASON ;
+
+    IP_ADDRESS ;
+
+    CREATED_AT.
+
+    
+
+    
+    
+    
+    48. ACTIONS QUI DOIVENT ABSOLUMENT ÊTRE AUDITÉES
+
+    VALIDATION TRANSPORTEUR ;
+
+    SUSPENSION ;
+
+    MODIFICATION D’UNE COTATION ;
+
+    MODIFICATION DU CLASSEMENT ;
+
+    OVERRIDE ADMINISTRATEUR ;
+
+    DÉBLOCAGE DES IDENTITÉS ;
+
+    MODIFICATION D’UNE COMMISSION ;
+
+    ANNULATION ;
+
+    MODIFICATION DE DROITS ;
+
+    EXPORT DE DONNÉES SENSIBLES.
+
+    
+
+    
+    
+    49. TABLE NOTES INTERNES
+
+    TABLE :
+
+    
+    INTERNAL_NOTES
+
+    CHAMPS :
+
+    NOTE_ID ;
+
+    ENTITY_TYPE ;
+
+    ENTITY_ID ;
+
+    NOTE_TEXT ;
+
+    CREATED_BY ;
+
+    CREATED_AT.
+
+    ELLES NE SONT JAMAIS VISIBLES PAR LE CLIENT OU LE TRANSPORTEUR.
+
+    
+
+    
+    
+    
+    50. CONTACTS INTERNATIONAUX
+
+    POUR TON MODÈLE D’EXPANSION, IL FAUT UNE STRUCTURE SPÉCIFIQUE.
+
+    TABLE :
+
+    
+    INTERNATIONAL_RELATIONSHIPS
+
+    CHAMPS :
+
+    RELATIONSHIP_ID ;
+
+    SOURCE_COMPANY_ID ;
+
+    TARGET_COMPANY_ID ;
+
+    SOURCE_COUNTRY_ID ;
+
+    TARGET_COUNTRY_ID ;
+
+    RELATIONSHIP_TYPE ;
+
+    RELATED_DEAL_ID ;
+
+    RELATED_RFQ_ID ;
+
+    SOURCE_CONTACT_ID ;
+
+    TARGET_CONTACT_ID ;
+
+    ACTIVE ;
+
+    CREATED_AT.
+
+    
+
+    
+    
+    
+    51. TYPES DE RELATION
+
+    EXEMPLES :
+
+    
+    EXPORTER_TO_IMPORTER
+
+    
+    
+    CARRIER_TO_FOREIGN_PARTNER
+
+    
+    
+    SHIPPER_TO_SUPPLIER
+
+    
+    
+    SHIPPER_TO_CUSTOMER
+
+    
+    
+    LOGISTICS_CONTACT
+
+    
+    
+    FREIGHT_CORRESPONDENT.
+
+    
+
+    
+    
+    
+    52. INTÉRÊT DE CETTE TABLE
+
+    EXEMPLE :
+
+    FRANCE → ITALIE.
+
+    LA PLATEFORME SAIT :
+
+    DONNEUR D’ORDRE FRANÇAIS :
+
+    COMPANY_001.
+
+    FOURNISSEUR ITALIEN :
+
+    COMPANY_942.
+
+    RESPONSABLE EXPORT ITALIEN :
+
+    CONTACT_3821.
+
+    TRANSPORTEUR FRANÇAIS :
+
+    COMPANY_120.
+
+    CORRESPONDANT ITALIEN :
+
+    COMPANY_871.
+
+    APRÈS DES CENTAINES D’OPÉRATIONS :
+
+    NOUS POUVONS MESURER LA DENSITÉ DU RÉSEAU ITALIEN.
+
+    
+
+    
+    
+    53. TABLE MATURITÉ PAYS — PLUS TARD
+
+    TABLE :
+
+    
+    MARKET_METRICS
+
+    CHAMPS :
+
+    COUNTRY_ID ;
+
+    SHIPPER_COUNT ;
+
+    CARRIER_COUNT ;
+
+    CONTACT_COUNT ;
+
+    RFQ_COUNT ;
+
+    DEAL_COUNT ;
+
+    VOLUME_VALUE ;
+
+    MATURITY_SCORE ;
+
+    CALCULATED_AT.
+
+    LE SCORE EST UNE AIDE AU PILOTAGE.
+
+    
+
+    
+    
+    
+    54. BASE MULTI-PAYS
+
+    AUCUNE TABLE IMPORTANTE NE DOIT SUPPOSER QUE :
+
+    
+    LE PAYS = FRANCE.
+
+    LE PAYS EST TOUJOURS UNE DONNÉE.
+
+    C’EST UNE RÈGLE ARCHITECTURALE FONDAMENTALE.
+
+    
+
+    
+    
+    
+    55. BASE MULTI-DEVISES
+
+    AUCUN PRIX NE DOIT ÊTRE STOCKÉ SANS DEVISE.
+
+    MAUVAISE STRUCTURE :
+
+    PRICE = 1800
+
+    BONNE STRUCTURE :
+
+    PRICE = 1800
+
+    CURRENCY = EUR
+
+    
+
+    
+    
+    56. BASE MULTILINGUE
+
+    LES TEXTES SYSTÈME DE L’APPLICATION DOIVENT ÊTRE SÉPARÉS DES DONNÉES MÉTIER.
+
+    CELA PERMETTRA DE PASSER :
+
+    FRANÇAIS
+
+    ↓
+
+    ANGLAIS
+
+    ↓
+
+    ESPAGNOL
+
+    ↓
+
+    ITALIEN
+
+    SANS REFAIRE L’APPLICATION.
+
+    
+
+    
+    
+    57. NUMÉROTATION DES RFQ
+
+    EXEMPLE :
+
+    
+    RFQ-FR-2026-000001
+
+    OU PLUS SIMPLEMENT :
+
+    
+    
+    RFQ-2026-000001
+
+    JE RECOMMANDE UNE NUMÉROTATION MONDIALE UNIQUE.
+
+    LE PAYS RESTE UNE DONNÉE DE LA RFQ.
+
+    
+
+    
+    
+    
+    58. NUMÉROTATION DES AFFAIRES
+
+    EXEMPLE :
+
+    
+    DEAL-2026-000001
+
+    OU POUR L’AFFICHAGE UTILISATEUR :
+
+    
+    
+    TR-2026-000001
+
+    LES IDENTIFIANTS INTERNES TECHNIQUES RESTENT DISTINCTS DES NUMÉROS COMMERCIAUX.
+
+    
+
+    
+    
+    
+    59. IDENTIFIANTS TECHNIQUES
+
+    JE RECOMMANDE DES IDENTIFIANTS TECHNIQUES NON PRÉVISIBLES POUR LES URL PUBLIQUES.
+
+    PAR EXEMPLE :
+
+    UUID.
+
+    CELA ÉVITE QU’UN UTILISATEUR PUISSE TENTER :
+
+    /rfq/1001
+
+    PUIS :
+
+    /rfq/1002
+
+    ET ACCÉDER À DES INFORMATIONS QUI NE LUI APPARTIENNENT PAS.
+
+    
+
+    
+    
+    60. SÉPARATION DONNÉES PUBLIQUES / PRIVÉES
+
+    CERTAINES INFORMATIONS ONT DEUX NIVEAUX.
+
+    EXEMPLE :
+
+    
+    AVANT CONFIRMATION
+
+    ORIGINE :
+
+    LYON, FRANCE.
+
+    
+    
+    APRÈS CONFIRMATION
+
+    12 RUE X, 69000 LYON.
+
+    LA BASE DOIT PERMETTRE CETTE SÉPARATION DE FAÇON NATIVE.
+
+    
+
+    
+    
+    
+    61. DROITS D’ACCÈS
+
+    CHAQUE REQUÊTE DOIT VÉRIFIER :
+
+    
+    QUI DEMANDE ?
+
+    
+    
+    À QUELLE ENTREPRISE APPARTIENT-IL ?
+
+    
+    
+    QUEL RÔLE A-T-IL ?
+
+    
+    
+    A-T-IL LE DROIT DE VOIR CETTE DONNÉE ?
+
+    IL NE FAUT PAS SE CONTENTER DE CACHER LES BOUTONS À L’ÉCRAN.
+
+    LA SÉCURITÉ DOIT ÊTRE APPLIQUÉE CÔTÉ SERVEUR.
+
+    
+
+    
+    
+    
+    62. PRINCIPALES RELATIONS
+
+    SCHÉMA SIMPLIFIÉ :
+
+    
+    COMPANY
+
+    ↓ USERS
+
+    
+    
+    COMPANY
+
+    ↓ CONTACTS
+
+    
+    
+    SHIPPER COMPANY
+
+    ↓ RFQ
+
+    
+    
+    RFQ
+
+    ↓ CARGO
+
+    
+    
+    RFQ
+
+    ↓ QUOTES
+
+    
+    
+    CARRIER COMPANY
+
+    ↓ QUOTES
+
+    
+    
+    QUOTE
+
+    ↓ PRICE LINES
+
+    
+    
+    RFQ
+
+    ↓ RECOMMENDATION
+
+    
+    
+    QUOTE
+
+    ↓ ACCEPTANCE
+
+    
+    
+    ACCEPTANCE
+
+    ↓ CARRIER CONFIRMATION
+
+    
+    
+    DOUBLE CONFIRMATION
+
+    ↓ DEAL
+
+    
+    
+    DEAL
+
+    ↓ COMMISSION
+
+    
+    
+    COMMISSION
+
+    ↓ INVOICE
+
+    
+
+    
+    
+    
+    63. SCHÉMA DE LA BOUCLE MÉTIER
+
+    DONNEUR D’ORDRE
+
+    ↓
+
+    COMPANY + USER
+
+    ↓
+
+    RFQ
+
+    ↓
+
+    CARGO + INCOTERM + ROUTE
+
+    ↓
+
+    CARRIER ELIGIBILITY
+
+    ↓
+
+    QUOTES
+
+    ↓
+
+    QUOTE PRICE LINES
+
+    ↓
+
+    NORMALISATION
+
+    ↓
+
+    RANKING
+
+    ↓
+
+    RECOMMENDATION
+
+    ↓
+
+    CLIENT ACCEPTANCE
+
+    ↓
+
+    CARRIER CONFIRMATION
+
+    ↓
+
+    DEAL
+
+    ↓
+
+    COMMISSION
+
+    ↓
+
+    INVOICE
+
+    ↓
+
+    PAYMENT.
+
+    
+
+    
+    
+    64. DONNÉES À NE JAMAIS ÉCRASER
+
+    COTATION ORIGINALE ;
+
+    TAUX DE CHANGE UTILISÉ ;
+
+    TAUX DE COMMISSION ;
+
+    DATE ACCEPTATION ;
+
+    DATE CONFIRMATION ;
+
+    ANCIENNES VALEURS APRÈS MODIFICATION ;
+
+    MOTIF D’OVERRIDE ADMINISTRATEUR ;
+
+    INCIDENTS ;
+
+    JOURNAL D’AUDIT.
+
+    
+
+    
+    
+    65. ARCHIVAGE
+
+    LES DONNÉES PEUVENT ÊTRE :
+
+    
+    ACTIVE
+
+    
+    
+    ARCHIVED
+
+    
+    
+    SUSPENDED
+
+    MAIS PAS NÉCESSAIREMENT SUPPRIMÉES PHYSIQUEMENT.
+
+    LA POLITIQUE FINALE DEVRA RESPECTER LES OBLIGATIONS LÉGALES DE CONSERVATION ET DE SUPPRESSION APPLICABLES.
+
+    
+
+    
+    
+    
+    66. RECHERCHE
+
+    LES CHAMPS SUIVANTS DOIVENT ÊTRE INDEXÉS POUR PERMETTRE DES RECHERCHES RAPIDES :
+
+    COMPANY NAME ;
+
+    COUNTRY ;
+
+    EMAIL ;
+
+    RFQ NUMBER ;
+
+    DEAL NUMBER ;
+
+    INVOICE NUMBER ;
+
+    ORIGIN ;
+
+    DESTINATION ;
+
+    TRANSPORT MODE ;
+
+    CREATED DATE.
+
+    
+
+    
+    
+    67. PERFORMANCE
+
+    AU DÉPART, QUELQUES MILLIERS DE RFQ NE POSERONT PAS DE PROBLÈME.
+
+    MAIS LA BASE DOIT ÊTRE PENSÉE POUR :
+
+    
+    100 000 RFQ
+
+    PUIS :
+
+    
+    
+    1 000 000+ RFQ.
+
+    LES GROS VOLUMES SERONT NOTAMMENT :
+
+    COTATIONS ;
+
+    NOTIFICATIONS ;
+
+    AUDIT LOGS ;
+
+    MESSAGES ;
+
+    DONNÉES ANALYTIQUES.
+
+    
+
+    
+    
+    
+    68. ARCHITECTURE RECOMMANDÉE POUR LE MVP
+
+    BASE RELATIONNELLE PRINCIPALE :
+
+    
+    POSTGRESQL
+
+    ELLE CONVIENT TRÈS BIEN AU TYPE DE DONNÉES TRANSACTIONNELLES DU PROJET.
+
+    AUTOUR :
+
+    STOCKAGE DE FICHIERS SÉPARÉ ;
+
+    CACHE SI NÉCESSAIRE ;
+
+    MOTEUR DE RECHERCHE PLUS TARD ;
+
+    DATA WAREHOUSE PLUS TARD.
+
+    
+
+    
+    
+    
+    69. CE QU’IL NE FAUT PAS FAIRE
+
+    
+    1. METTRE TOUT DANS UNE SEULE TABLE.
+
+    
+    
+    2. CRÉER UNE BASE PAR PAYS.
+
+    
+    
+    3. CRÉER UNE APPLICATION DIFFÉRENTE PAR PAYS.
+
+    
+    
+    4. DUPLIQUER CHAQUE CLIENT DÈS QU’IL A PLUSIEURS RÔLES.
+
+    
+    
+    5. ÉCRASER L’HISTORIQUE DES COTATIONS.
+
+    
+    
+    6. CODER LE TAUX DE COMMISSION EN DUR.
+
+    
+    
+    7. STOCKER LES DOCUMENTS DIRECTEMENT DANS DES CHAMPS TEXTE.
+
+    
+    
+    8. CONFONDRE LE PRIX COMPARABLE ET L’ASSIETTE DE COMMISSION.
+
+    
+
+    
+    
+    
+    70. MODÈLE INTERNATIONAL RECOMMANDÉ
+
+    NOUS AURONS :
+
+    
+    UNE PLATEFORME.
+
+    
+    
+    UNE BASE DE DONNÉES CENTRALE.
+
+    
+    
+    PLUSIEURS PAYS.
+
+    
+    
+    PLUSIEURS DOMAINES OU SOUS-DOMAINES SI NÉCESSAIRE.
+
+    EXEMPLE :
+
+    FRANCE
+
+    BELGIQUE
+
+    ITALIE
+
+    ESPAGNE
+
+    MAIS TOUT EST PILOTÉ PAR LA MÊME INFRASTRUCTURE.
+
+    
+
+    
+    
+    
+    71. AVANTAGE STRATÉGIQUE
+
+    CETTE ARCHITECTURE PERMETTRA QU’UNE ENTREPRISE SOIT :
+
+    AUJOURD’HUI :
+
+    EXPORTATEUR ITALIEN IDENTIFIÉ DANS UNE OPÉRATION FRANÇAISE.
+
+    DEMAIN :
+
+    DONNEUR D’ORDRE ACTIF LORS DU LANCEMENT EN ITALIE.
+
+    SANS AVOIR À RECRÉER SA FICHE.
+
+    C’EST EXACTEMENT CE QU’IL FAUT POUR TON MODÈLE D’EXPANSION.
+
+    
+
+    
+    
+    72. PROCHAINE VERSION
+
+    APRÈS LA BASE DE DONNÉES, NOUS DEVONS PASSER À :
+
+    
+    
+    VERSION 0.7 — ARCHITECTURE TECHNIQUE DE L’APPLICATION
+
+    ELLE DEVRA DÉFINIR :
+
+    FRONT-END ;
+
+    BACK-END ;
+
+    API ;
+
+    AUTHENTIFICATION ;
+
+    GESTION DES RÔLES ;
+
+    SÉCURITÉ ;
+
+    STOCKAGE DES DOCUMENTS ;
+
+    EMAILS ET NOTIFICATIONS ;
+
+    MOTEUR DE COMPARAISON ;
+
+    SERVICES DE TAUX DE CHANGE ;
+
+    JOURNALISATION ;
+
+    HÉBERGEMENT ;
+
+    SAUVEGARDES ;
+
+    SCALABILITÉ ;
+
+    MONITORING ;
+
+    ENVIRONNEMENTS TEST / PRÉPRODUCTION / PRODUCTION ;
+
+    API FUTURES POUR TMS, ERP ET AUTRES PARTENAIRES.
+
+    C’EST CETTE VERSION QUI COMMENCERA À TRANSFORMER LE CAHIER DES CHARGES FONCTIONNEL EN VÉRITABLE DOSSIER TECHNIQUE POUR LES DÉVELOPPEURS.
+
+    
+    
+      
+        
+                
+        
+        
+              
+      
+    
+  
+

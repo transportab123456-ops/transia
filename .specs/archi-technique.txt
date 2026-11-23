@@ -1,0 +1,2419 @@
+
+
+
+    
+    ARCHITECTURE TECHNIQUE DE L’APPLICATION
+
+    
+    1. OBJECTIF
+
+    L’ARCHITECTURE TECHNIQUE DOIT PERMETTRE DE LANCER RAPIDEMENT UN MVP, TOUT EN ÉVITANT DE DEVOIR RECONSTRUIRE L’APPLICATION LORS DU PASSAGE À PLUSIEURS PAYS.
+
+    LE SYSTÈME DOIT ÊTRE :
+
+    MODULAIRE ;
+
+    SÉCURISÉ ;
+
+    MULTI-PAYS ;
+
+    MULTI-DEVISES ;
+
+    MULTILINGUE ;
+
+    TRAÇABLE ;
+
+    SCALABLE ;
+
+    SIMPLE À MAINTENIR.
+
+    
+
+    
+    
+    
+    2. ARCHITECTURE GÉNÉRALE
+
+    JE RECOMMANDE UNE ARCHITECTURE WEB MODERNE EN TROIS COUCHES :
+
+    
+    FRONT-END
+
+    INTERFACE UTILISATEUR.
+
+    ↓
+
+    
+    
+    BACK-END / API
+
+    RÈGLES MÉTIER.
+
+    ↓
+
+    
+    
+    BASE DE DONNÉES
+
+    DONNÉES TRANSACTIONNELLES.
+
+    À CELA S’AJOUTENT :
+
+    STOCKAGE DOCUMENTAIRE ;
+
+    SERVICE D’E-MAIL ;
+
+    NOTIFICATIONS ;
+
+    TAUX DE CHANGE ;
+
+    LOGS ;
+
+    MONITORING ;
+
+    SAUVEGARDES.
+
+    
+
+    
+    
+    
+    3. FRONT-END
+
+    LE FRONT-END GÈRE :
+
+    INSCRIPTIONS ;
+
+    TABLEAUX DE BORD ;
+
+    RFQ ;
+
+    FORMULAIRES ;
+
+    COTATIONS ;
+
+    COMPARATEUR ;
+
+    MESSAGERIE ;
+
+    BACK-OFFICE ;
+
+    PARAMÈTRES.
+
+    IL DOIT ÊTRE RESPONSIVE :
+
+    
+    ORDINATEUR
+
+    
+    
+    TABLETTE
+
+    
+    
+    MOBILE
+
+    POUR LE MVP, UNE APPLICATION WEB RESPONSIVE EST SUFFISANTE.
+
+    PAS BESOIN DE DÉVELOPPER IMMÉDIATEMENT UNE APPLICATION IOS ET ANDROID NATIVE.
+
+    
+
+    
+    
+    
+    4. TECHNOLOGIE FRONT-END
+
+    OPTIONS APPROPRIÉES :
+
+    
+    REACT
+
+    OU
+
+    
+    
+    NEXT.JS
+
+    JE RECOMMANDE PLUTÔT :
+
+    
+    
+    NEXT.JS
+
+    POUR :
+
+    STRUCTURE ROBUSTE ;
+
+    BONNES PERFORMANCES ;
+
+    INTERNATIONALISATION ;
+
+    ÉVOLUTIVITÉ ;
+
+    ÉCOSYSTÈME IMPORTANT.
+
+    LE CHOIX FINAL DÉPENDRA ÉGALEMENT DE L’ÉQUIPE DE DÉVELOPPEMENT.
+
+    
+
+    
+    
+    
+    5. BACK-END
+
+    LE BACK-END GÈRE :
+
+    AUTHENTIFICATION ;
+
+    AUTORISATIONS ;
+
+    RFQ ;
+
+    MATCHING ;
+
+    COTATIONS ;
+
+    COMPARAISON ;
+
+    ACCEPTATIONS ;
+
+    COMMISSIONS ;
+
+    FACTURATION ;
+
+    DOCUMENTS ;
+
+    AUDIT ;
+
+    NOTIFICATIONS ;
+
+    PARAMÈTRES.
+
+    
+
+    
+    
+    6. TECHNOLOGIE BACK-END
+
+    PLUSIEURS STACKS SONT ADAPTÉES.
+
+    PAR EXEMPLE :
+
+    
+    NODE.JS / NESTJS
+
+    OU
+
+    
+    
+    PYTHON / DJANGO
+
+    OU
+
+    
+    
+    PYTHON / FASTAPI
+
+    POUR CE PROJET, JE PRIVILÉGIERAIS :
+
+    
+    
+    NESTJS
+
+    OU
+
+    
+    
+    DJANGO.
+
+    LES DEUX SONT ADAPTÉS À UNE APPLICATION B2B TRANSACTIONNELLE.
+
+    
+
+    
+    
+    
+    7. APPROCHE MVP
+
+    POUR LA PREMIÈRE VERSION :
+
+    
+    PAS DE MICRO-SERVICES COMPLEXES.
+
+    JE RECOMMANDE UN :
+
+    
+    
+    MODULAR MONOLITH
+
+    C’EST-À-DIRE :
+
+    UNE APPLICATION BACK-END UNIQUE, MAIS BIEN DÉCOUPÉE EN MODULES.
+
+    EXEMPLE :
+
+    USERS ;
+
+    COMPANIES ;
+
+    CARRIERS ;
+
+    RFQ ;
+
+    QUOTES ;
+
+    MATCHING ;
+
+    DEALS ;
+
+    COMMISSIONS ;
+
+    BILLING ;
+
+    DOCUMENTS ;
+
+    ADMIN.
+
+    
+
+    
+    
+    
+    8. POURQUOI ÉVITER LES MICRO-SERVICES AU DÉBUT
+
+    PARCE QU’ILS AJOUTENT :
+
+    COMPLEXITÉ ;
+
+    COÛT ;
+
+    DÉPLOIEMENTS MULTIPLES ;
+
+    MONITORING PLUS LOURD ;
+
+    DÉBOGAGE PLUS DIFFICILE.
+
+    AU DÉPART, LE BESOIN PRINCIPAL EST :
+
+    
+    LANCER.
+
+    
+    
+    TESTER.
+
+    
+    
+    CORRIGER.
+
+    
+    
+    APPRENDRE.
+
+    NOUS POURRONS EXTRAIRE DES SERVICES PLUS TARD SI LE VOLUME LE JUSTIFIE.
+
+    
+
+    
+    
+    
+    9. API
+
+    TOUTES LES FONCTIONS PRINCIPALES DOIVENT PASSER PAR UNE API STRUCTURÉE.
+
+    EXEMPLES :
+
+    
+    POST /RFQS
+
+    CRÉER UNE RFQ.
+
+    
+    
+    GET /RFQS
+
+    CONSULTER LES RFQ.
+
+    
+    
+    POST /RFQS/{ID}/QUOTES
+
+    DÉPOSER UNE COTATION.
+
+    
+    
+    POST /QUOTES/{ID}/ACCEPT
+
+    ACCEPTER.
+
+    
+    
+    POST /DEALS/{ID}/CONFIRM
+
+    CONFIRMER UNE AFFAIRE.
+
+    
+
+    
+    
+    
+    10. VERSIONNEMENT DE L’API
+
+    PRÉVOIR :
+
+    
+    /API/V1/
+
+    EXEMPLE :
+
+    /api/v1/rfqs
+
+    CELA PERMETTRA PLUS TARD DE CRÉER :
+
+    /api/v2/
+
+    SANS CASSER LES INTÉGRATIONS EXISTANTES.
+
+    
+
+    
+    
+    
+    11. AUTHENTIFICATION
+
+    L’AUTHENTIFICATION DOIT REPOSER SUR :
+
+    E-MAIL ;
+
+    MOT DE PASSE ;
+
+    SESSION SÉCURISÉE OU TOKEN ;
+
+    VALIDATION D’E-MAIL.
+
+    POUR LES COMPTES ADMINISTRATEURS :
+
+    
+    MFA / DOUBLE AUTHENTIFICATION RECOMMANDÉE.
+
+    
+
+    
+    
+    
+    12. MOTS DE PASSE
+
+    LES MOTS DE PASSE :
+
+    
+    NE SONT JAMAIS STOCKÉS EN CLAIR.
+
+    ILS DOIVENT ÊTRE HASHÉS AVEC UN ALGORITHME ADAPTÉ.
+
+    EXEMPLE :
+
+    ARGON2 ;
+
+    BCRYPT.
+
+    
+
+    
+    
+    
+    13. GESTION DES SESSIONS
+
+    LE SYSTÈME DOIT POUVOIR :
+
+    EXPIRER UNE SESSION ;
+
+    DÉCONNECTER UN UTILISATEUR ;
+
+    RÉVOQUER LES SESSIONS ;
+
+    VOIR LES CONNEXIONS RÉCENTES SI NÉCESSAIRE.
+
+    
+
+    
+    
+    14. RÔLES ET AUTORISATIONS
+
+    LE CONTRÔLE D’ACCÈS DOIT ÊTRE GÉRÉ CÔTÉ SERVEUR.
+
+    RÔLES :
+
+    
+    SHIPPER_USER
+
+    
+    
+    SHIPPER_ADMIN
+
+    
+    
+    CARRIER_USER
+
+    
+    
+    CARRIER_ADMIN
+
+    
+    
+    PLATFORM_OPERATIONS
+
+    
+    
+    PLATFORM_FINANCE
+
+    
+    
+    PLATFORM_ADMIN
+
+    
+    
+    SUPER_ADMIN.
+
+    
+
+    
+    
+    
+    15. PRINCIPE RBAC
+
+    UTILISER :
+
+    
+    ROLE-BASED ACCESS CONTROL.
+
+    EXEMPLE :
+
+    UN CARRIER_USER :
+
+    PEUT VOIR SES RFQ ÉLIGIBLES.
+
+    NE PEUT PAS VOIR :
+
+    LES AUTRES COTATIONS.
+
+    UN SHIPPER_USER :
+
+    PEUT VOIR LES RFQ DE SON ENTREPRISE SELON SES DROITS.
+
+    NE PEUT PAS VOIR :
+
+    L’IDENTITÉ DU TRANSPORTEUR AVANT CONFIRMATION.
+
+    
+
+    
+    
+    
+    16. CONTRÔLE PAR ENTREPRISE
+
+    TRÈS IMPORTANT.
+
+    TOUTE REQUÊTE DOIT VÉRIFIER :
+
+    
+    USER.COMPANY_ID
+
+    PAR RAPPORT À :
+
+    
+    
+    RESOURCE.COMPANY_ID.
+
+    CELA ÉVITE QU’UN CLIENT PUISSE ACCÉDER AUX DONNÉES D’UN AUTRE CLIENT.
+
+    
+
+    
+    
+    
+    17. IDENTIFIANTS PUBLICS
+
+    LES URL PUBLIQUES UTILISENT DES IDENTIFIANTS NON SÉQUENTIELS.
+
+    EXEMPLE :
+
+    UUID.
+
+    MAUVAIS :
+
+    /rfq/1002
+
+    MEILLEUR :
+
+    /rfq/7d5f...
+
+    
+
+    
+    
+    18. BASE DE DONNÉES
+
+    BASE PRINCIPALE :
+
+    
+    POSTGRESQL
+
+    ELLE CONTIENT :
+
+    ENTREPRISES ;
+
+    UTILISATEURS ;
+
+    RFQ ;
+
+    COTATIONS ;
+
+    AFFAIRES ;
+
+    COMMISSIONS ;
+
+    STATUTS ;
+
+    AUDIT.
+
+    
+
+    
+    
+    
+    19. STOCKAGE DES FICHIERS
+
+    LES DOCUMENTS NE DOIVENT PAS ÊTRE STOCKÉS DIRECTEMENT DANS POSTGRESQL.
+
+    UTILISER UN STOCKAGE OBJET COMPATIBLE :
+
+    
+    S3
+
+    OU ÉQUIVALENT.
+
+    LA BASE CONSERVE :
+
+    NOM ;
+
+    TYPE ;
+
+    IDENTIFIANT ;
+
+    URL INTERNE ;
+
+    DROITS ;
+
+    STATUT.
+
+    
+
+    
+    
+    
+    20. ACCÈS AUX DOCUMENTS
+
+    LES DOCUMENTS NE DOIVENT PAS ÊTRE PUBLIQUEMENT ACCESSIBLES PAR URL FIXE.
+
+    UTILISER :
+
+    
+    SIGNED URL
+
+    TEMPORAIRE.
+
+    EXEMPLE :
+
+    UN LIEN VALABLE 5 MINUTES.
+
+    
+
+    
+    
+    
+    21. ANONYMISATION DES DOCUMENTS
+
+    AVANT DE RENDRE UNE PIÈCE JOINTE VISIBLE AUX TRANSPORTEURS :
+
+    LE SYSTÈME DOIT POUVOIR LA CLASSER :
+
+    
+    SAFE
+
+    
+    
+    NEEDS_REVIEW
+
+    
+    
+    PRIVATE.
+
+    POUR LE MVP, L’ADMINISTRATEUR PEUT VALIDER MANUELLEMENT LES DOCUMENTS SENSIBLES.
+
+    
+
+    
+    
+    
+    22. MESSAGERIE
+
+    LA MESSAGERIE DOIT ÊTRE INTERNE.
+
+    STRUCTURE :
+
+    
+    THREAD
+
+    LIÉ À UNE RFQ.
+
+    ↓
+
+    
+    
+    MESSAGES
+
+    ENTRE DONNEUR D’ORDRE ET TRANSPORTEURS.
+
+    LES IDENTITÉS SONT MASQUÉES AVANT CONFIRMATION.
+
+    
+
+    
+    
+    
+    23. FILTRE ANTI-CONTOURNEMENT
+
+    LE SYSTÈME DOIT POUVOIR DÉTECTER :
+
+    EMAIL ;
+
+    TÉLÉPHONE ;
+
+    URL ;
+
+    WHATSAPP ;
+
+    NOM DE DOMAINE ;
+
+    COORDONNÉES EXPLICITES.
+
+    EN V1 :
+
+    
+    DÉTECTION + ALERTE + BLOCAGE SIMPLE.
+
+    EN V2 :
+
+    ANALYSE PLUS INTELLIGENTE.
+
+    
+
+    
+    
+    
+    24. SERVICE DE NOTIFICATIONS
+
+    UN MODULE UNIQUE DOIT GÉRER :
+
+    
+    IN-APP
+
+    
+    
+    EMAIL.
+
+    PLUS TARD :
+
+    SMS ;
+
+    WHATSAPP ;
+
+    PUSH MOBILE.
+
+    
+
+    
+    
+    
+    25. ÉVÉNEMENTS DE NOTIFICATION
+
+    EXEMPLES :
+
+    
+    RFQ_CREATED
+
+    
+    
+    NEW_QUOTE
+
+    
+    
+    QUOTE_DEADLINE_SOON
+
+    
+    
+    RECOMMENDATION_READY
+
+    
+    
+    QUOTE_ACCEPTED
+
+    
+    
+    CARRIER_CONFIRMATION_REQUIRED
+
+    
+    
+    DEAL_CONFIRMED
+
+    
+    
+    INVOICE_ISSUED
+
+    
+    
+    DOCUMENT_EXPIRING.
+
+    
+
+    
+    
+    
+    26. ARCHITECTURE ÉVÉNEMENTIELLE SIMPLE
+
+    LE BACK-END PEUT ÉMETTRE DES ÉVÉNEMENTS INTERNES.
+
+    EXEMPLE :
+
+    
+    DEAL_CONFIRMED
+
+    DÉCLENCHE :
+
+    DÉBLOCAGE DES CONTACTS ;
+
+    CRÉATION COMMISSION ;
+
+    NOTIFICATION CLIENT ;
+
+    NOTIFICATION TRANSPORTEUR ;
+
+    ENTRÉE AUDIT.
+
+    CELA ÉVITE DE DUPLIQUER LA LOGIQUE.
+
+    
+
+    
+    
+    
+    27. MOTEUR DE MATCHING
+
+    LE MOTEUR UTILISE :
+
+    MODE ;
+
+    PAYS ;
+
+    TYPE DE TRANSPORT ;
+
+    VALIDATION TRANSPORTEUR ;
+
+    MARCHANDISE DANGEREUSE ;
+
+    SPÉCIALISATIONS.
+
+    POUR LE MVP :
+
+    
+    RÈGLES MÉTIER DÉTERMINISTES.
+
+    PAS BESOIN D’IA.
+
+    
+
+    
+    
+    
+    28. MOTEUR DE COMPARAISON
+
+    LE MOTEUR DOIT :
+
+    VÉRIFIER LA CONFORMITÉ ;
+
+    CALCULER LE PRIX COMPARABLE ;
+
+    CONVERTIR LA DEVISE ;
+
+    VÉRIFIER LE DÉLAI ;
+
+    CLASSER ;
+
+    PROPOSER L’OFFRE N°1.
+
+    
+
+    
+    
+    29. MOTEUR DE RÈGLES
+
+    JE RECOMMANDE QUE LES RÈGLES IMPORTANTES SOIENT CONFIGURABLES.
+
+    EXEMPLES :
+
+    
+    COMMISSION RATE
+
+    
+    
+    CONFIRMATION DEADLINE
+
+    
+    
+    ALLOWED CURRENCIES
+
+    
+    
+    QUOTE EDIT RULES
+
+    
+    
+    COUNTRY STATUS
+
+    
+    
+    TRANSPORT MODES.
+
+    
+
+    
+    
+    
+    30. TAUX DE CHANGE
+
+    UTILISER UN FOURNISSEUR EXTERNE DE TAUX DE CHANGE.
+
+    LE SYSTÈME CONSERVE :
+
+    SOURCE ;
+
+    DATE ;
+
+    HEURE ;
+
+    TAUX.
+
+    IL NE FAUT JAMAIS RECALCULER RÉTROACTIVEMENT UNE ANCIENNE COTATION AVEC LE TAUX DU JOUR.
+
+    
+
+    
+    
+    31. FACTURATION
+
+    LE MVP PEUT GÉNÉRER :
+
+    
+    FACTURE PDF.
+
+    LE MODULE DOIT CONSERVER :
+
+    NUMÉRO ;
+
+    DATE ;
+
+    TRANSPORTEUR ;
+
+    COMMISSIONS ;
+
+    MONTANT ;
+
+    TAXES ;
+
+    STATUT.
+
+    PLUS TARD :
+
+    INTÉGRATION À UN ERP OU LOGICIEL COMPTABLE.
+
+    
+
+    
+    
+    
+    32. PAIEMENT
+
+    POUR LE MVP :
+
+    
+    PAS DE PAIEMENT DU TRANSPORT DANS LA PLATEFORME.
+
+    LA PLATEFORME PEUT SIMPLEMENT SUIVRE :
+
+    
+    
+    FACTURE DE COMMISSION
+
+    
+    
+    PAYÉE / NON PAYÉE.
+
+    PLUS TARD :
+
+    PAIEMENT EN LIGNE POSSIBLE POUR LES COMMISSIONS.
+
+    
+
+    
+    
+    
+    33. INTERNATIONALISATION
+
+    LE FRONT-END DOIT ÊTRE BASÉ SUR DES FICHIERS DE TRADUCTION.
+
+    EXEMPLE :
+
+    fr.json
+
+    en.json
+
+    es.json
+
+    AUCUN TEXTE IMPORTANT NE DOIT ÊTRE CODÉ DIRECTEMENT PARTOUT DANS LE FRONT-END.
+
+    
+
+    
+    
+    34. DATES ET FUSEAUX HORAIRES
+
+    TOUTES LES DATES TECHNIQUES SONT STOCKÉES EN :
+
+    
+    UTC.
+
+    L’AFFICHAGE EST CONVERTI DANS LE FUSEAU HORAIRE DE L’UTILISATEUR.
+
+    TRÈS IMPORTANT POUR LES DATES LIMITES DE COTATION.
+
+    
+
+    
+    
+    
+    35. PAYS ET FORMATS LOCAUX
+
+    LA COUCHE DE PRÉSENTATION DOIT GÉRER :
+
+    DATE ;
+
+    NOMBRE ;
+
+    DEVISE ;
+
+    LANGUE.
+
+    EXEMPLE :
+
+    FRANCE :
+
+    1 250,00 €
+
+    ROYAUME-UNI :
+
+    £1,250.00.
+
+    
+
+    
+    
+    36. SÉCURITÉ DES DONNÉES
+
+    AU MINIMUM :
+
+    
+    HTTPS OBLIGATOIRE
+
+    
+    
+    CHIFFREMENT EN TRANSIT
+
+    
+    
+    CHIFFREMENT DES DONNÉES SENSIBLES AU REPOS SI NÉCESSAIRE
+
+    
+    
+    CONTRÔLES D’ACCÈS
+
+    
+    
+    AUDIT
+
+    
+    
+    SAUVEGARDES
+
+    
+    
+    GESTION DES SECRETS.
+
+    
+
+    
+    
+    
+    37. SECRETS TECHNIQUES
+
+    LES ÉLÉMENTS SUIVANTS NE DOIVENT JAMAIS ÊTRE DANS LE CODE SOURCE :
+
+    MOTS DE PASSE DB ;
+
+    CLÉS API ;
+
+    CLÉS EMAIL ;
+
+    CLÉS DE STOCKAGE ;
+
+    TOKENS.
+
+    UTILISER :
+
+    
+    ENVIRONMENT VARIABLES
+
+    OU UN :
+
+    
+    
+    SECRET MANAGER.
+
+    
+
+    
+    
+    
+    38. PROTECTION API
+
+    PRÉVOIR :
+
+    RATE LIMITING ;
+
+    VALIDATION DES ENTRÉES ;
+
+    PROTECTION CSRF SI APPLICABLE ;
+
+    PROTECTION XSS ;
+
+    PROTECTION INJECTION ;
+
+    CONTRÔLE DES UPLOADS ;
+
+    LOGS DE SÉCURITÉ.
+
+    
+
+    
+    
+    39. UPLOAD DE FICHIERS
+
+    LIMITER :
+
+    TYPE ;
+
+    TAILLE ;
+
+    EXTENSIONS ;
+
+    NOMBRE.
+
+    EXEMPLE :
+
+    PDF
+
+    JPG
+
+    PNG
+
+    XLSX
+
+    SELON LES BESOINS.
+
+    LES FICHIERS DOIVENT ÊTRE ANALYSÉS AVANT UTILISATION SI LE NIVEAU DE RISQUE LE JUSTIFIE.
+
+    
+
+    
+    
+    40. JOURNALISATION
+
+    LE SYSTÈME DOIT PRODUIRE DES LOGS TECHNIQUES :
+
+    
+    INFO
+
+    
+    
+    WARNING
+
+    
+    
+    ERROR
+
+    
+    
+    SECURITY.
+
+    MAIS ÉVITER DE LOGUER :
+
+    MOTS DE PASSE ;
+
+    TOKENS ;
+
+    DONNÉES SENSIBLES INUTILES.
+
+    
+
+    
+    
+    
+    41. MONITORING
+
+    LE SYSTÈME DOIT PERMETTRE DE SURVEILLER :
+
+    DISPONIBILITÉ ;
+
+    TEMPS DE RÉPONSE ;
+
+    ERREURS ;
+
+    CPU ;
+
+    MÉMOIRE ;
+
+    BASE DE DONNÉES ;
+
+    FILES DE TÂCHES ;
+
+    EMAILS EN ÉCHEC.
+
+    
+
+    
+    
+    42. ALERTES TECHNIQUES
+
+    EXEMPLES :
+
+    
+    API DOWN
+
+    
+    
+    ERROR RATE > SEUIL
+
+    
+    
+    DATABASE STORAGE HIGH
+
+    
+    
+    EMAIL DELIVERY FAILURE
+
+    
+    
+    BACKUP FAILED.
+
+    
+
+    
+    
+    
+    43. SAUVEGARDES
+
+    PRÉVOIR :
+
+    
+    BACKUP AUTOMATIQUE DE LA BASE.
+
+    
+    
+    VERSIONNAGE OU RÉTENTION DES FICHIERS.
+
+    
+    
+    TEST DE RESTAURATION.
+
+    UNE SAUVEGARDE QUI N’A JAMAIS ÉTÉ RESTAURÉE EN TEST N’EST PAS UNE GARANTIE SUFFISANTE.
+
+    
+
+    
+    
+    
+    44. ENVIRONNEMENTS
+
+    IL FAUT AU MINIMUM :
+
+    
+    DEVELOPMENT
+
+    POUR LES DÉVELOPPEURS.
+
+    
+    
+    STAGING
+
+    POUR TESTER UNE VERSION AVANT PRODUCTION.
+
+    
+    
+    PRODUCTION
+
+    POUR LES UTILISATEURS.
+
+    LES DONNÉES DE PRODUCTION NE DOIVENT PAS ÊTRE COPIÉES LIBREMENT DANS L’ENVIRONNEMENT DE TEST.
+
+    
+
+    
+    
+    
+    45. CI/CD
+
+    À CHAQUE MISE À JOUR :
+
+    
+    CODE
+
+    ↓
+
+    
+    
+    TESTS
+
+    ↓
+
+    
+    
+    BUILD
+
+    ↓
+
+    
+    
+    STAGING
+
+    ↓
+
+    
+    
+    VALIDATION
+
+    ↓
+
+    
+    
+    PRODUCTION.
+
+    LE PROCESSUS DOIT ÊTRE AUTOMATISÉ AUTANT QUE POSSIBLE.
+
+    
+
+    
+    
+    
+    46. TESTS AUTOMATIQUES
+
+    PRIORITÉ AUX TESTS SUR LES RÈGLES MÉTIER IMPORTANTES.
+
+    EXEMPLES :
+
+    
+    UN TRANSPORTEUR NON VALIDÉ NE PEUT PAS COTER.
+
+    
+    
+    UN TRANSPORTEUR NE VOIT PAS LES PRIX DES AUTRES.
+
+    
+    
+    UNE OFFRE HORS DÉLAI N’EST PAS ACCEPTÉE.
+
+    
+    
+    LA COMMISSION EST CALCULÉE SUR LA BONNE ASSIETTE.
+
+    
+    
+    LES IDENTITÉS RESTENT MASQUÉES AVANT CONFIRMATION.
+
+    
+
+    
+    
+    
+    47. TESTS E2E
+
+    SCÉNARIO PRINCIPAL :
+
+    CLIENT S’INSCRIT ;
+
+    CRÉE RFQ ;
+
+    TRANSPORTEUR S’INSCRIT ;
+
+    ADMIN LE VALIDE ;
+
+    TRANSPORTEUR COTE ;
+
+    AUTRE TRANSPORTEUR COTE ;
+
+    ADMIN VALIDE LA MEILLEURE OFFRE ;
+
+    CLIENT ACCEPTE ;
+
+    TRANSPORTEUR CONFIRME ;
+
+    COORDONNÉES DÉBLOQUÉES ;
+
+    COMMISSION CRÉÉE.
+
+    CE SCÉNARIO DOIT ÊTRE TESTÉ AUTOMATIQUEMENT.
+
+    
+
+    
+    
+    48. SCALABILITÉ
+
+    L’ARCHITECTURE DOIT SUPPORTER AU DÉPART :
+
+    
+    QUELQUES CENTAINES D’UTILISATEURS.
+
+    PUIS :
+
+    
+    
+    DES MILLIERS.
+
+    PUIS :
+
+    
+    
+    DES DIZAINES DE MILLIERS.
+
+    LA PREMIÈRE ÉVOLUTION SE FERA PAR :
+
+    SERVEURS PLUS PUISSANTS ;
+
+    PLUSIEURS INSTANCES ;
+
+    CACHE ;
+
+    QUEUES ;
+
+    INDEX DATABASE.
+
+    
+
+    
+    
+    
+    49. QUEUE DE TÂCHES
+
+    LES TÂCHES NON IMMÉDIATES PEUVENT ÊTRE TRAITÉES EN ARRIÈRE-PLAN.
+
+    EXEMPLES :
+
+    ENVOI EMAIL ;
+
+    CRÉATION PDF ;
+
+    RECALCUL ANALYTIQUE ;
+
+    IMPORT DONNÉES ;
+
+    ANALYSE DOCUMENT.
+
+    OUTILS POSSIBLES :
+
+    REDIS + WORKER ;
+
+    RABBITMQ PLUS TARD SI NÉCESSAIRE.
+
+    
+
+    
+    
+    50. CACHE
+
+    UTILISER REDIS PLUS TARD POUR :
+
+    SESSIONS ;
+
+    CACHE ;
+
+    RATE LIMITING ;
+
+    QUEUES.
+
+    PAS BESOIN DE SUR-OPTIMISER LE PREMIER JOUR.
+
+    
+
+    
+    
+    51. RECHERCHE
+
+    AU DÉPART :
+
+    POSTGRESQL PEUT GÉRER LA RECHERCHE PRINCIPALE.
+
+    PLUS TARD, SI LA BASE DEVIENT TRÈS GRANDE :
+
+    
+    ELASTICSEARCH
+
+    OU
+
+    
+    
+    OPENSEARCH.
+
+    
+
+    
+    
+    
+    52. ANALYTICS
+
+    NE PAS CHARGER LA BASE TRANSACTIONNELLE AVEC TOUT LE REPORTING LOURD.
+
+    AU DÉBUT :
+
+    REQUÊTES SIMPLES.
+
+    PLUS TARD :
+
+    
+    DATA WAREHOUSE
+
+    POUR :
+
+    PRIX ;
+
+    PAYS ;
+
+    LIGNES ;
+
+    KPI ;
+
+    SCORING ;
+
+    IA.
+
+    
+
+    
+    
+    
+    53. DONNÉES ANALYTIQUES IMPORTANTES
+
+    CONSERVER DÈS LE DÉPART :
+
+    RFQ CREATED ;
+
+    RFQ PUBLISHED ;
+
+    QUOTE SUBMITTED ;
+
+    QUOTE UPDATED ;
+
+    RECOMMENDATION SENT ;
+
+    CLIENT ACCEPTED ;
+
+    CLIENT REFUSED ;
+
+    CARRIER CONFIRMED ;
+
+    DEAL CANCELLED ;
+
+    COMMISSION GENERATED.
+
+    CELA PERMETTRA D’ANALYSER LE FUNNEL.
+
+    
+
+    
+    
+    54. INTÉGRATIONS FUTURES
+
+    L’ARCHITECTURE API DOIT PERMETTRE PLUS TARD DES INTÉGRATIONS AVEC :
+
+    ERP ;
+
+    TMS ;
+
+    CRM ;
+
+    ASSUREURS ;
+
+    PLATEFORMES DE TRACKING ;
+
+    COMPTABILITÉ ;
+
+    SERVICES DE SIGNATURE ;
+
+    FOURNISSEURS DE TAUX DE CHANGE.
+
+    
+
+    
+    
+    55. WEBHOOKS FUTURS
+
+    EXEMPLE :
+
+    UN ERP CLIENT ENVOIE :
+
+    
+    CREATE_RFQ.
+
+    LA PLATEFORME RENVOIE :
+
+    
+    
+    DEAL_CONFIRMED.
+
+    PAS NÉCESSAIRE DANS LE MVP, MAIS L’ARCHITECTURE DOIT LE PERMETTRE.
+
+    
+
+    
+    
+    
+    56. PROTECTION ANTI-SCRAPING
+
+    LES DEMANDES DE TRANSPORT ONT UNE VALEUR COMMERCIALE.
+
+    IL FAUT LIMITER :
+
+    EXTRACTION MASSIVE ;
+
+    ROBOTS ;
+
+    SCRAPING ;
+
+    REQUÊTES AUTOMATISÉES ABUSIVES.
+
+    OUTILS :
+
+    AUTHENTIFICATION ;
+
+    RATE LIMIT ;
+
+    PAGINATION ;
+
+    MONITORING ;
+
+    DÉTECTION D’ANOMALIES.
+
+    
+
+    
+    
+    57. AFFICHAGE DES RFQ
+
+    NE PAS CHARGER 100 000 RFQ EN UNE FOIS.
+
+    UTILISER :
+
+    
+    PAGINATION
+
+    OU
+
+    
+    
+    INFINITE SCROLL CONTRÔLÉ.
+
+    EXEMPLE :
+
+    50 RFQ PAR PAGE.
+
+    
+
+    
+    
+    
+    58. REQUÊTES BASE DE DONNÉES
+
+    LES FILTRES LES PLUS UTILISÉS DOIVENT ÊTRE INDEXÉS :
+
+    STATUS ;
+
+    COUNTRY ;
+
+    MODE ;
+
+    DEADLINE ;
+
+    COMPANY ;
+
+    CREATED_AT.
+
+    
+
+    
+    
+    59. VERROUILLAGE MÉTIER
+
+    CERTAINS ÉTATS DOIVENT EMPÊCHER LES MODIFICATIONS.
+
+    EXEMPLE :
+
+    RFQ = CLOSED.
+
+    → NOUVELLE COTATION INTERDITE.
+
+    DEAL = CONFIRMED.
+
+    → MODIFICATION DU PRIX INTERDITE SANS PROCÉDURE ADMINISTRATEUR.
+
+    
+
+    
+    
+    60. STATE MACHINE
+
+    JE RECOMMANDE DE MODÉLISER LES PRINCIPAUX WORKFLOWS COMME DES MACHINES À ÉTATS.
+
+    EXEMPLE RFQ :
+
+    
+    DRAFT
+
+    ↓
+
+    
+    
+    PUBLISHED
+
+    ↓
+
+    
+    
+    OPEN
+
+    ↓
+
+    
+    
+    CLOSED
+
+    ↓
+
+    
+    
+    ANALYSIS
+
+    ↓
+
+    
+    
+    RECOMMENDED
+
+    ↓
+
+    
+    
+    ACCEPTED
+
+    ↓
+
+    
+    
+    CONFIRMED.
+
+    CELA ÉVITE LES STATUTS INCOHÉRENTS.
+
+    
+
+    
+    
+    
+    61. OBSERVABILITÉ MÉTIER
+
+    LE SYSTÈME DOIT AUSSI SIGNALER LES ANOMALIES MÉTIER.
+
+    EXEMPLE :
+
+    
+    RFQ OUVERTE DEPUIS 5 JOURS ET 0 COTATION.
+
+    
+    
+    OFFRE ACCEPTÉE MAIS TRANSPORTEUR SANS RÉPONSE.
+
+    
+    
+    AFFAIRE CONFIRMÉE MAIS COMMISSION NON CRÉÉE.
+
+    
+
+    
+    
+    
+    62. ADMINISTRATEUR : ACTIONS MANUELLES
+
+    LE BACK-OFFICE PEUT DÉCLENCHER :
+
+    
+    RECALCULER LE CLASSEMENT
+
+    
+    
+    RENVOYER UNE NOTIFICATION
+
+    
+    
+    PROLONGER UNE DATE LIMITE
+
+    
+    
+    SUSPENDRE UNE RFQ
+
+    
+    
+    ANNULER UNE RECOMMANDATION
+
+    MAIS CES ACTIONS SONT AUDITÉES.
+
+    
+
+    
+    
+    
+    63. ARCHITECTURE MULTI-PAYS
+
+    UNE SEULE INSTANCE LOGIQUE DE LA PLATEFORME.
+
+    LES RÈGLES SPÉCIFIQUES À UN PAYS SONT CONFIGURÉES PAR :
+
+    
+    COUNTRY_CONFIG.
+
+    EXEMPLES :
+
+    DEVISE PAR DÉFAUT ;
+
+    LANGUE ;
+
+    TVA ;
+
+    DOCUMENTS REQUIS ;
+
+    RÈGLES COMMERCIALES ;
+
+    CONDITIONS D’ACTIVATION.
+
+    
+
+    
+    
+    
+    64. PAS DE CODE SPÉCIFIQUE PAR PAYS SI POSSIBLE
+
+    MAUVAIS :
+
+    IF FRANCE THEN...
+IF BELGIUM THEN...
+IF ITALY THEN...
+
+    MEILLEUR :
+
+    
+    CONFIGURATION PAR PAYS.
+
+    CELA FACILITERA L’EXPANSION.
+
+    
+
+    
+    
+    
+    65. FEATURE FLAGS
+
+    UTILISER DES :
+
+    
+    FEATURE FLAGS
+
+    POUR ACTIVER OU DÉSACTIVER UNE FONCTION.
+
+    EXEMPLE :
+
+    AI_SCORING = OFF
+
+    WHATSAPP_NOTIFICATIONS = OFF
+
+    MARKET_BELGIUM = OFF
+
+    LE JOUR OÙ TU DÉCIDES :
+
+    MARKET_BELGIUM = ON
+
+    APRÈS VALIDATION DES CONDITIONS NÉCESSAIRES.
+
+    
+
+    
+    
+    
+    66. EXPANSION CONTRÔLÉE
+
+    L’OUVERTURE D’UN NOUVEAU PAYS DOIT NÉCESSITER :
+
+    
+    ADMIN APPROVAL.
+
+    ET PEUT DÉCLENCHER :
+
+    LANGUE ;
+
+    DEVISE ;
+
+    PARAMÈTRES ;
+
+    CONDITIONS JURIDIQUES ;
+
+    EMAILS LOCAUX ;
+
+    FILTRES.
+
+    
+
+    
+    
+    
+    67. NOM DE DOMAINE
+
+    POUR LE FUTUR :
+
+    UNE MARQUE MONDIALE.
+
+    EXEMPLE :
+
+    platform.com
+
+    PUIS :
+
+    
+    FRANCE
+
+    fr.platform.com
+
+    OU :
+
+    platform.com/fr
+
+    
+    
+    BELGIQUE
+
+    platform.com/be
+
+    JE RECOMMANDE PLUTÔT UNE SEULE MARQUE ET UNE SEULE PLATEFORME, AVEC LOCALISATION PAR PAYS.
+
+    
+
+    
+    
+    
+    68. HÉBERGEMENT
+
+    LE MVP PEUT ÊTRE HÉBERGÉ SUR :
+
+    
+    AWS
+
+    
+    
+    AZURE
+
+    
+    
+    GOOGLE CLOUD
+
+    
+    
+    SCALeway / OVHcloud SELON LES CONTRAINTES.
+
+    LE CHOIX DOIT PRENDRE EN COMPTE :
+
+    LOCALISATION DES DONNÉES ;
+
+    COÛT ;
+
+    COMPÉTENCES DE L’ÉQUIPE ;
+
+    CONFORMITÉ ;
+
+    SUPPORT.
+
+    
+
+    
+    
+    
+    69. ARCHITECTURE CLOUD SIMPLIFIÉE
+
+    
+    CDN / WAF
+
+    ↓
+
+    
+    
+    FRONT-END
+
+    ↓
+
+    
+    
+    API
+
+    ↓
+
+    
+    
+    POSTGRESQL
+
+    ↓
+
+    
+    
+    OBJECT STORAGE
+
+    AVEC :
+
+    
+    
+    REDIS
+
+    
+    
+    EMAIL SERVICE
+
+    
+    
+    MONITORING
+
+    
+    
+    BACKUP.
+
+    
+
+    
+    
+    
+    70. WAF
+
+    PLUS TARD OU DÈS LE DÉBUT SELON LE FOURNISSEUR :
+
+    
+    WEB APPLICATION FIREWALL
+
+    POUR BLOQUER :
+
+    TRAFIC MALVEILLANT ;
+
+    CERTAINES ATTAQUES ;
+
+    BOTS ;
+
+    ABUS.
+
+    
+
+    
+    
+    
+    71. DISPONIBILITÉ
+
+    OBJECTIF MVP RAISONNABLE :
+
+    
+    HAUTE DISPONIBILITÉ, SANS SUR-ARCHITECTURE.
+
+    IL EST INUTILE DE CONSTRUIRE IMMÉDIATEMENT UNE INFRASTRUCTURE DE TYPE AMAZON.
+
+    MAIS IL FAUT ÉVITER :
+
+    
+    
+    UN SEUL SERVEUR NON SAUVEGARDÉ.
+
+    
+
+    
+    
+    
+    72. REPRISE APRÈS INCIDENT
+
+    IL FAUT DÉFINIR :
+
+    
+    RPO
+
+    QUANTITÉ MAXIMALE DE DONNÉES QUE NOUS ACCEPTONS DE PERDRE.
+
+    
+    
+    RTO
+
+    DÉLAI DE REMISE EN SERVICE VISÉ.
+
+    CES OBJECTIFS DEVRONT ÊTRE AJUSTÉS AU BUDGET DU MVP.
+
+    
+
+    
+    
+    
+    73. PROPRIÉTÉ DU CODE
+
+    POINT TRÈS IMPORTANT POUR LE FUTUR CONTRAT AVEC LES DÉVELOPPEURS :
+
+    LA SOCIÉTÉ PROPRIÉTAIRE DE LA PLATEFORME DOIT CONTRÔLER :
+
+    CODE SOURCE ;
+
+    DÉPÔTS GIT ;
+
+    DOMAINE ;
+
+    SERVEURS ;
+
+    BASES DE DONNÉES ;
+
+    CLÉS CLOUD ;
+
+    COMPTES EMAIL ;
+
+    COMPTES API ;
+
+    DOCUMENTATION.
+
+    IL NE FAUT PAS LAISSER CES ACTIFS UNIQUEMENT AU NOM D’UN PRESTATAIRE.
+
+    
+
+    
+    
+    74. DÉPÔT DE CODE
+
+    UTILISER :
+
+    
+    GITHUB
+
+    OU
+
+    
+    
+    GITLAB.
+
+    L’ORGANISATION DOIT APPARTENIR À LA SOCIÉTÉ DU PROJET.
+
+    LES DÉVELOPPEURS REÇOIVENT DES DROITS.
+
+    ILS NE SONT PAS PROPRIÉTAIRES DU DÉPÔT PRINCIPAL.
+
+    
+
+    
+    
+    
+    75. DOCUMENTATION TECHNIQUE
+
+    LES DÉVELOPPEURS DOIVENT FOURNIR :
+
+    README ;
+
+    INSTALLATION ;
+
+    ARCHITECTURE ;
+
+    API ;
+
+    BASE DE DONNÉES ;
+
+    VARIABLES D’ENVIRONNEMENT ;
+
+    PROCÉDURE DE DÉPLOIEMENT ;
+
+    PROCÉDURE DE SAUVEGARDE ;
+
+    PROCÉDURE DE RESTAURATION.
+
+    
+
+    
+    
+    76. PROPRIÉTÉ DES DONNÉES
+
+    LE CONTRAT PRESTATAIRE DEVRA PRÉCISER QUE :
+
+    
+    LES DONNÉES DE LA PLATEFORME APPARTIENNENT OU SONT CONTRÔLÉES PAR L’ENTITÉ EXPLOITANTE SELON LE CADRE JURIDIQUE APPLICABLE.
+
+    LE PRESTATAIRE TECHNIQUE NE PEUT PAS LES EXPLOITER POUR SON PROPRE COMPTE.
+
+    
+
+    
+    
+    
+    77. DONNÉES DE TEST
+
+    LES DÉVELOPPEURS DOIVENT UTILISER DES DONNÉES FICTIVES POUR LES TESTS.
+
+    PAS DE COPIE SAUVAGE DE DONNÉES CLIENTS EN LOCAL.
+
+    
+
+    
+    
+    78. MVP TECHNIQUE — PÉRIMÈTRE
+
+    POUR LE PREMIER LANCEMENT, NOUS AVONS BESOIN DE :
+
+    
+    FRONT-END
+
+    INSCRIPTION ;
+
+    LOGIN ;
+
+    DONNEUR D’ORDRE ;
+
+    TRANSPORTEUR ;
+
+    RFQ ;
+
+    COTATION ;
+
+    OFFRE ;
+
+    ACCEPTATION ;
+
+    BACK-OFFICE.
+
+    
+    
+    BACK-END
+
+    AUTH ;
+
+    COMPANIES ;
+
+    RFQ ;
+
+    QUOTES ;
+
+    MATCHING ;
+
+    DEALS ;
+
+    COMMISSIONS ;
+
+    DOCUMENTS ;
+
+    NOTIFICATIONS ;
+
+    AUDIT.
+
+    
+    
+    INFRASTRUCTURE
+
+    DB ;
+
+    STOCKAGE ;
+
+    EMAIL ;
+
+    BACKUP ;
+
+    MONITORING.
+
+    
+
+    
+    
+    
+    79. CE QUI EST REPORTÉ
+
+    APPLICATION MOBILE NATIVE ;
+
+    IA ;
+
+    TRACKING GPS ;
+
+    PAIEMENT DU FRET ;
+
+    BLOCKCHAIN ;
+
+    MICRO-SERVICES ;
+
+    DATA LAKE ;
+
+    CHATBOT AVANCÉ ;
+
+    ASSURANCE INTÉGRÉE ;
+
+    TMS ;
+
+    CRM COMPLET.
+
+    
+
+    
+    
+    80. ARCHITECTURE CIBLE
+
+    
+    UTILISATEURS
+
+    DONNEURS D’ORDRE + TRANSPORTEURS + ADMINISTRATEURS.
+
+    ↓
+
+    
+    
+    WEB APP
+
+    NEXT.JS OU ÉQUIVALENT.
+
+    ↓
+
+    
+    
+    API
+
+    NESTJS / DJANGO OU ÉQUIVALENT.
+
+    ↓
+
+    
+    
+    MODULES MÉTIER
+
+    AUTH
+COMPANY
+RFQ
+QUOTE
+MATCHING
+DEAL
+COMMISSION
+BILLING
+DOCUMENTS
+NOTIFICATIONS.
+
+    ↓
+
+    
+    
+    POSTGRESQL
+
+    ↓
+
+    
+    
+    OBJECT STORAGE
+
+    ↓
+
+    
+    
+    SERVICES EXTERNES
+
+    EMAIL
+FX
+MONITORING.
+
+    
+
+    
+    
+    
+    81. PROCHAINE ÉTAPE
+
+    NOUS DEVONS MAINTENANT PASSER À UN SUJET CRITIQUE :
+
+    
+    
+    VERSION 0.8 — ARCHITECTURE JURIDIQUE ET CONTRACTUELLE
+
+    ELLE DOIT DÉFINIR :
+
+    STATUT DE LA PLATEFORME ;
+
+    DISTINCTION ENTRE INTERMÉDIAIRE, COURTIER ET COMMISSIONNAIRE ;
+
+    QUI CONTRACTE AVEC QUI ;
+
+    RESPONSABILITÉ DU TRANSPORT ;
+
+    PAIEMENT DU TRANSPORT ;
+
+    COMMISSION DE 8 % ;
+
+    EXIGIBILITÉ DE LA COMMISSION ;
+
+    ANNULATION ;
+
+    NON-CONTOURNEMENT ;
+
+    CONFIDENTIALITÉ DES OFFRES ;
+
+    PROTECTION DES DONNÉES ;
+
+    RGPD POUR L’EUROPE ;
+
+    COLLECTE DES CONTACTS INTERNATIONAUX ;
+
+    CONSERVATION DES DONNÉES ;
+
+    RESPONSABILITÉ EN CAS DE MARCHANDISE DANGEREUSE ;
+
+    ASSURANCES ;
+
+    LITIGES ;
+
+    DROIT APPLICABLE ;
+
+    CONTRATS TRANSPORTEURS ;
+
+    CONDITIONS DONNEURS D’ORDRE.
+
+    CE CHAPITRE DEVRA ENSUITE ÊTRE VALIDÉ AVEC UN AVOCAT SPÉCIALISÉ AVANT LE LANCEMENT COMMERCIAL.
+
+    
+    
+      
+        
+                
+        
+        
+              
+      
+    
+  
+
