@@ -251,7 +251,10 @@ function tokenFrom(mail) {
 
   /* Recommandation */
   const rank = await call(recommendations, "POST", { rfqNumber: rfqNum }, { cookie: adminCookie });
-  check("recommandation validée", rank.status === 200 && rank.body.status === "VALIDATED", rank.body);
+  check("sans Drex → relecture humaine", rank.status === 200 && rank.body.status === "PENDING_ADMIN", rank.body);
+  check("aucun e-mail avant validation", !(await lastMail(email, "recommendation_ready")), null);
+  const approve = await call(recommendations, "POST", { rfqNumber: rfqNum, approve: true }, { cookie: adminCookie });
+  check("recommandation validée après relecture", approve.status === 200 && approve.body.status === "VALIDATED", approve.body);
   const recoMail = await lastMail(email, "recommendation_ready");
   check("e-mail recommendation_ready au donneur", !!recoMail && recoMail.body_text.includes(rfqNum), null);
 
@@ -334,6 +337,25 @@ function tokenFrom(mail) {
   check("cron valide → 200 + drained", cronOk.status === 200 && typeof cronOk.body.drained === "number", cronOk.body);
   const healthOk = await call(flushCron, "GET");
   check("health public inchangé (200 + db)", healthOk.status === 200 && healthOk.body.db && healthOk.body.db.ok === true, healthOk.body);
+
+  /* Vue outbox : les jetons sont masqués par défaut. Un lien de
+     réinitialisation est une clé : il ne s'affiche que sur demande
+     explicite (OUTBOX_EXPOSE_LINKS=true, diagnostic local). */
+  delete process.env.OUTBOX_EXPOSE_LINKS;
+  const outboxMasked = await call(admin, "GET", { view: "outbox" }, { cookie: adminCookie });
+  check("outbox par défaut → liens masqués",
+    outboxMasked.status === 200 && outboxMasked.body.links_exposed === false &&
+    outboxMasked.body.emails.length > 0 &&
+    outboxMasked.body.emails.every((m) => m.link === null && m.links.length === 0),
+    outboxMasked.body && outboxMasked.body.emails && outboxMasked.body.emails[0]);
+
+  process.env.OUTBOX_EXPOSE_LINKS = "true";
+  const outboxExposed = await call(admin, "GET", { view: "outbox" }, { cookie: adminCookie });
+  delete process.env.OUTBOX_EXPOSE_LINKS;
+  check("OUTBOX_EXPOSE_LINKS=true → liens exposés",
+    outboxExposed.status === 200 && outboxExposed.body.links_exposed === true &&
+    outboxExposed.body.emails.some((m) => m.links.length > 0),
+    outboxExposed.body && outboxExposed.body.emails && outboxExposed.body.emails[0]);
 
   const stuck = await query(`SELECT count(*)::int AS n FROM outbox_emails WHERE status IN ('SENDING') AND locked_at < now() - interval '1 minute'`);
   check("aucun verrou orphelin laissé", stuck.rows[0].n === 0, stuck.rows[0]);

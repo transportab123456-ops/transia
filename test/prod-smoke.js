@@ -233,6 +233,9 @@ function makeClient() {
   console.log("\n[7] Classement + recommandation");
   const rank = await admin("POST", "/api/recommendations", { rfqNumber: rfqNum });
   check("classement calculé", rank.status === 200, rank.body);
+  check("sans Drex → relecture humaine", rank.body.status === "PENDING_ADMIN", rank.body);
+  const approve = await admin("POST", "/api/recommendations", { rfqNumber: rfqNum, approve: true });
+  check("validation explicite → VALIDATED", approve.status === 200 && approve.body.status === "VALIDATED", approve.body);
   check("stats 1 conforme + 1 à vérifier + 1 conforme(USD)", rank.body.stats && rank.body.stats.conforme === 2 && rank.body.stats.aVerifier === 1, rank.body.stats);
   check("n°1 = offre A (2350 EUR)", rank.body.recommended && rank.body.recommended.comparable_total === 2350, rank.body.recommended);
 

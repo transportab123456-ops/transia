@@ -248,12 +248,22 @@ const admin = require("../api/admin");
 
   const rank = await call(recommendations, "POST", { rfqNumber: rfqNum }, { cookie: adminCookie });
   check("classement calculé", rank.status === 200, rank.body);
+  check("sans Drex → relecture humaine, rien n'est validé", rank.body.status === "PENDING_ADMIN", rank.body);
   check("3 conformes? non : 2 conformes + 1 à vérifier", rank.body.stats.conforme === 2 && rank.body.stats.aVerifier === 1, rank.body.stats);
   /* Normalisation : offre C (USD 2500 + 140 USD de frais) ≈ 2434 EUR
      vs offre A v2 (2290 EUR) → A v2 doit être n°1 */
   check("n°1 = offre A v2 (2290 EUR, moins cher converti)",
     rank.body.recommended && rank.body.recommended.comparable_total === 2290, rank.body.recommended);
   check("commissionnable = transport seul", rank.body.recommended.commissionable_amount === 2290, rank.body.recommended);
+
+  /* Toujours rien côté client : la relecture n'a pas encore eu lieu */
+  const stillPending = await call(recommendations, "GET", { rfq: rfqNum }, { cookie: shipperCookie });
+  check("shipper : toujours PENDING_ADMIN avant relecture",
+    stillPending.status === 200 && stillPending.body.status === "PENDING_ADMIN", stillPending.body);
+
+  /* Relecture humaine : l'opérateur valide explicitement la proposition */
+  const approve = await call(recommendations, "POST", { rfqNumber: rfqNum, approve: true }, { cookie: adminCookie });
+  check("validation explicite → VALIDATED", approve.status === 200 && approve.body.status === "VALIDATED", approve.body);
 
   /* Après validation, le client voit le classement */
   const validated = await call(recommendations, "GET", { rfq: rfqNum }, { cookie: shipperCookie });
@@ -272,11 +282,172 @@ const admin = require("../api/admin");
 
   /* Retour à la proposition du moteur pour la suite */
   const rankAgain = await call(recommendations, "POST", { rfqNumber: rfqNum }, { cookie: adminCookie });
-  check("revalidation du n°1 moteur", rankAgain.status === 200 && rankAgain.body.status === "VALIDATED", rankAgain.body);
+  check("recalcul après validation → PENDING_ADMIN",
+    rankAgain.status === 200 && rankAgain.body.status === "PENDING_ADMIN", rankAgain.body);
+  const reApprove = await call(recommendations, "POST", { rfqNumber: rfqNum, approve: true }, { cookie: adminCookie });
+  check("revalidation du n°1 moteur", reApprove.status === 200 && reApprove.body.status === "VALIDATED", reApprove.body);
+  check("validation : montant relu conservé (2290 EUR)",
+    reApprove.body.recommended && reApprove.body.recommended.comparable_total === 2290, reApprove.body.recommended);
+
+  /* Le recalcul a remplacé le classement : une seule ligne par offre,
+     y compris pour l'offre validée lors du calcul précédent. */
+  const rankingRows = await query(
+    `SELECT count(*)::int AS total, count(DISTINCT quote_id)::int AS offres
+       FROM quote_rankings
+      WHERE rfq_id = (SELECT rfq_id FROM rfqs WHERE rfq_number = $1)`,
+    [rfqNum]
+  );
+  check("classement persisté sans doublon après recalcul",
+    rankingRows.rows[0].total === rankingRows.rows[0].offres, rankingRows.rows[0]);
+  const recoView = await call(recommendations, "GET", { rfq: rfqNum }, { cookie: adminCookie });
+  const recoLetters = (recoView.body.rankings || []).map((r) => r.letter);
+  check("GET classement : une ligne par offre",
+    recoLetters.length === new Set(recoLetters).size, recoLetters);
+
+  /* Une recommandation déjà validée ne peut pas être revalidée */
+  const approveAgain = await call(recommendations, "POST", { rfqNumber: rfqNum, approve: true }, { cookie: adminCookie });
+  check("aucune recommandation en attente → 409",
+    approveAgain.status === 409 && approveAgain.body.code === "NO_PENDING_RECOMMENDATION", approveAgain.body);
+
+  /* ---------- Validation d'une relecture devenue obsolète ----------
+     Sur une RFQ encore ouverte, une nouvelle version d'offre arrive
+     entre le calcul et la validation : la validation est refusée et
+     rien n'est présenté au client. */
+  console.log("\n[8bis] Validation refusée si le classement a changé");
+  const staleRfq = await call(rfqs, "POST", {
+    originCity: "Lille", originCountry: "FR", destinationCity: "Tunis", destinationCountry: "TN",
+    mode: "ROAD", cargoDescription: "Charge relecture obsolète", palletCount: 2
+  }, { cookie: shipperCookie });
+  check("RFQ dédiée créée", staleRfq.status === 201, staleRfq.body);
+  const staleNum = staleRfq.body.rfq.rfq_number;
+
+  const sA = await call(quotes, "POST", {
+    rfqNumber: staleNum, currency: "EUR", baseTransportPrice: 1800,
+    transitTimeValue: 4, transitTimeUnit: "day", validUntil: "2026-12-20"
+  }, { cookie: carrierCookies[0] });
+  const sB = await call(quotes, "POST", {
+    rfqNumber: staleNum, currency: "EUR", baseTransportPrice: 1900,
+    transitTimeValue: 5, transitTimeUnit: "day", validUntil: "2026-12-20"
+  }, { cookie: carrierCookies[1] });
+  check("deux offres déposées", sA.status === 201 && sB.status === 201, [sA.body, sB.body]);
+
+  const sRank = await call(recommendations, "POST", { rfqNumber: staleNum }, { cookie: adminCookie });
+  check("classement en relecture", sRank.status === 200 && sRank.body.status === "PENDING_ADMIN", sRank.body);
+  check("n°1 = 1800 EUR", sRank.body.recommended && sRank.body.recommended.comparable_total === 1800, sRank.body.recommended);
+
+  const sB2 = await call(quotes, "POST", {
+    rfqNumber: staleNum, currency: "EUR", baseTransportPrice: 1700,
+    transitTimeValue: 5, transitTimeUnit: "day", validUntil: "2026-12-20"
+  }, { cookie: carrierCookies[1] });
+  check("nouvelle version d'offre déposée", sB2.status === 201, sB2.body);
+
+  const sStale = await call(recommendations, "POST", { rfqNumber: staleNum, approve: true }, { cookie: adminCookie });
+  check("classement modifié depuis la relecture → 409 RANKING_CHANGED",
+    sStale.status === 409 && sStale.body.code === "RANKING_CHANGED", sStale.body);
+  const sStaleOverride = await call(recommendations, "POST", {
+    rfqNumber: staleNum, approve: true,
+    overrideQuoteId: sA.body.quote.quote_id, overrideReason: "Écart sur un classement obsolète"
+  }, { cookie: adminCookie });
+  check("écart motivé sur un classement obsolète → 409 RANKING_CHANGED",
+    sStaleOverride.status === 409 && sStaleOverride.body.code === "RANKING_CHANGED", sStaleOverride.body);
+  const sShipper = await call(recommendations, "GET", { rfq: staleNum }, { cookie: shipperCookie });
+  check("validation refusée : le client ne voit rien",
+    sShipper.status === 200 && sShipper.body.status === "PENDING_ADMIN", sShipper.body);
+
+  const sRecalc = await call(recommendations, "POST", { rfqNumber: staleNum }, { cookie: adminCookie });
+  check("recalcul → PENDING_ADMIN sur le nouveau classement",
+    sRecalc.status === 200 && sRecalc.body.status === "PENDING_ADMIN", sRecalc.body);
+  check("nouveau n°1 = 1700 EUR", sRecalc.body.recommended && sRecalc.body.recommended.comparable_total === 1700, sRecalc.body.recommended);
+  const sApprove = await call(recommendations, "POST", { rfqNumber: staleNum, approve: true }, { cookie: adminCookie });
+  check("validation de la relecture à jour → VALIDATED",
+    sApprove.status === 200 && sApprove.body.status === "VALIDATED", sApprove.body);
 
   /* Shipper ne peut pas valider */
   const shipperRank = await call(recommendations, "POST", { rfqNumber: rfqNum }, { cookie: shipperCookie });
   check("shipper → 403 validation", shipperRank.status === 403, shipperRank.body);
+
+  /* ---------- Écart motivé à la validation ----------
+     L'opérateur retient une autre offre du classement relu : le motif
+     est obligatoire, l'offre doit figurer dans ce classement, et la
+     validation ne recalcule rien. */
+  console.log("\n[8ter] Écart motivé à la validation");
+  const altRfq = await call(rfqs, "POST", {
+    originCity: "Nantes", originCountry: "FR", destinationCity: "Alger", destinationCountry: "DZ",
+    mode: "ROAD", cargoDescription: "Charge écart motivé", palletCount: 3
+  }, { cookie: shipperCookie });
+  check("RFQ d'écart motivé créée", altRfq.status === 201, altRfq.body);
+  const altNum = altRfq.body.rfq.rfq_number;
+
+  const altA = await call(quotes, "POST", {
+    rfqNumber: altNum, currency: "EUR", baseTransportPrice: 2000,
+    transitTimeValue: 6, transitTimeUnit: "day", validUntil: "2026-12-20",
+    conditions: "Port payé."
+  }, { cookie: carrierCookies[0] });
+  const altB = await call(quotes, "POST", {
+    rfqNumber: altNum, currency: "EUR", baseTransportPrice: 2100,
+    transitTimeValue: 3, transitTimeUnit: "day", validUntil: "2026-12-20",
+    conditions: "Franco départ."
+  }, { cookie: carrierCookies[1] });
+  check("deux offres conformes déposées",
+    altA.status === 201 && altA.body.quote.compliance_status === "CONFORME" &&
+    altB.status === 201 && altB.body.quote.compliance_status === "CONFORME", [altA.body, altB.body]);
+
+  const altRank = await call(recommendations, "POST", { rfqNumber: altNum }, { cookie: adminCookie });
+  check("classement en relecture", altRank.status === 200 && altRank.body.status === "PENDING_ADMIN", altRank.body);
+  check("n°1 = 2000 EUR", altRank.body.recommended && altRank.body.recommended.comparable_total === 2000, altRank.body.recommended);
+
+  const altView = await call(recommendations, "GET", { rfq: altNum }, { cookie: adminCookie });
+  const altRow = (altView.body.rankings || []).find((r) => r.quote_id === altB.body.quote.quote_id);
+  check("le classement exposé porte l'identifiant de l'offre", !!altRow && altRow.rank === 2, altView.body.rankings);
+
+  const overrideNoMotif = await call(recommendations, "POST", {
+    rfqNumber: altNum, approve: true,
+    overrideQuoteId: altB.body.quote.quote_id, overrideReason: "  "
+  }, { cookie: adminCookie });
+  check("écart sans motif → 400 OVERRIDE_REASON_REQUIRED",
+    overrideNoMotif.status === 400 && overrideNoMotif.body.code === "OVERRIDE_REASON_REQUIRED", overrideNoMotif.body);
+
+  const badAlt = await call(recommendations, "POST", {
+    rfqNumber: altNum, approve: true,
+    overrideQuoteId: "00000000-0000-0000-0000-000000000000",
+    overrideReason: "Offre absente du classement relu"
+  }, { cookie: adminCookie });
+  check("offre hors classement → 400 INVALID_OVERRIDE",
+    badAlt.status === 400 && badAlt.body.code === "INVALID_OVERRIDE", badAlt.body);
+
+  const altStillPending = await call(recommendations, "GET", { rfq: altNum }, { cookie: adminCookie });
+  check("refus d'écart : la relecture reste en attente",
+    altStillPending.body.status === "PENDING_ADMIN" && altStillPending.body.validated === false, altStillPending.body);
+
+  const override = await call(recommendations, "POST", {
+    rfqNumber: altNum, approve: true,
+    overrideQuoteId: altB.body.quote.quote_id,
+    overrideReason: "Délai de 3 jours exigé par le client"
+  }, { cookie: adminCookie });
+  check("écart motivé → offre retenue validée",
+    override.status === 200 && override.body.status === "VALIDATED" &&
+    override.body.recommended.quote_id === altB.body.quote.quote_id &&
+    override.body.recommended.rank === 2, override.body);
+  check("écart : offre d'origine et motif renvoyés",
+    override.body.override && override.body.override.from === altA.body.quote.quote_id &&
+    override.body.override.reason === "Délai de 3 jours exigé par le client", override.body.override);
+
+  const altAfter = await call(recommendations, "GET", { rfq: altNum }, { cookie: shipperCookie });
+  const chosenRow = (altAfter.body.rankings || []).find((r) => r.quote_id === altB.body.quote.quote_id);
+  check("shipper voit l'offre retenue validée, motif journalisé",
+    altAfter.body.validated === true && !!chosenRow && chosenRow.admin_validated === true &&
+    /Délai de 3 jours/.test(chosenRow.admin_reason || ""), altAfter.body);
+  check("écart : seule l'offre retenue est validée",
+    (altAfter.body.rankings || []).every((r) => r.quote_id === altB.body.quote.quote_id || r.admin_validated === false),
+    altAfter.body.rankings);
+
+  const altMail = await query(
+    `SELECT count(*)::int AS n FROM outbox_emails
+      WHERE event_type = 'recommendation_ready'
+        AND entity_id = (SELECT rfq_id FROM rfqs WHERE rfq_number = $1)`,
+    [altNum]
+  );
+  check("écart motivé : un seul e-mail recommendation_ready", altMail.rows[0].n === 1, altMail.rows[0]);
 
   /* ---------- Double confirmation ---------- */
   console.log("\n[9] Acceptation → confirmation → affaire");

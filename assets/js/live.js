@@ -710,5 +710,201 @@
         body.innerHTML = "<tr><td colspan='7' class='muted' style='padding:16px;'>Aucune affaire confirmée pour l'instant.</td></tr>";
       }
     });
+
+    /* Validation des recommandations (réelle) */
+    initRecoValidation(user);
+  }
+
+  /* ============================================================
+     ADMIN — validation des recommandations (données réelles)
+     admin.js rend ce panneau à partir de données de démonstration :
+     on le remplace par les RFQ et les classements réels. La
+     validation porte sur la recommandation en attente telle qu'elle
+     est affichée ; l'API refuse si le classement a changé depuis.
+     ============================================================ */
+  function initRecoValidation(user) {
+    var oldSel = get("adminSelectRfq");
+    var zone = get("adminClassement");
+    if (!oldSel || !zone) return;
+
+    /* Le sélecteur de démonstration écoute « change » : on le remplace
+       par une copie sans écouteur avant de brancher les données réelles. */
+    var sel = oldSel.cloneNode(false);
+    oldSel.parentNode.replaceChild(sel, oldSel);
+
+    /* Mêmes rôles que requireAuth(PLATFORM_ROLES) côté API : la finance
+       voit le back-office mais ne valide pas les recommandations. */
+    if (["PLATFORM_OPERATIONS", "PLATFORM_ADMIN", "SUPER_ADMIN"].indexOf(user.role) === -1) {
+      zone.innerHTML = "<p class='muted' style='font-size:13.5px;'>Validation réservée aux rôles opérations et administration de la plateforme.</p>";
+      return;
+    }
+
+    zone.innerHTML = "<p class='muted' style='font-size:13.5px;'>Chargement…</p>";
+
+    API.get("/api/rfqs").then(function (r) {
+      if (!r.ok) {
+        zone.innerHTML = "<p class='muted' style='font-size:13.5px;'>" + h(r.body.error || "Demandes indisponibles.") + "</p>";
+        return;
+      }
+      var rfqs = r.body.rfqs || [];
+      sel.innerHTML = "";
+      if (!rfqs.length) {
+        zone.innerHTML = "<p class='muted' style='font-size:13.5px;'>Aucune demande de cotation.</p>";
+        return;
+      }
+      rfqs.forEach(function (x) {
+        var o = document.createElement("option");
+        o.value = x.rfq_number;
+        o.textContent = x.rfq_number + " — " + x.origin_city + " → " + x.destination_city;
+        sel.appendChild(o);
+      });
+      var pre = new URLSearchParams(window.location.search).get("ref");
+      if (pre && Array.prototype.some.call(sel.options, function (o) { return o.value === pre; })) sel.value = pre;
+      sel.addEventListener("change", charger);
+      charger();
+    });
+
+    function charger() {
+      var ref = sel.value;
+      if (!ref) return;
+      zone.innerHTML = "<p class='muted' style='font-size:13.5px;'>Chargement…</p>";
+      API.get("/api/recommendations?rfq=" + encodeURIComponent(ref)).then(function (r) {
+        if (!r.ok) {
+          zone.innerHTML = "<p class='muted' style='font-size:13.5px;'>" + h(r.body.error || "Classement indisponible.") + "</p>";
+          return;
+        }
+        rendre(ref, r.body);
+      });
+    }
+
+    function rendre(ref, rec) {
+      var lignes = (rec.rankings || []).map(function (x) {
+        var st = x.compliance === "CONFORME" ? "badge-green"
+          : x.compliance === "A_VERIFIER" ? "badge-amber" : "badge-red";
+        var conformite = x.compliance === "CONFORME" ? "Conforme"
+          : x.compliance === "A_VERIFIER" ? "À vérifier"
+          : x.compliance === "NON_CONFORME" ? "Non conforme" : "—";
+        return "<tr" + (x.system_recommended ? " style='background:var(--blue-light);'" : "") + ">" +
+          "<td>" + (x.rank == null ? "—" : "<b>" + x.rank + "</b>") + "</td>" +
+          "<td><b>Offre " + h(x.letter || "?") + "</b>" +
+          (x.system_recommended ? " <span class='badge badge-blue'>Proposition moteur</span>" : "") +
+          (x.admin_validated ? " <span class='badge badge-green'>Validée</span>" : "") + "</td>" +
+          "<td>" + (x.comparable_price == null ? "<span style='color:#96650f;'>à déterminer</span>" : "<b>" + euro(x.comparable_price) + "</b>") + "</td>" +
+          "<td>" + h(x.currency) + "</td>" +
+          "<td>" + (x.transitTime ? h(Number(x.transitTime.value)) + " " + h(x.transitTime.unit === "hour" ? "h" : x.transitTime.unit === "week" ? "sem." : "j") : "—") + "</td>" +
+          "<td><span class='badge " + st + "'>" + h(conformite) + "</span></td></tr>";
+      }).join("");
+
+      var table = lignes
+        ? "<div class='table-wrap'><table class='table'><thead><tr><th>Rang</th><th>Offre</th><th>Prix comparable</th><th>Devise</th><th>Délai</th><th>Conformité</th></tr></thead><tbody>" + lignes + "</tbody></table></div>"
+        : "<p class='muted' style='font-size:13.5px;'>Aucune offre classée pour cette demande.</p>";
+
+      var actions = "";
+      if (rec.status === "PENDING_ADMIN") {
+        var lettre = rec.recommended && rec.recommended.letter ? rec.recommended.letter : null;
+        /* Écart motivé : seules les offres conformes du classement relu,
+           hors proposition du moteur, sont proposées. */
+        var autres = (rec.rankings || []).filter(function (x) {
+          return x.rank != null && x.compliance === "CONFORME" &&
+            (!rec.recommended || x.quote_id !== rec.recommended.quote_id);
+        });
+        var optionsAutres = autres.map(function (x) {
+          return "<option value='" + h(x.quote_id) + "'>Offre " + h(x.letter || "?") +
+            (x.comparable_price == null ? " — prix à déterminer" : " — " + euro(x.comparable_price)) + "</option>";
+        }).join("");
+        actions =
+          "<div class='info-banner' style='margin-top:16px;'> <span><b>Relecture requise.</b> " +
+          h(rec.message || "Vérifiez le classement ci-dessus avant de valider.") + "</span></div>" +
+          "<div style='display:flex;gap:10px;flex-wrap:wrap;margin-top:14px;'>" +
+          "<button class='btn btn-primary' id='btnValiderRecoLive'>✓ Valider " + h(lettre ? "l'offre " + lettre : "la proposition n°1") + " telle qu'elle a été relue</button>" +
+          "<button class='btn btn-outline' id='btnRecalculerRecoLive'>Recalculer le classement</button></div>" +
+          "<p class='form-note'>La validation porte sur le classement affiché : si une offre a changé entre-temps, elle est refusée et il faut recalculer.</p>" +
+          (autres.length
+            ? "<div class='panel' style='margin-top:16px;'>" +
+              "<b style='font-size:14px;'>Retenir une autre offre (écart motivé)</b>" +
+              "<p class='form-note' style='margin-top:4px;'>L'offre retenue doit figurer dans le classement relu. Le motif est obligatoire et journalisé.</p>" +
+              "<div class='field' style='margin-top:10px;max-width:520px;'><label>Offre à retenir</label>" +
+              "<select id='selOverrideRecoLive'><option value=''>— Choisir une offre —</option>" + optionsAutres + "</select></div>" +
+              "<div class='field' style='margin-top:10px;max-width:520px;'><label>Motif de l'écart</label>" +
+              "<textarea id='txtMotifRecoLive' rows='3' placeholder='Pourquoi cette offre plutôt que la proposition du moteur ?'></textarea></div>" +
+              "<button class='btn btn-outline' id='btnValiderOverrideRecoLive'>Valider l'offre retenue avec ce motif</button></div>"
+            : "");
+      } else if (rec.status === "VALIDATED" || rec.status === "SENT") {
+        actions = "<div class='info-banner' style='margin-top:16px;'>✓ <span><b>Recommandation validée</b>" +
+          (rec.recommended && rec.recommended.validatedAt ? " le " + h(new Date(rec.recommended.validatedAt).toLocaleString("fr-FR")) : "") +
+          ". Le donneur d'ordre peut l'accepter depuis son espace.</span></div>";
+      } else if (rec.status === "NONE") {
+        actions = "<div style='margin-top:14px;'><button class='btn btn-primary' id='btnCalculerRecoLive'>Calculer le classement</button></div>" +
+          "<p class='form-note'>Le calcul prépare une proposition ; elle reste en attente de votre validation.</p>";
+      } else {
+        actions = "<div class='info-banner' style='margin-top:16px;'> <span>" +
+          h(rec.message || "Aucune offre conforme : clarification requise avant recommandation.") + "</span></div>";
+      }
+
+      zone.innerHTML = table + actions;
+
+      var bv = get("btnValiderRecoLive");
+      if (bv) bv.addEventListener("click", function () {
+        var prix = rec.recommended && rec.recommended.comparable_total != null ? " (" + euro(rec.recommended.comparable_total) + ")" : "";
+        var cible = rec.recommended && rec.recommended.letter ? "l'offre " + rec.recommended.letter : "la proposition n°1";
+        if (!window.confirm("Valider " + cible + prix + " telle qu'elle a été relue ?\n\nLa validation est refusée si le classement a changé depuis l'affichage.")) return;
+        bv.disabled = true;
+        API.post("/api/recommendations", { rfqNumber: ref, approve: true }).then(function (res) {
+          if (!res.ok) {
+            bv.disabled = false;
+            toast(res.body.error || "Validation impossible.", "err");
+            if (res.body.code === "RANKING_CHANGED" || res.body.code === "NO_PENDING_RECOMMENDATION") charger();
+            return;
+          }
+          toast("Recommandation validée — le donneur d'ordre peut l'accepter.", "ok");
+          charger();
+        }).catch(function () { bv.disabled = false; toast("Service injoignable.", "err"); });
+      });
+
+      var bo = get("btnValiderOverrideRecoLive");
+      if (bo) bo.addEventListener("click", function () {
+        var selAlt = get("selOverrideRecoLive");
+        var txtMotif = get("txtMotifRecoLive");
+        var quoteId = selAlt ? selAlt.value : "";
+        var motif = txtMotif ? txtMotif.value.trim() : "";
+        if (!quoteId) { toast("Choisissez l'offre à retenir.", "err"); if (selAlt) selAlt.focus(); return; }
+        if (motif.length < 5) { toast("Motif obligatoire : expliquez l'écart (5 caractères minimum).", "err"); if (txtMotif) txtMotif.focus(); return; }
+        if (!window.confirm("Retenir une autre offre que la proposition du moteur ?\n\nL'écart et son motif sont journalisés.")) return;
+        bo.disabled = true;
+        API.post("/api/recommendations", {
+          rfqNumber: ref, approve: true, overrideQuoteId: quoteId, overrideReason: motif
+        }).then(function (res) {
+          if (!res.ok) {
+            bo.disabled = false;
+            toast(res.body.error || "Validation impossible.", "err");
+            if (res.body.code === "RANKING_CHANGED" || res.body.code === "NO_PENDING_RECOMMENDATION" || res.body.code === "INVALID_OVERRIDE") charger();
+            return;
+          }
+          toast("Offre retenue validée — le donneur d'ordre peut l'accepter.", "ok");
+          charger();
+        }).catch(function () { bo.disabled = false; toast("Service injoignable.", "err"); });
+      });
+
+      var br = get("btnRecalculerRecoLive");
+      if (br) br.addEventListener("click", function () {
+        if (!window.confirm("Recalculer le classement ? La recommandation en attente sera remplacée par le résultat du calcul.")) return;
+        br.disabled = true;
+        API.post("/api/recommendations", { rfqNumber: ref }).then(function (res) {
+          if (!res.ok) { br.disabled = false; toast(res.body.error || "Calcul impossible.", "err"); return; }
+          toast(res.body.status === "PENDING_ADMIN" ? "Classement recalculé — en attente de validation." : (res.body.message || "Classement recalculé."), "ok");
+          charger();
+        }).catch(function () { br.disabled = false; toast("Service injoignable.", "err"); });
+      });
+
+      var bc = get("btnCalculerRecoLive");
+      if (bc) bc.addEventListener("click", function () {
+        bc.disabled = true;
+        API.post("/api/recommendations", { rfqNumber: ref }).then(function (res) {
+          if (!res.ok) { bc.disabled = false; toast(res.body.error || "Calcul impossible.", "err"); return; }
+          toast(res.body.status === "PENDING_ADMIN" ? "Classement calculé — en attente de votre validation." : (res.body.message || "Classement calculé."), "ok");
+          charger();
+        }).catch(function () { bc.disabled = false; toast("Service injoignable.", "err"); });
+      });
+    }
   }
 })();

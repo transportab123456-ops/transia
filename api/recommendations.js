@@ -4,12 +4,21 @@
           plateforme). Le classement n'est visible du client
           qu'après validation administrative (spec : l'algorithme
           propose, l'administrateur valide avant envoi).
-   POST : recalcule et persiste le classement (plateforme), puis
-          valide la recommandation — soit la proposition n°1 du
-          moteur, soit un écart motivé (override journalisé).
-          La décision de valider d'office ou de router vers une
-          relecture humaine s'appuie sur les probabilités calibrées
-          renvoyées par Nace Drex (api/_lib/drex.js).
+   POST : deux chemins distincts.
+          - Calcul ({ rfqNumber }) : recalcule et persiste le
+            classement (plateforme) et ouvre une recommandation, soit
+            validée d'office (Drex au-dessus du seuil, écart motivé),
+            soit PENDING_ADMIN pour relecture humaine. Sans Drex (clé
+            absente, panne, seuil non atteint), la recommandation part
+            toujours en relecture, jamais en validation d'office.
+          - Validation d'une relecture ({ rfqNumber, approve: true }) :
+            valide la recommandation PENDING_ADMIN telle qu'elle a été
+            relue, sans recalculer ni réécrire le classement. Si le
+            classement a changé entre-temps (nouvelle offre, nouvelle
+            version, nouveau taux), la validation est refusée (409).
+            L'opérateur peut retenir une autre offre du classement relu
+            ({ overrideQuoteId, overrideReason }) : le motif est alors
+            obligatoire et journalisé.
    ============================================================ */
 "use strict";
 
@@ -27,6 +36,74 @@ const SHIPPER_ROLES = ["SHIPPER_USER", "SHIPPER_ADMIN"];
 /* Seuil de validation automatique : au-delà, la proposition part
    directement ; en dessous, elle passe en relecture humaine. */
 const DREX_VALIDATION_THRESHOLD = 0.7;
+
+/* Routage du calcul. Le repli est volontairement prudent :
+   l'absence de décision (Drex non configuré, injoignable ou en
+   timeout) n'est jamais une validation d'office, elle ouvre une
+   relecture humaine. Seuls un écart motivé ou une probabilité Drex
+   au-dessus du seuil valident. La validation d'une relecture
+   ({ approve: true }) ne passe pas par ici : elle valide la
+   recommandation existante sans recalculer le classement. */
+function routingDecision(drex, opts) {
+  const options = opts || {};
+  if (options.overrideReason) {
+    return { autoValidate: true, reason: options.overrideReason };
+  }
+  if (!drex) {
+    return { autoValidate: false, reason: "Drex indisponible : relecture humaine requise." };
+  }
+  if (drex.routed === "auto") {
+    return { autoValidate: true, reason: null };
+  }
+  return { autoValidate: false, reason: "Décision automatique sous le seuil : relecture opérateur requise." };
+}
+
+/* Empreinte stable d'un classement : identité, rang et prix comparable
+   de chaque offre conforme. Elle permet de comparer le classement relu
+   (persisté dans quote_rankings lors du calcul) au classement actuel
+   sans réécrire la base. L'ordre des lignes est sans effet. */
+function rankingFingerprint(rows) {
+  return (rows || [])
+    .map((r) => [
+      String(r.quote_id),
+      r.rank_position == null ? "" : String(Number(r.rank_position)),
+      r.comparable_price == null ? "" : Number(r.comparable_price).toFixed(2)
+    ].join("|"))
+    .sort()
+    .join(";");
+}
+
+/* Mise à la forme des lignes quote_rankings (les offres classées du
+   moteur portent rank / prixComparable). */
+function rankingRows(conforme) {
+  return (conforme || []).map((o) => ({
+    quote_id: o.quote_id,
+    rank_position: o.rank,
+    comparable_price: o.prixComparable
+  }));
+}
+
+/* Classement recalculé depuis les données réelles — DERNIÈRE VERSION
+   par transporteur uniquement (les versions antérieures restent en
+   base pour l'historique). Renvoie null sans offre exploitable. */
+async function computeClassement(client, rfqId) {
+  const quotes = await client.query(
+    `SELECT DISTINCT ON (q.carrier_company_id)
+            q.quote_id, q.carrier_company_id, q.base_transport_price, q.mandatory_fees_total,
+            q.comparable_total, q.commissionable_amount, q.transit_time_value, q.transit_time_unit,
+            q.valid_until, q.conditions, q.compliance_status, q.submitted_at,
+            q.fees_to_specify, q.scope_comparable, q.non_compliance_reason,
+            cur.iso_code AS currency
+       FROM quotes q JOIN currencies cur ON cur.currency_id = q.currency_id
+      WHERE q.rfq_id = $1 AND q.status IN ('SUBMITTED','RANKED','SELECTED')
+      ORDER BY q.carrier_company_id, q.quote_version DESC`,
+    [rfqId]
+  );
+  if (!quotes.rows.length) return null;
+  const fx = await loadFx(client);
+  const normalized = quotes.rows.map((q) => normalizeQuote(q, fx, "EUR"));
+  return classify(normalized);
+}
 
 /* État transmis à Drex : uniquement les faits utiles à la décision
    (prix comparables, délais, complétude), jamais d'identité. */
@@ -54,7 +131,7 @@ function drexCaseState(rfqNumber, rfqRow, classement) {
   };
 }
 
-module.exports = handler(async (req, res) => {
+const recHandler = handler(async (req, res) => {
   /* ---------- GET : classement d'une RFQ ---------- */
   if (req.method === "GET") {
     const denied = await requireAuth()(req, res);
@@ -147,6 +224,7 @@ module.exports = handler(async (req, res) => {
         sentAt: rec.rows[0].sent_to_client_at
       } : null,
       rankings: rankings.rows.map((r) => ({
+        quote_id: r.quote_id,
         letter: letterOf[r.quote_id],
         rank: r.rank_position,
         comparable_price: r.comparable_price,
@@ -177,50 +255,153 @@ module.exports = handler(async (req, res) => {
       await client.query("BEGIN");
 
       const rfq = await client.query(
-        `SELECT rfq_id, status, origin_city, destination_city FROM rfqs WHERE rfq_number = $1`,
+        `SELECT rfq_id, shipper_company_id, status, origin_city, destination_city
+           FROM rfqs WHERE rfq_number = $1`,
         [rfqNumber]
       );
       if (!rfq.rows.length) { await client.query("ROLLBACK"); return fail(res, 404, "Demande introuvable.", "NOT_FOUND"); }
       const rfqId = rfq.rows[0].rfq_id;
 
-      /* Recalcul du classement depuis les données réelles —
-         DERNIÈRE VERSION par transporteur uniquement (les versions
-         antérieures restent en base pour l'historique) */
-      const quotes = await client.query(
-        `SELECT DISTINCT ON (q.carrier_company_id)
-                q.quote_id, q.carrier_company_id, q.base_transport_price, q.mandatory_fees_total,
-                q.comparable_total, q.commissionable_amount, q.transit_time_value, q.transit_time_unit,
-                q.valid_until, q.conditions, q.compliance_status, q.submitted_at,
-                q.fees_to_specify, q.scope_comparable, q.non_compliance_reason,
-                cur.iso_code AS currency
-           FROM quotes q JOIN currencies cur ON cur.currency_id = q.currency_id
-          WHERE q.rfq_id = $1 AND q.status IN ('SUBMITTED','RANKED','SELECTED')
-          ORDER BY q.carrier_company_id, q.quote_version DESC`,
-        [rfqId]
-      );
-      if (!quotes.rows.length) { await client.query("ROLLBACK"); return fail(res, 409, "Aucune offre déposée sur cette demande.", "NO_QUOTES"); }
+      /* ---------- Validation d'une relecture humaine ----------
+         L'opérateur valide la recommandation qu'il a relue : on ne
+         recalcule pas le classement et on n'en persiste pas un
+         nouveau. Le classement est seulement reconstruit en mémoire
+         pour vérifier qu'il n'a pas bougé depuis la relecture ; toute
+         divergence est refusée et impose un nouveau calcul. */
+      if (body.approve === true) {
+        const pending = await client.query(
+          `SELECT rec.recommendation_id, rec.quote_id, rk.rank_position
+             FROM rfq_recommendations rec
+             LEFT JOIN quote_rankings rk
+                    ON rk.rfq_id = rec.rfq_id AND rk.quote_id = rec.quote_id
+            WHERE rec.rfq_id = $1 AND rec.status = 'PENDING_ADMIN'
+            ORDER BY rec.system_recommended_at DESC
+            LIMIT 1
+            FOR UPDATE OF rec`,
+          [rfqId]
+        );
+        if (!pending.rows.length) {
+          await client.query("ROLLBACK");
+          return fail(res, 409,
+            "Aucune recommandation en attente : calculez le classement avant de valider.",
+            "NO_PENDING_RECOMMENDATION");
+        }
+        const reviewed = pending.rows[0];
 
-      const fx = await loadFx(client);
-      const normalized = quotes.rows.map((q) => normalizeQuote(q, fx, "EUR"));
-      const classement = classify(normalized);
+        /* Le classement relu est celui persisté lors du calcul : il a
+           pu changer depuis (nouvelle offre, nouvelle version, taux). */
+        const stored = await client.query(
+          `SELECT rk.quote_id, rk.rank_position, rk.comparable_price,
+                  q.commissionable_amount
+             FROM quote_rankings rk
+             JOIN quotes q ON q.quote_id = rk.quote_id
+            WHERE rk.rfq_id = $1`,
+          [rfqId]
+        );
+        const classement = await computeClassement(client, rfqId);
+        const current = classement ? rankingRows(classement.conforme) : [];
 
-      /* Persistance du classement (historique conservé : on supprime
-         les entrées système non validées de ce calcul) */
-      await client.query(`DELETE FROM quote_rankings WHERE rfq_id = $1 AND admin_validated = false`, [rfqId]);
+        if (reviewed.rank_position !== 1
+            || rankingFingerprint(stored.rows) !== rankingFingerprint(current)) {
+          await client.query("ROLLBACK");
+          return fail(res, 409,
+            "Le classement a changé depuis la relecture : relancez le calcul avant de valider.",
+            "RANKING_CHANGED");
+        }
 
-      for (const o of classement.conforme) {
+        /* Écart motivé : l'opérateur retient une autre offre du
+           classement relu. Le motif est obligatoire et journalisé, et
+           l'offre doit figurer dans ce classement, jamais en dehors. */
+        let chosen = stored.rows.find((r) => r.quote_id === reviewed.quote_id);
+        let overrideReason = null;
+        if (body.overrideQuoteId) {
+          const alt = stored.rows.find((r) => r.quote_id === String(body.overrideQuoteId));
+          const motif = String(body.overrideReason || "").trim();
+          if (!alt) {
+            await client.query("ROLLBACK");
+            return fail(res, 400,
+              "L'offre retenue doit figurer dans le classement relu.",
+              "INVALID_OVERRIDE");
+          }
+          if (motif.length < 5) {
+            await client.query("ROLLBACK");
+            return fail(res, 400,
+              "Motif d'écart obligatoire (journalisé, spec : jamais d'écart sans motif).",
+              "OVERRIDE_REASON_REQUIRED");
+          }
+          chosen = alt;
+          overrideReason = motif;
+        }
+
+        const reason = overrideReason
+          ? "Écart motivé : " + overrideReason
+          : "Relecture humaine : validation explicite de l'opérateur.";
         await client.query(
-          `INSERT INTO quote_rankings (rfq_id, quote_id, rank_position, comparable_price, system_recommended)
-           VALUES ($1,$2,$3,$4,$5)`,
-          [rfqId, o.quote_id, o.rank, o.prixComparable, o.rank === 1]
+          `UPDATE rfq_recommendations
+              SET quote_id = $2, status = 'VALIDATED', admin_validated_at = now()
+            WHERE recommendation_id = $1`,
+          [reviewed.recommendation_id, chosen.quote_id]
+        );
+
+        await client.query(
+          `UPDATE quote_rankings SET admin_validated = true, admin_user_id = $3, admin_reason = $4
+            WHERE rfq_id = $1 AND quote_id = $2`,
+          [rfqId, chosen.quote_id, user.user_id, reason]
         );
         await client.query(
-          `UPDATE quotes SET rank = $2, comparable_total = $3, commissionable_amount = $4,
-                              compliance_status = 'CONFORME', updated_at = now()
-            WHERE quote_id = $1`,
-          [o.quote_id, o.rank, o.prixComparable, o.assietteCommission]
+          `UPDATE rfqs SET status = 'RECOMMENDED' WHERE rfq_id = $1 AND status IN ('OPEN','COTATION','ANALYSIS')`,
+          [rfqId]
         );
+        await client.query(
+          `INSERT INTO audit_log (user_id, action_type, entity_type, entity_id, old_value, new_value, reason)
+           VALUES ($1,'RECOMMENDATION_VALIDATED','rfqs',$2,$3,$4,$5)`,
+          [user.user_id, rfqId,
+           JSON.stringify({ recommendation_id: reviewed.recommendation_id, quote_id: reviewed.quote_id }),
+           JSON.stringify({ chosen: chosen.quote_id, comparable: Number(chosen.comparable_price), ranking: "relu", override: overrideReason }),
+           reason]
+        );
+
+        /* Le comparatif est prêt : le donneur d'ordre est invité à
+           accepter ou refuser. */
+        const shipper = await companyEmails(client, rfq.rows[0].shipper_company_id);
+        if (shipper) {
+          await enqueueEmail(client, {
+            dedupeKey: "recommendation_ready:" + rfqId + ":" + reviewed.recommendation_id,
+            eventType: "recommendation_ready",
+            entityType: "rfqs",
+            entityId: rfqId,
+            to: shipper.email,
+            userId: shipper.user_id,
+            vars: { firstName: shipper.first_name, rfqNumber, offers: current.length }
+          });
+        }
+
+        await client.query("COMMIT");
+        await flushOutbox(client);
+
+        return json(res, 200, {
+          rfqNumber,
+          status: "VALIDATED",
+          recommended: {
+            quote_id: chosen.quote_id,
+            comparable_total: chosen.comparable_price == null ? null : Number(chosen.comparable_price),
+            commissionable_amount: chosen.commissionable_amount == null ? null : Number(chosen.commissionable_amount),
+            rank: chosen.rank_position
+          },
+          drex: null,
+          override: overrideReason ? { from: reviewed.quote_id, reason: overrideReason } : null,
+          secours: classement ? classement.secours.map((s) => s.quote_id) : [],
+          stats: classement
+            ? { conforme: classement.conforme.length, aVerifier: classement.aVerifier.length, ecartees: classement.ecartees.length }
+            : { conforme: 0, aVerifier: 0, ecartees: 0 }
+        });
       }
+
+      /* Recalcul du classement depuis les données réelles */
+      const classement = await computeClassement(client, rfqId);
+      if (!classement) { await client.query("ROLLBACK"); return fail(res, 409, "Aucune offre déposée sur cette demande.", "NO_QUOTES"); }
+
+      /* Statut technique des offres non classées */
       for (const o of classement.aVerifier) {
         await client.query(
           `UPDATE quotes SET comparable_total = NULL, compliance_status = 'A_VERIFIER', updated_at = now()
@@ -244,6 +425,27 @@ module.exports = handler(async (req, res) => {
           aVerifier: classement.aVerifier.length,
           ecartees: classement.ecartees.length
         });
+      }
+
+      /* Persistance du nouveau classement : il remplace intégralement
+         le précédent. Ne supprimer que les lignes non validées laissait
+         l'ancienne ligne validée d'une offre à côté de sa nouvelle
+         ligne, donc la même offre deux fois après un recalcul. Les
+         décisions passées restent dans rfq_recommendations et
+         audit_log ; quote_rankings ne porte que le classement courant. */
+      await client.query(`DELETE FROM quote_rankings WHERE rfq_id = $1`, [rfqId]);
+      for (const o of classement.conforme) {
+        await client.query(
+          `INSERT INTO quote_rankings (rfq_id, quote_id, rank_position, comparable_price, system_recommended)
+           VALUES ($1,$2,$3,$4,$5)`,
+          [rfqId, o.quote_id, o.rank, o.prixComparable, o.rank === 1]
+        );
+        await client.query(
+          `UPDATE quotes SET rank = $2, comparable_total = $3, commissionable_amount = $4,
+                              compliance_status = 'CONFORME', updated_at = now()
+            WHERE quote_id = $1`,
+          [o.quote_id, o.rank, o.prixComparable, o.assietteCommission]
+        );
       }
 
       /* Nouvelle recommandation système (l'ancienne devient SUPERSEDED) */
@@ -273,8 +475,9 @@ module.exports = handler(async (req, res) => {
          L'algorithme propose ; Drex renvoie la probabilité calibrée
          de chaque issue (validation d'office / relecture humaine) et
          on route sur ces probabilités. Un écart motivé est déjà une
-         décision humaine : on ne la double pas d'un appel Drex. Sans
-         NACE_API_KEY, la plateforme garde son comportement actuel. */
+         décision humaine : on ne le double pas d'un appel Drex. Sans
+         NACE_API_KEY, il n'y a pas de décision — donc relecture,
+         jamais validation. */
       let drex = null;
       if (!overrideReason) {
         try {
@@ -292,7 +495,8 @@ module.exports = handler(async (req, res) => {
           console.warn("[drex] décision indisponible :", err.code || err.message);
         }
       }
-      const autoValidate = !drex || drex.routed === "auto";
+      const routing = routingDecision(drex, { overrideReason });
+      const autoValidate = routing.autoValidate;
 
       const rec = await client.query(
         `INSERT INTO rfq_recommendations (rfq_id, quote_id, status)
@@ -310,13 +514,13 @@ module.exports = handler(async (req, res) => {
           [user.user_id, rfqId,
            JSON.stringify({ motorPick: motorPick.quote_id }),
            JSON.stringify({ chosen: chosen.quote_id, comparable: chosen.prixComparable, drex }),
-           "Décision automatique sous le seuil : relecture opérateur requise."]
+           routing.reason]
         );
         await client.query("COMMIT");
         return json(res, 200, {
           rfqNumber,
           status: "PENDING_ADMIN",
-          message: "Recommandation en attente de relecture : la décision automatique n'atteint pas le seuil de confiance.",
+          message: routing.reason + " Rien n'a été envoyé au donneur d'ordre : validez explicitement pour poursuivre.",
           recommended: {
             quote_id: chosen.quote_id,
             comparable_total: chosen.prixComparable,
@@ -329,7 +533,8 @@ module.exports = handler(async (req, res) => {
         });
       }
 
-      /* Validation immédiate de la recommandation par l'admin qui exécute */
+      /* Validation de la recommandation : décision explicite de
+         l'opérateur, écart motivé, ou Drex au-dessus du seuil. */
       await client.query(
         `UPDATE rfq_recommendations SET status = 'VALIDATED', admin_validated_at = now()
           WHERE recommendation_id = $1`,
@@ -338,7 +543,7 @@ module.exports = handler(async (req, res) => {
       await client.query(
         `UPDATE quote_rankings SET admin_validated = true, admin_user_id = $3, admin_reason = $4
           WHERE rfq_id = $1 AND quote_id = $2`,
-        [rfqId, chosen.quote_id, user.user_id, overrideReason]
+        [rfqId, chosen.quote_id, user.user_id, routing.reason]
       );
       await client.query(`UPDATE rfqs SET status = 'RECOMMENDED' WHERE rfq_id = $1 AND status IN ('OPEN','COTATION','ANALYSIS')`, [rfqId]);
 
@@ -348,7 +553,7 @@ module.exports = handler(async (req, res) => {
         [user.user_id, rfqId,
          JSON.stringify({ motorPick: motorPick.quote_id }),
          JSON.stringify({ chosen: chosen.quote_id, comparable: chosen.prixComparable, drex }),
-         overrideReason]
+         routing.reason]
       );
 
       /* Notification transactionnelle : le comparatif est prêt —
@@ -400,3 +605,8 @@ module.exports = handler(async (req, res) => {
   res.setHeader("Allow", "GET, POST");
   return json(res, 405, { error: "Méthode non autorisée." });
 });
+
+module.exports = recHandler;
+module.exports.routingDecision = routingDecision;
+module.exports.rankingFingerprint = rankingFingerprint;
+module.exports.rankingRows = rankingRows;

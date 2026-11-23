@@ -130,8 +130,10 @@ module.exports = handler(async (req, res) => {
           ORDER BY email_id DESC
           LIMIT 50`
       );
-      /* OUTBOX_EXPOSE_LINKS=false coupe l'exposition des jetons. */
-      const exposeLinks = process.env.OUTBOX_EXPOSE_LINKS !== "false";
+      /* Masqué par défaut : un lien de vérification ou de
+         réinitialisation est une clé. Il faut OUTBOX_EXPOSE_LINKS=true
+         pour l'afficher, et seulement pour du diagnostic local. */
+      const exposeLinks = process.env.OUTBOX_EXPOSE_LINKS === "true";
       const emails = r.rows.map((m) => {
         const links = exposeLinks ? extractLinks(m.body_text) : [];
         return {

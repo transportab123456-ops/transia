@@ -316,6 +316,9 @@ const { hashPassword } = require("../api/_lib/auth");
 
   const rank = await call(recommendations, "POST", { rfqNumber: numA }, { cookie: adminCookie });
   check("classement de RFQ A calculé", rank.status === 200, rank.body);
+  check("sans Drex → relecture humaine", rank.body.status === "PENDING_ADMIN", rank.body);
+  const approveA = await call(recommendations, "POST", { rfqNumber: numA, approve: true }, { cookie: adminCookie });
+  check("validation explicite → VALIDATED", approveA.status === 200 && approveA.body.status === "VALIDATED", approveA.body);
   const accept = await call(deals, "POST", { action: "accept", rfqNumber: numA }, { cookie: cookieA });
   check("A accepte l'offre de C1", accept.status === 201, accept.body);
   const confirm = await call(deals, "POST", {
@@ -630,12 +633,19 @@ const { hashPassword } = require("../api/_lib/auth");
     check(`offre reco ${i + 1} déposée`, q.status === 201, q.body);
   }
 
-  /* Sans NACE_API_KEY, Drex est indisponible : la validation est
-     automatique et le chemin flushOutbox(client) est bien pris. */
-  const recos = await Promise.all(recoNums.map((rfqNumber) => call(recommendations, "POST", { rfqNumber }, { cookie: adminCookie })));
+  /* Sans NACE_API_KEY, Drex est indisponible : chaque recommandation
+     part en relecture. Quatre validations explicites simultanées
+     doivent aboutir sans 500 (chemin flushOutbox(client) pris). */
+  const ranks = await Promise.all(recoNums.map((rfqNumber) => call(recommendations, "POST", { rfqNumber }, { cookie: adminCookie })));
+  const rankStatuses = ranks.map((r) => r.status);
+  check("4 classements simultanés : aucune 500", rankStatuses.every((s) => s !== 500), rankStatuses);
+  check("les 4 classements attendent la relecture",
+    ranks.every((r) => r.status === 200 && r.body.status === "PENDING_ADMIN"), ranks.map((r) => r.body && r.body.code));
+
+  const recos = await Promise.all(recoNums.map((rfqNumber) => call(recommendations, "POST", { rfqNumber, approve: true }, { cookie: adminCookie })));
   const recoStatuses = recos.map((r) => r.status);
-  check("4 recommandations simultanées : aucune 500", recoStatuses.every((s) => s !== 500), recoStatuses);
-  check("les 4 recommandations aboutissent", recoStatuses.every((s) => s === 200), recos.map((r) => r.body && r.body.code));
+  check("4 validations simultanées : aucune 500", recoStatuses.every((s) => s !== 500), recoStatuses);
+  check("les 4 validations aboutissent", recoStatuses.every((s) => s === 200), recos.map((r) => r.body && r.body.code));
 
   const recoCount = await query(
     `SELECT count(*)::int AS n FROM rfq_recommendations
@@ -677,6 +687,64 @@ const { hashPassword } = require("../api/_lib/auth");
     [tokenHashes]
   );
   check("4 jetons consommés", usedTokens.rows[0].n === 4, usedTokens.rows[0]);
+
+  /* ---------- Deux validations simultanées de la même relecture ---------- */
+  console.log("\n[16] Deux validations simultanées : une seule aboutit, un seul e-mail");
+
+  const rfqOne = await call(rfqs, "POST", {
+    originCity: "Bordeaux", originCountry: "FR", destinationCity: "Rabat", destinationCountry: "MA",
+    mode: "ROAD", cargoDescription: "Charge validation unique", palletCount: 1
+  }, { cookie: cookieB });
+  check("RFQ de validation créée", rfqOne.status === 201, rfqOne.body);
+  const numOne = rfqOne.body.rfq.rfq_number;
+
+  const qOne = await call(quotes, "POST", {
+    rfqNumber: numOne, currency: "EUR", baseTransportPrice: 1650, transitTimeValue: 4
+  }, { cookie: crew[0] });
+  check("offre de validation déposée", qOne.status === 201, qOne.body);
+
+  const rankOne = await call(recommendations, "POST", { rfqNumber: numOne }, { cookie: adminCookie });
+  check("classement en relecture", rankOne.status === 200 && rankOne.body.status === "PENDING_ADMIN", rankOne.body);
+
+  /* Deux opérateurs valident en même temps : le verrou FOR UPDATE et le
+     UPDATE conditionnel garantissent un seul succès, donc un seul
+     e-mail recommendation_ready. */
+  const twoApprovals = await Promise.all([1, 2].map(() => call(
+    recommendations, "POST", { rfqNumber: numOne, approve: true }, { cookie: adminCookie }
+  )));
+  const approvalStatuses = twoApprovals.map((r) => r.status).sort();
+  check("une validation aboutit, l'autre est refusée",
+    approvalStatuses.length === 2 && approvalStatuses[0] === 200 && approvalStatuses[1] === 409,
+    twoApprovals.map((r) => ({ status: r.status, code: r.body && r.body.code })));
+
+  const loser = twoApprovals.find((r) => r.status === 409);
+  check("le refus est explicite",
+    !!loser && ["NO_PENDING_RECOMMENDATION", "RANKING_CHANGED"].includes(loser.body.code),
+    loser && loser.body);
+
+  const validatedCount = await query(
+    `SELECT count(*)::int AS n FROM rfq_recommendations
+      WHERE rfq_id = (SELECT rfq_id FROM rfqs WHERE rfq_number = $1) AND status = 'VALIDATED'`,
+    [numOne]
+  );
+  check("une seule recommandation validée", validatedCount.rows[0].n === 1, validatedCount.rows[0]);
+
+  const mailCount = await query(
+    `SELECT count(*)::int AS n FROM outbox_emails
+      WHERE event_type = 'recommendation_ready'
+        AND entity_id = (SELECT rfq_id FROM rfqs WHERE rfq_number = $1)`,
+    [numOne]
+  );
+  check("un seul e-mail recommendation_ready", mailCount.rows[0].n === 1, mailCount.rows[0]);
+
+  const rankingCount = await query(
+    `SELECT count(*)::int AS total, count(DISTINCT quote_id)::int AS offres
+       FROM quote_rankings
+      WHERE rfq_id = (SELECT rfq_id FROM rfqs WHERE rfq_number = $1)`,
+    [numOne]
+  );
+  check("une seule ligne de classement par offre",
+    rankingCount.rows[0].total === rankingCount.rows[0].offres, rankingCount.rows[0]);
 
   console.log("\n----------------------------------------");
   console.log(`Résultat : ${pass} succès, ${failCount} échec(s)`);
