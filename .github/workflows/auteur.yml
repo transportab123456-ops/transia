@@ -5,8 +5,14 @@ name: Auteur des commits
 # Les hooks locaux (.githooks/) le signalent avant le commit, mais
 # `git commit --no-verify` / `git push --no-verify` les contournent : ce
 # contrôle est le dernier filet, côté CI, sur chaque push vers main.
+#
+# Il tourne aussi sur les pull requests : le ruleset de main exige une PR et
+# les checks « auteur » et « test », donc un commit d'auteur non autorisé est
+# refusé avant d'atteindre main au lieu d'être seulement signalé après coup.
 on:
   push:
+    branches: [main]
+  pull_request:
     branches: [main]
 
 permissions:
@@ -32,21 +38,37 @@ jobs:
           AVANT: ${{ github.event.before }}
           APRES: ${{ github.event.after }}
           TETE: ${{ github.sha }}
+          PR_BASE: ${{ github.event.pull_request.base.sha }}
+          PR_TETE: ${{ github.event.pull_request.head.sha }}
         run: |
           set -u
           ATTENDU="transportab123456-ops <transportab123456@gmail.com>"
           ZERO="0000000000000000000000000000000000000000"
-          APRES="${APRES:-$TETE}"
-
-          # Premier push de la branche, ou commit d'avant introuvable (force-push) :
-          # seul le commit de tête est vérifié. L'historique antérieur à la règle
-          # n'est pas jugé, comme dans le hook pre-push.
-          if [ "$AVANT" = "$ZERO" ] || ! git cat-file -e "$AVANT^{commit}" 2>/dev/null; then
-            PORTEE=""
-            echo "Portée : commit de tête $APRES (historique antérieur non vérifié)."
+          # Pull request : la portée est base..tête de la PR. Le commit de fusion
+          # que GitHub construit n'est pas jugé, seulement les commits apportés
+          # par la branche.
+          if [ -n "${PR_BASE:-}" ]; then
+            APRES="${PR_TETE:-$TETE}"
+            if git cat-file -e "$PR_BASE^{commit}" 2>/dev/null; then
+              PORTEE="$PR_BASE..$APRES"
+              echo "Portée (pull request) : $PORTEE"
+            else
+              PORTEE=""
+              echo "Portée : commit de tête $APRES (base $PR_BASE introuvable)."
+            fi
           else
-            PORTEE="$AVANT..$APRES"
-            echo "Portée : $PORTEE"
+            APRES="${APRES:-$TETE}"
+
+            # Premier push de la branche, ou commit d'avant introuvable (force-push) :
+            # seul le commit de tête est vérifié. L'historique antérieur à la règle
+            # n'est pas jugé, comme dans le hook pre-push.
+            if [ "$AVANT" = "$ZERO" ] || ! git cat-file -e "$AVANT^{commit}" 2>/dev/null; then
+              PORTEE=""
+              echo "Portée : commit de tête $APRES (historique antérieur non vérifié)."
+            else
+              PORTEE="$AVANT..$APRES"
+              echo "Portée : $PORTEE"
+            fi
           fi
 
           # PORTEE vide : le commit de tête seul, sans remonter son historique.
@@ -92,4 +114,4 @@ jobs:
             echo "::error::$mauvais commit(s) avec un auteur autre que « $ATTENDU »."
             exit 1
           fi
-          echo "Tous les commits poussés sont conformes."
+          echo "Tous les commits vérifiés sont conformes."
