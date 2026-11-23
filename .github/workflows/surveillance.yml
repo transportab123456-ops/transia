@@ -1,14 +1,15 @@
 name: Surveillance API
 
-# Sonde externe de /api/health, toutes les 5 minutes.
+# Sonde externe de /api/health, une fois par heure.
 #
 # Pourquoi : /api/health interroge réellement PostgreSQL (SELECT now()) et
 # répond 503 dès que la base ne répond plus. Personne ne l'appelait : le cron
 # Vercel ne s'en sert que pour vider la file d'e-mails. Une panne Neon se
 # découvrait donc par un client mécontent.
 #
-# Coût : nul. Les minutes Actions sont gratuites sur un dépôt public, et aucun
-# service de surveillance tiers n'est nécessaire.
+# Coût : nul. Les minutes Actions sont gratuites sur un dépôt public. Un moniteur
+# externe assure la détection rapide ; ce passage horaire est le second filet, qui
+# ouvre une issue et laisse une trace exploitable.
 #
 # Chemin d'alerte, sans configuration supplémentaire :
 #   1. une issue « incident » est ouverte (ou complétée) dans ce dépôt, avec
@@ -21,12 +22,17 @@ name: Surveillance API
 # désactive les workflows planifiés après 60 jours sans activité du dépôt.
 # Un push (ou une exécution manuelle) réactive la planification.
 #
-# Effet de bord utile : la sonde garde la base Neon éveillée (suspension après
-# 5 min d'inactivité sur l'offre gratuite), ce qui évite le premier 500 après
-# une période creuse.
+# Coût côté base : chaque passage réveille le calcul Neon, qui se rendort après
+# 5 min d'inactivité. Une sonde toutes les 5 minutes le maintenait éveillé en
+# permanence : ~182 CU-hours par mois pour un quota gratuit de 100, épuisé vers le
+# 17e jour, puis calcul suspendu jusqu'au mois suivant. Une fois par heure, le
+# calcul reste éveillé 5 min par heure (~15 CU-hours par mois), largement dans le
+# quota, et une panne de base reste détectée en moins d'une heure.
 on:
   schedule:
-    - cron: "*/5 * * * *"
+    # Décalé de l'heure pleine : GitHub déconseille le début d'heure, où la charge
+    # est la plus forte.
+    - cron: "17 * * * *"
   workflow_dispatch:
     inputs:
       simuler_panne:
