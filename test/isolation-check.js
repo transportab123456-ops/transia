@@ -105,6 +105,15 @@ const { hashPassword } = require("../api/_lib/auth");
   const pw = "motdepasse-test-2026";
   const terms = { termsAccepted: true, termsVersion: "1.0" };
 
+  async function registerCarrier(i) {
+    const res = await call(carriers, "POST", {
+      companyName: `Iso Transporteur ${i} ${stamp}`, countryCode: "FR",
+      email: `iso-carrier${i}-${stamp}@example.fr`, password: pw,
+      firstName: "Carl", lastName: `C${i}`, modes: ["ROAD"], ...terms
+    });
+    return { res, cookie: extractCookie(res.headers) };
+  }
+
   /* ---------- Acteurs ---------- */
   console.log("\n[1] Acteurs : 2 donneurs d'ordre, 2 transporteurs, 1 admin");
 
@@ -125,14 +134,10 @@ const { hashPassword } = require("../api/_lib/auth");
   const carrierCookies = [];
   const carrierIds = [];
   for (const i of [1, 2]) {
-    const c = await call(carriers, "POST", {
-      companyName: `Iso Transporteur ${i} ${stamp}`, countryCode: "FR",
-      email: `iso-carrier${i}-${stamp}@example.fr`, password: pw,
-      firstName: "Carl", lastName: `C${i}`, modes: ["ROAD"], ...terms
-    });
-    check(`transporteur ${i} inscrit`, c.status === 201 && c.body.verification.status === "PENDING", c.body);
-    carrierCookies.push(extractCookie(c.headers));
-    carrierIds.push(c.body.company.company_id);
+    const { res, cookie } = await registerCarrier(i);
+    check(`transporteur ${i} inscrit`, res.status === 201 && res.body.verification.status === "PENDING", res.body);
+    carrierCookies.push(cookie);
+    carrierIds.push(res.body.company.company_id);
   }
 
   const adminCo = await query(
@@ -494,16 +499,12 @@ const { hashPassword } = require("../api/_lib/auth");
      requête ne doit finir en 500. */
   const extraCookies = [];
   for (const i of [3, 4]) {
-    const c = await call(carriers, "POST", {
-      companyName: `Iso Transporteur ${i} ${stamp}`, countryCode: "FR",
-      email: `iso-carrier${i}-${stamp}@example.fr`, password: pw,
-      firstName: "Carl", lastName: `C${i}`, modes: ["ROAD"], ...terms
-    });
+    const { res, cookie } = await registerCarrier(i);
     const v = await call(admin, "POST", {
-      action: "verify", companyId: c.body.company.company_id, decision: "VERIFIED"
+      action: "verify", companyId: res.body.company.company_id, decision: "VERIFIED"
     }, { cookie: adminCookie });
-    check(`transporteur ${i} prêt pour la charge`, c.status === 201 && v.status === 200, v.body);
-    extraCookies.push(extractCookie(c.headers));
+    check(`transporteur ${i} prêt pour la charge`, res.status === 201 && v.status === 200, v.body);
+    extraCookies.push(cookie);
   }
 
   const rfqC = await call(rfqs, "POST", {

@@ -18,7 +18,7 @@ const MAX_POOL_MAX = 20;
    sur un calcul 0,25 CU). Lu à la création du pool, une seule fois
    par processus. */
 function poolMax() {
-  const raw = Number.parseInt(process.env.PG_POOL_MAX, 10);
+  const raw = Number(process.env.PG_POOL_MAX);
   if (!Number.isInteger(raw) || raw < 1) return DEFAULT_POOL_MAX;
   return Math.min(raw, MAX_POOL_MAX);
 }
