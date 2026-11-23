@@ -541,27 +541,20 @@ const { hashPassword } = require("../api/_lib/auth");
   check("les 4 RFQ sont créées", createdStatuses.every((s) => s === 201), created.map((r) => r.body && r.body.code));
   const nums = created.map((r) => r.body.rfq.rfq_number);
 
-  /* Une offre conforme par RFQ, puis acceptation des quatre en parallèle. */
-  for (let i = 0; i < nums.length; i++) {
+  /* Une offre conforme par RFQ, puis acceptation des quatre en parallèle.
+     La réponse de dépôt porte déjà quote_id : inutile de le relire. */
+  const quoteIds = [];
+  for (const [i, rfqNumber] of nums.entries()) {
     const q = await call(quotes, "POST", {
-      rfqNumber: nums[i], currency: "EUR", baseTransportPrice: 1800 + i * 100, transitTimeValue: 5
+      rfqNumber, currency: "EUR", baseTransportPrice: 1800 + i * 100, transitTimeValue: 5
     }, { cookie: crew[i] });
     check(`offre ${i + 1} déposée pour l'acceptation`, q.status === 201, q.body);
+    quoteIds.push(q.body.quote.quote_id);
   }
-  await query(
-    `UPDATE quotes SET compliance_status = 'CONFORME'
-      WHERE rfq_id IN (SELECT rfq_id FROM rfqs WHERE rfq_number = ANY($1))`,
-    [nums]
-  );
-  const qids = await query(
-    `SELECT r.rfq_number, q.quote_id FROM quotes q JOIN rfqs r ON r.rfq_id = q.rfq_id
-      WHERE r.rfq_number = ANY($1)`,
-    [nums]
-  );
-  const quoteIdByNum = new Map(qids.rows.map((r) => [r.rfq_number, r.quote_id]));
+  await query(`UPDATE quotes SET compliance_status = 'CONFORME' WHERE quote_id = ANY($1)`, [quoteIds]);
 
-  const accepts = await Promise.all(nums.map((rfqNumber) => call(deals, "POST", {
-    rfqNumber, action: "accept", quoteId: quoteIdByNum.get(rfqNumber)
+  const accepts = await Promise.all(nums.map((rfqNumber, i) => call(deals, "POST", {
+    rfqNumber, action: "accept", quoteId: quoteIds[i]
   }, { cookie: cookieA })));
   const acceptStatuses = accepts.map((r) => r.status);
   check("4 acceptations simultanées : aucune 500", acceptStatuses.every((s) => s !== 500), acceptStatuses);
@@ -573,6 +566,29 @@ const { hashPassword } = require("../api/_lib/auth");
     [nums]
   );
   check("4 acceptations en base", accCount.rows[0].n === 4, accCount.rows[0]);
+
+  /* ---------- Vérifications simultanées de transporteurs ---------- */
+  console.log("\n[12] Vérifications simultanées de transporteurs : aucune 500");
+
+  const awaiting = [];
+  for (const i of [5, 6, 7, 8]) awaiting.push(await registerCarrier(i));
+  check("4 transporteurs en attente de vérification",
+    awaiting.every(({ res }) => res.status === 201 && res.body.verification.status === "PENDING"),
+    awaiting.map(({ res }) => res.status));
+  const awaitingIds = awaiting.map(({ res }) => res.body.company.company_id);
+
+  const verdicts = await Promise.all(awaitingIds.map((companyId) => call(admin, "POST", {
+    action: "verify", companyId, decision: "VERIFIED"
+  }, { cookie: adminCookie })));
+  const verdictStatuses = verdicts.map((r) => r.status);
+  check("4 vérifications simultanées : aucune 500", verdictStatuses.every((s) => s !== 500), verdictStatuses);
+  check("les 4 transporteurs sont vérifiés", verdictStatuses.every((s) => s === 200), verdicts.map((r) => r.body && r.body.code));
+
+  const verifiedCount = await query(
+    `SELECT count(*)::int AS n FROM carrier_profiles WHERE company_id = ANY($1) AND validation_status = 'VERIFIED'`,
+    [awaitingIds]
+  );
+  check("4 profils vérifiés en base", verifiedCount.rows[0].n === 4, verifiedCount.rows[0]);
 
   console.log("\n----------------------------------------");
   console.log(`Résultat : ${pass} succès, ${failCount} échec(s)`);
