@@ -59,35 +59,52 @@ git config core.hooksPath .githooks
 ```
 
 `git commit --no-verify` et `git push --no-verify` contournent les hooks : le
-contrôle en CI les rattrape après coup, mais Vercel bloque alors le déploiement.
+contrôle en CI les rattrape, et il bloque désormais la fusion (voir ci-dessous).
 
 Un rebase ne passe pas par `pre-commit` (git ne l'exécute pas) et conserve
 l'auteur d'origine : c'est `pre-push` qui refuse alors les anciens commits
 réattribués, en indiquant comment corriger un seul commit ou toute une série.
 
-## Contrôle en CI (dernier filet)
+## Contrôle en CI (bloquant)
 
 `--no-verify` contourne les hooks locaux : le workflow **Auteur des commits**
-(`.github/workflows/auteur.yml`) rejoue le contrôle sur chaque push vers `main`,
-avant que Vercel ne bloque le déploiement.
+(`.github/workflows/auteur.yml`) rejoue le contrôle, et le dépôt est réglé pour
+que ce check bloque réellement `main`.
 
-- portée : `github.event.before..github.event.after`, c'est-à-dire exactement les
-  commits du push ; premier push ou `before` introuvable (force-push) : seul le
-  commit de tête est vérifié, l'historique antérieur à la règle n'est pas jugé ;
+- déclencheurs : chaque push vers `main`, et chaque pull request vers `main` ;
+- portée en pull request : `base.sha..head.sha` de la PR — le commit de fusion
+  construit par GitHub n'est pas jugé, seuls les commits de la branche le sont ;
+- portée en push : `github.event.before..github.event.after`, c'est-à-dire
+  exactement les commits du push ; premier push ou `before` introuvable
+  (force-push) : seul le commit de tête est vérifié, l'historique antérieur à la
+  règle n'est pas jugé ;
 - clone complet (`fetch-depth: 0`), sinon le commit d'avant le push est absent ;
 - échec : une ligne `::error::` par commit fautif, plus un récapitulatif dans le
   résumé du run avec les commandes de correction ;
 - succès : `N commit(s) vérifié(s), 0 non conforme(s).`
 
+Le ruleset **main - PR obligatoire et checks auteur/test** (actif, sur
+`refs/heads/main`) exige une pull request et les checks `auteur` et `test`, sans
+acteur de contournement ; force-push et suppression de `main` sont bloqués. Un
+push direct est refusé par le serveur (`GH013`), et une PR dont le check
+`auteur` échoue reste `BLOCKED` : la fusion est refusée même pour le
+propriétaire, sauf `--admin` (à éviter).
+
+Un ruleset n'existe que sur un dépôt public ou avec GitHub Pro : le dépôt est
+donc **public** depuis le 2026-11-23. Aucun secret n'est versionné — seuls
+`.env.example` et `.env.admin.example` le sont, avec des valeurs fictives.
+
 Une fusion de pull request depuis l'interface GitHub crée un commit dont l'auteur
 est le compte qui fusionne : si ce compte n'est pas `transportab123456-ops`, le
 contrôle échoue — et Vercel aurait bloqué le déploiement de la même façon.
 
-## Ce que fait un push sur `main`
+## Ce que fait une fusion sur `main`
 
-1. le workflow **Auteur des commits** vérifie l'auteur des commits poussés ;
-2. le workflow **Tests** exécute `npm test` (14 suites, base PostgreSQL jetable) ;
-3. Vercel déploie la production et réattribue `https://transia-sooty.vercel.app`.
+1. la PR ne peut être fusionnée que si les checks `auteur` et `test` sont verts ;
+2. le workflow **Auteur des commits** rejoue le contrôle sur le commit de fusion
+   poussé sur `main` ;
+3. le workflow **Tests** exécute `npm test` (14 suites, base PostgreSQL jetable) ;
+4. Vercel déploie la production et réattribue `https://transia-sooty.vercel.app`.
 
 Un déploiement bloqué ne peut pas être relancé : il faut corriger l'identité
 puis pousser un nouveau commit.
