@@ -11,4 +11,5 @@ tools/
 node_modules/
 .git/
 .vercel/
+.cloud-attachments/
 *.md
