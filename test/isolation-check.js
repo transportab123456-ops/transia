@@ -409,6 +409,61 @@ const { hashPassword } = require("../api/_lib/auth");
     holder.release();
   }
 
+  /* ---------- Concurrence réelle sur la version d'offre ---------- */
+  console.log("\n[9] Concurrence réelle : deux dépôts simultanés → 409");
+
+  /* Une transaction concurrente retient la prochaine version sans la
+     valider : les deux dépôts calculent donc la même version et se
+     bloquent sur l'index unique. On valide seulement quand les deux
+     attentes sont observées, puis les deux doivent répondre 409. */
+  const rfqIdB = (await query(`SELECT rfq_id FROM rfqs WHERE rfq_number = $1`, [numB])).rows[0].rfq_id;
+  const nextVersion = (await query(
+    `SELECT COALESCE(max(quote_version), 0) + 1 AS n
+       FROM quotes WHERE rfq_id = $1 AND carrier_company_id = $2`,
+    [rfqIdB, carrierIds[1]]
+  )).rows[0].n;
+  const eurId = (await query(`SELECT currency_id FROM currencies WHERE iso_code = 'EUR'`)).rows[0].currency_id;
+
+  /* Connexion hors pool : le pool plafonne à 3, et les deux dépôts
+     concurrents en occupent déjà deux. */
+  const { Client } = require("pg");
+  const quoteHolder = new Client({ connectionString: process.env.DATABASE_URL });
+  await quoteHolder.connect();
+  try {
+    await quoteHolder.query("BEGIN");
+    await quoteHolder.query(
+      `INSERT INTO quotes (rfq_id, carrier_company_id, quote_version, currency_id,
+                           base_transport_price, compliance_status)
+       VALUES ($1,$2,$3,$4,2000,'CONFORME')`,
+      [rfqIdB, carrierIds[1], nextVersion, eurId]
+    );
+
+    const deposit = () => call(quotes, "POST", {
+      rfqNumber: numB, currency: "EUR", baseTransportPrice: 2000
+    }, { cookie: carrierCookies[1] });
+    const first = deposit();
+    const second = deposit();
+
+    let waiting = 0;
+    for (let i = 0; i < 250 && waiting < 2; i++) {
+      const w = await query(
+        `SELECT count(*)::int AS n FROM pg_stat_activity
+          WHERE wait_event_type = 'Lock' AND query ILIKE '%INSERT INTO quotes%'`
+      );
+      waiting = w.rows[0].n;
+      if (waiting < 2) await new Promise((r) => setTimeout(r, 20));
+    }
+    check("les deux dépôts attendent l'index unique", waiting >= 2, waiting);
+
+    await quoteHolder.query("COMMIT");
+    const [firstRes, secondRes] = await Promise.all([first, second]);
+    check("1er dépôt simultané → 409 CONFLICT", firstRes.status === 409 && firstRes.body.code === "CONFLICT", firstRes.body);
+    check("2e dépôt simultané → 409 CONFLICT", secondRes.status === 409 && secondRes.body.code === "CONFLICT", secondRes.body);
+  } finally {
+    await quoteHolder.query("ROLLBACK").catch(() => {});
+    await quoteHolder.end().catch(() => {});
+  }
+
   console.log("\n----------------------------------------");
   console.log(`Résultat : ${pass} succès, ${failCount} échec(s)`);
   process.exit(failCount === 0 ? 0 : 1);

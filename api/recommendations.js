@@ -200,7 +200,7 @@ module.exports = handler(async (req, res) => {
       );
       if (!quotes.rows.length) { await client.query("ROLLBACK"); return fail(res, 409, "Aucune offre déposée sur cette demande.", "NO_QUOTES"); }
 
-      const fx = await loadFx();
+      const fx = await loadFx(client);
       const normalized = quotes.rows.map((q) => normalizeQuote(q, fx, "EUR"));
       const classement = classify(normalized);
 

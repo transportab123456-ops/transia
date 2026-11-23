@@ -108,7 +108,7 @@ module.exports = handler(async (req, res) => {
       const version = v.rows[0].next;
 
       /* Prix comparable figé côté serveur */
-      const fx = await loadFx();
+      const fx = await loadFx(client);
       const probe = normalizeQuote(
         { quote_id: null, rfq_id: rfqRow.rfq_id, carrier_company_id: user.company_id,
           currency, base_transport_price: basePrice, mandatory_fees_total: mandatoryFees,
