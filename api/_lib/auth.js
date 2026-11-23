@@ -52,10 +52,12 @@ function sha256(v) {
   return crypto.createHash("sha256").update(v).digest("hex");
 }
 
-async function createSession(user, req, runner) {
+/* `client` : connexion encore tenue par l'appelant (inscription), pour
+   ne pas en demander une seconde au pool. */
+async function createSession(user, req, client) {
   const token = randomToken();
   const expires = new Date(Date.now() + SESSION_TTL_MS);
-  await (runner || { query }).query(
+  await (client || { query }).query(
     `INSERT INTO sessions (user_id, token_hash, user_agent, ip_address, expires_at)
      VALUES ($1, $2, $3, $4, $5)`,
     [user.user_id, sha256(token), (req.headers["user-agent"] || "").slice(0, 300), null, expires]

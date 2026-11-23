@@ -39,11 +39,11 @@ async function rateLimit(req, action, key, limit, windowMinutes) {
   return { allowed: true, remaining: limit - used };
 }
 
-/* Enregistre l'issue d'une tentative protégée. `runner` : connexion
+/* Enregistre l'issue d'une tentative protégée. `client` : connexion
    encore tenue par l'appelant, pour ne pas demander une seconde
    connexion au pool juste après un COMMIT. */
-async function recordAttempt(action, key, succeeded, runner) {
-  const db = runner || { query };
+async function recordAttempt(action, key, succeeded, client) {
+  const db = client || { query };
   await db.query(
     `INSERT INTO login_attempts (attempt_key, succeeded) VALUES ($1, $2)`,
     [action + ":" + hashKey(key), !!succeeded]

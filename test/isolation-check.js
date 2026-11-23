@@ -13,6 +13,7 @@
    ============================================================ */
 "use strict";
 
+const crypto = require("crypto");
 const { PassThrough, Writable } = require("stream");
 
 require("../db/env").requireDatabaseUrl();
@@ -97,6 +98,7 @@ const quotes = require("../api/quotes");
 const recommendations = require("../api/recommendations");
 const deals = require("../api/deals");
 const admin = require("../api/admin");
+const tokens = require("../api/auth/tokens");
 const { getPool, query } = require("../api/_lib/db");
 const { hashPassword } = require("../api/_lib/auth");
 
@@ -642,6 +644,39 @@ const { hashPassword } = require("../api/_lib/auth");
     [recoNums]
   );
   check("4 recommandations en base", recoCount.rows[0].n === 4, recoCount.rows[0]);
+
+  /* ---------- Vérifications d'e-mail simultanées ---------- */
+  console.log("\n[15] Vérifications d'e-mail simultanées : aucune 500");
+
+  const tokenHashes = [];
+  const verifyTokens = [];
+  for (let i = 1; i <= 4; i++) {
+    const u = await query(
+      `SELECT user_id, email FROM users WHERE email = $1`,
+      [`iso-load-${i}-${stamp}@example.fr`]
+    );
+    const token = crypto.randomBytes(32).toString("hex");
+    const hash = crypto.createHash("sha256").update(token).digest("hex");
+    await query(
+      `INSERT INTO email_verifications (user_id, email, token_hash, expires_at)
+       VALUES ($1,$2,$3, now() + interval '1 hour')`,
+      [u.rows[0].user_id, u.rows[0].email, hash]
+    );
+    verifyTokens.push(token);
+    tokenHashes.push(hash);
+  }
+
+  const verifications = await Promise.all(verifyTokens.map((token) => call(tokens, "POST", { token })));
+  const verifyStatuses = verifications.map((r) => r.status);
+  check("4 vérifications simultanées : aucune 500", verifyStatuses.every((s) => s !== 500), verifyStatuses);
+  check("les 4 comptes sont activés", verifyStatuses.every((s) => s === 200), verifications.map((r) => r.body && r.body.code));
+
+  const usedTokens = await query(
+    `SELECT count(*)::int AS n FROM email_verifications
+      WHERE token_hash = ANY($1) AND used_at IS NOT NULL`,
+    [tokenHashes]
+  );
+  check("4 jetons consommés", usedTokens.rows[0].n === 4, usedTokens.rows[0]);
 
   console.log("\n----------------------------------------");
   console.log(`Résultat : ${pass} succès, ${failCount} échec(s)`);

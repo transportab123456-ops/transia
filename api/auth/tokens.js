@@ -243,7 +243,7 @@ module.exports = handler(async (req, res) => {
       await client.query("COMMIT");
 
       /* Une réussite remet le compteur de l'adresse à zéro. */
-      await recordAttempt("reset_confirm", clientIp(req), true);
+      await recordAttempt("reset_confirm", clientIp(req), true, client);
 
       return json(res, 200, {
         reset: true,
@@ -288,7 +288,7 @@ module.exports = handler(async (req, res) => {
 
     if (!verif || verif.used_at || new Date(verif.expires_at) < new Date()) {
       await client.query("ROLLBACK");
-      await recordAttempt("verify", clientIp(req), false);
+      await recordAttempt("verify", clientIp(req), false, client);
       return fail(res, 400, "Lien de vérification invalide ou expiré. Demandez un nouveau lien.", "TOKEN_INVALID");
     }
 
@@ -316,9 +316,9 @@ module.exports = handler(async (req, res) => {
     );
     await client.query("COMMIT");
 
-    await recordAttempt("verify", clientIp(req), true);
+    await recordAttempt("verify", clientIp(req), true, client);
 
-    const { token: sessionToken, expires } = await createSession(u.rows[0], req);
+    const { token: sessionToken, expires } = await createSession(u.rows[0], req, client);
     res.setHeader("Set-Cookie", sessionCookie(sessionToken, expires));
 
     return json(res, 200, {
