@@ -126,8 +126,14 @@ jobs:
         run: |
           set -uo pipefail
 
-          gh label create incident --color B60205 \
-            --description "Panne détectée par la sonde /api/health" >/dev/null 2>&1 || true
+          # Sans checkout, gh ne peut pas déduire le dépôt : --repo est
+          # obligatoire. Un échec de création du label ne doit jamais empêcher
+          # l'alerte — l'incident est retrouvé par son titre.
+          gh label create incident --repo "$REPO" --color B60205 \
+            --description "Panne détectée par la sonde /api/health" 2>&1 \
+            || echo "Label « incident » non créé — alerte poursuivie sans label."
+          label=$(gh label list --repo "$REPO" --limit 100 --json name \
+            --jq '.[] | select(.name == "incident") | .name' | head -1)
 
           corps=$(cat <<EOF
           **La sonde a échoué le $(date -u '+%Y-%m-%d à %H:%M UTC').**
@@ -149,16 +155,25 @@ jobs:
           EOF
           )
 
-          existante=$(gh issue list --repo "$REPO" --label incident --state open \
-            --limit 1 --json number --jq '.[0].number // empty')
+          # Titre plutôt que label : l'alerte fonctionne même si le label
+          # n'existe pas ou si sa création est refusée.
+          existante=$(gh issue list --repo "$REPO" --state open --limit 50 \
+            --json number,title \
+            --jq '[.[] | select(.title | startswith("[incident]"))][0].number // empty')
 
           if [ -n "$existante" ]; then
             gh issue comment "$existante" --repo "$REPO" --body "$corps"
             echo "::error title=Base toujours injoignable::Incident #$existante complété."
           else
-            gh issue create --repo "$REPO" \
-              --title "[incident] API Transia — base injoignable" \
-              --label incident --body "$corps"
+            if [ -n "$label" ]; then
+              gh issue create --repo "$REPO" \
+                --title "[incident] API Transia — base injoignable" \
+                --label incident --body "$corps"
+            else
+              gh issue create --repo "$REPO" \
+                --title "[incident] API Transia — base injoignable" \
+                --body "$corps"
+            fi
             echo "::error title=Base injoignable::Issue d'incident créée."
           fi
 
@@ -169,8 +184,9 @@ jobs:
         run: |
           set -uo pipefail
 
-          existante=$(gh issue list --repo "$REPO" --label incident --state open \
-            --limit 1 --json number --jq '.[0].number // empty')
+          existante=$(gh issue list --repo "$REPO" --state open --limit 50 \
+            --json number,title \
+            --jq '[.[] | select(.title | startswith("[incident]"))][0].number // empty')
 
           if [ -n "$existante" ]; then
             gh issue comment "$existante" --repo "$REPO" \
