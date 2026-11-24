@@ -32,7 +32,11 @@ on:
   schedule:
     # Décalé de l'heure pleine : GitHub déconseille le début d'heure, où la charge
     # est la plus forte.
-    - cron: "17 * * * *"
+    #
+    # Toute modification de cette ligne fait recalculer l'échéance côté GitHub :
+    # c'est le seul levier pour ré-enregistrer une planification qui ne part plus
+    # (désactiver/réactiver le workflow ne suffit pas).
+    - cron: "23 * * * *"
   workflow_dispatch:
     inputs:
       simuler_panne:
